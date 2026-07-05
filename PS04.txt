@@ -1,0 +1,29 @@
+Problem Statement 4: Simplifying IPO Offer Document Preparation for SMEs
+Problem
+Small and Medium Enterprises (SMEs) are a critical engine of economic growth, yet their
+participation in public capital markets remains limited. A significant barrier to SME listings on
+the SME Exchange platform is the complexity and cost of preparing an IPO offer document.
+The process demands extensive involvement of merchant bankers, legal counsel, and
+compliance professionals often spanning several months and incurring costs that are
+disproportionate to the size of the capital being raised. SME promoters, typically operating with
+lean teams and limited exposure to capital market requirements, find it difficult to navigate the
+disclosure framework independently, making them heavily reliant on intermediaries from the
+very outset.
+SEBI recognises that simplifying the offer document preparation process is essential to
+deepening SME participation in the capital markets. Despite efforts to streamline listing
+requirements for SMEs, the drafting of a compliant offer document remains a time-intensive
+and resource-heavy exercise. There is a need for an innovative solution that allows SME issuers
+to capture their business, financial, and legal particulars and generate a well-organised,
+disclosure-ready draft offer document. The solution must be accessible to promoters without
+specialist knowledge, maintain appropriate checks for accuracy and completeness, and preserve
+the role of authorised intermediaries in review and certification before any regulatory
+submission.
+Desired outcome
+Participants are invited to develop a solution that enables an SME promoter to generate a
+substantially complete draft IPO offer document - significantly reducing preparation time,
+lowering dependence on intermediaries at the early drafting stage, and making the path to public
+listing more accessible for smaller enterprises. The solution should produce a well-structured
+draft covering all material disclosure requirements under SEBI's SME IPO framework, flag
+gaps or inconsistencies in the information provided, and be simple enough for a first-time issuer
+to engage with - ultimately broadening the pipeline of SMEs that can confidently pursue a
+public listing.

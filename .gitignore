@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.db
+*.sqlite
+desktop.ini
+
+.env
+venv/
+.venv/
+
+implementation_plan.md
+ps04_analysis_and_diagrams.md
+PS04_Dataset_Schema_Blueprint (1).md
