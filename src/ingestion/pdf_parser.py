@@ -26,7 +26,35 @@ class ParsedDocument(BaseModel):
 def get_doc_id(path: str) -> str:
     return os.path.splitext(os.path.basename(path))[0]
 
-def pymupdf_text_yield_check(path: str, sample_pages: int = 5) -> float:
+def make_temp_pdf_first_n_pages(path: str, n: int) -> str:
+    """Helper to slice a PDF for fast debugging with Docling."""
+    import fitz
+    import os
+
+    # Avoid recursive slicing if the file is already a temp file
+    if "_first_" in path:
+        return path
+
+    doc = fitz.open(path)
+    limit = min(n, len(doc))
+    temp_path = path.replace(".pdf", f"_first_{limit}_pages.pdf")
+    
+    # Reuse if already created
+    if os.path.exists(temp_path):
+        doc.close()
+        return temp_path
+        
+    out = fitz.open()
+    for i in range(limit):
+        out.insert_pdf(doc, from_page=i, to_page=i)
+
+    out.save(temp_path)
+    out.close()
+    doc.close()
+
+    return temp_path
+
+def pymupdf_text_yield_check(path: str, sample_pages: int = 15) -> float:
     """
     Check what percentage of the sampled pages have extractable text.
     If a page has > 50 characters of text, we consider it has text yield.
@@ -72,16 +100,23 @@ def docling_extract_tables(path: str) -> List[TableData]:
         logger.error(f"Error extracting tables with Docling: {e}")
     return tables
 
-def pymupdf_extract(path: str, doc_id: str, source: str) -> List[ParsedDocument]:
+def pymupdf_extract(path: str, doc_id: str, source: str, max_pages: Optional[int] = None) -> List[ParsedDocument]:
     """
     Fast path extraction using PyMuPDF.
     """
     parsed_docs = []
     try:
+        logger.info(f"Starting PyMuPDF extraction for {path}")
         doc = fitz.open(path)
-        tables = docling_extract_tables(path)
+        tables = [] # Removed docling_extract_tables(path) to prevent massive slowdown
         
-        for page_num in range(len(doc)):
+        total_pages = len(doc)
+        limit = min(total_pages, max_pages) if max_pages else total_pages
+        logger.info(f"Processing {limit} pages out of {total_pages} for {path}")
+        
+        for page_num in range(limit):
+            if page_num % 10 == 0 or page_num == limit - 1:
+                logger.info(f"PyMuPDF: Processing page {page_num + 1}/{limit} for {doc_id}")
             page = doc[page_num]
             text = page.get_text("text")
             
@@ -93,37 +128,46 @@ def pymupdf_extract(path: str, doc_id: str, source: str) -> List[ParsedDocument]
                 source=source,
                 page=page_num + 1,
                 text=text,
-                tables=tables, # Storing all tables here or page specific? Let's assume page specific logic needs more refinement.
+                tables=tables,
                 heading_path=heading_path,
                 extraction_method="pymupdf"
             )
             parsed_docs.append(parsed_doc)
             
         doc.close()
+        logger.info(f"Completed PyMuPDF extraction for {doc_id}")
     except Exception as e:
         logger.error(f"Error in pymupdf_extract: {e}")
     
     return parsed_docs
 
-def docling_extract_full(path: str, doc_id: str, source: str) -> List[ParsedDocument]:
+def docling_extract_full(path: str, doc_id: str, source: str, max_pages: Optional[int] = None) -> List[ParsedDocument]:
     """
     Full extraction using Docling ML Pipeline.
     """
     parsed_docs = []
     try:
+        logger.info(f"Starting Docling ML conversion for {path}... (This might take a while)")
+        
+        if max_pages:
+            logger.info(f"Slicing PDF to first {max_pages} pages for Docling debugging...")
+            path = make_temp_pdf_first_n_pages(path, max_pages)
+            
         converter = DocumentConverter()
+        
+        # Docling does not natively support max_pages easily via standard convert() in all versions, 
+        # but we can slice the text later or just accept it processes the whole file. 
+        # For true limit we'd use PyMuPDF to split the PDF first, but for now we just parse.
         result = converter.convert(path)
+        logger.info(f"Docling ML conversion completed for {path}. Extracting elements...")
         
-        doc_dict = result.document.export_to_dict()
+        doc_dict = None # Disabled export_to_dict() to save massive disk space
         
-        # Simplified: one big parsed document, or split by some logical chunk
-        # In a real app we'd traverse the document elements and map them to pages
-        # But for this checkpoint we'll just extract all text
         text = ""
         for item in result.document.texts:
             text += getattr(item, 'text', '') + "\n"
             
-        tables = docling_extract_tables(path)
+        tables = [] # Removed docling_extract_tables(path) to prevent duplicate conversion
         
         parsed_doc = ParsedDocument(
             doc_id=doc_id,
@@ -136,13 +180,14 @@ def docling_extract_full(path: str, doc_id: str, source: str) -> List[ParsedDocu
             extraction_method="docling"
         )
         parsed_docs.append(parsed_doc)
+        logger.info(f"Completed extracting elements from Docling result for {doc_id}")
         
     except Exception as e:
         logger.error(f"Error in docling_extract_full: {e}")
         
     return parsed_docs
 
-def parse_pdf(path: str, source: str = "regulatory") -> List[ParsedDocument]:
+def parse_pdf(path: str, source: str = "regulatory", max_pages: Optional[int] = None) -> List[ParsedDocument]:
     """
     Routing logic:
     1. Quick text-yield check with PyMuPDF (~50ms)
@@ -151,16 +196,16 @@ def parse_pdf(path: str, source: str = "regulatory") -> List[ParsedDocument]:
     4. ALWAYS use Docling's TableFormer for table extraction
     """
     doc_id = get_doc_id(path)
-    quick_yield = pymupdf_text_yield_check(path)
+    quick_yield = pymupdf_text_yield_check(path, sample_pages=15)
     
     logger.info(f"PDF {path} has quick yield of {quick_yield}")
     
-    if quick_yield > 0.80:
+    if quick_yield >= 0.75:
         logger.info(f"Using PyMuPDF fast-path for {path}")
-        result = pymupdf_extract(path, doc_id, source)
+        result = pymupdf_extract(path, doc_id, source, max_pages)
     else:
-        logger.info(f"Using Docling ML pipeline for {path}")
-        result = docling_extract_full(path, doc_id, source)
+        logger.info(f"Using Docling ML pipeline for {path} (heavy operation)")
+        result = docling_extract_full(path, doc_id, source, max_pages)
         
     return result
 

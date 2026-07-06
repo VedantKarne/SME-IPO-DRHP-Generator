@@ -12,6 +12,31 @@ This officially marks the completion of **Milestone M2 (Knowledge Base)**.
 
 ---
 
+## 00. Hybrid Indexing Architecture (Phase 3 Workflow)
+Below is the exact data-flow architecture implemented in this phase to achieve resilient, high-speed, hybrid semantic retrieval without relying on experimental Cloud APIs.
+
+```mermaid
+flowchart TD
+    classDef model fill:#e2e8f0,stroke:#475569,stroke-width:2px,color:#000000;
+    classDef process fill:#bae6fd,stroke:#0284c7,stroke-width:2px,color:#000000;
+    classDef db fill:#bbf7d0,stroke:#16a34a,stroke-width:2px,color:#000000;
+
+    A["Chunked Input<br/>JSONL Data"]:::model --> B{"BGE-M3 Embedder<br/>(FlagEmbedding)"}:::process
+
+    B --> C["Dense Vector<br/>1024D Semantic"]:::process
+    B --> D["Sparse Vector<br/>Lexical Keyword Weights"]:::process
+
+    C --> E["ChromaDB<br/>Regulatory & Precedent Collections"]:::db
+    D --> F["fallback_sparse.json<br/>Inverted Index Backup"]:::db
+
+    E --> G["Hybrid Searcher<br/>Reciprocal Rank Fusion (RRF)"]:::process
+    F --> G
+
+    G --> H["Top-K Retrieved Context<br/>Ranked Results"]:::model
+```
+
+---
+
 ## 🛠️ Features Built & Tested
 
 1. **Rigorous Metadata Contracts (`src/retrieval/schemas.py`)**

@@ -30,8 +30,10 @@ class VectorStore:
             self.supports_sparse = False
             logger.warning(f"ChromaDB version {CHROMA_VERSION} DOES NOT support sparse vectors natively.")
             logger.warning("Falling back to dense-only Chroma + separate local sparse JSON index.")
-            self.fallback_sparse_index = {}
-            self._load_fallback_sparse()
+            
+        # Initialize fallback store universally as the Chroma python client API for native sparse is experimental
+        self.fallback_sparse_index = {}
+        self._load_fallback_sparse()
             
         self._init_collections()
 
@@ -95,8 +97,8 @@ class VectorStore:
             # We'll use the fallback universally for sparse to be 100% safe, making it robust.
             pass
             
-        # Add dense to Chroma
-        collection.add(
+        # Upsert dense to Chroma (avoids DuplicateIDError if re-running pipeline)
+        collection.upsert(
             ids=ids,
             documents=documents,
             metadatas=clean_metadatas,

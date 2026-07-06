@@ -44,46 +44,48 @@ class PrecedentChunker:
 
     def process_document(self, file_path: str, source_doc_id: str, company: str = "", exchange: str = "", year: str = "") -> List[PrecedentChunk]:
         """
-        Process a DRHP PDF, chunk it, save parent-child maps, and return enriched chunks.
+        Legacy docling chunker. Deprecated due to double parsing overhead.
         """
-        logger.info(f"Converting {file_path} for chunking...")
-        try:
-            result = self.converter.convert(file_path)
-            docling_document = result.document
-        except Exception as e:
-            logger.error(f"Failed to convert {file_path}: {e}")
-            return []
+        pass
 
-        logger.info("Chunking document...")
-        chunks = list(self.chunker.chunk(docling_document))
+    def process_text(self, text: str, source_doc_id: str, company: str = "", exchange: str = "", year: str = "") -> List[PrecedentChunk]:
+        """
+        Process raw text from a DRHP, chunk it, save parent-child maps, and return enriched chunks.
+        Bypasses Docling to use the fast PyMuPDF extracted text.
+        """
+        logger.info(f"Chunking {source_doc_id} from raw text...")
+        
+        # Simple overlap chunking (since HybridChunker needs Docling document)
+        # Using ~512 words per chunk with 50 words overlap
+        words = text.split()
+        chunk_size = 500
+        overlap = 50
         
         precedent_chunks = []
+        idx = 0
         
-        for idx, c in enumerate(chunks):
+        for i in range(0, len(words), chunk_size - overlap):
+            chunk_words = words[i:i + chunk_size]
+            if not chunk_words:
+                break
+                
+            chunk_text = " ".join(chunk_words)
             chunk_id = f"{source_doc_id}_chunk_{idx}"
-            parent_id = f"{source_doc_id}_parent_{idx}"  # In a real scenario, parent_id would map to a unified section ID
-            
-            chunk_text = c.text
-            parent_text = self._build_parent_text(c)
+            parent_id = f"{source_doc_id}_parent_{idx}"
             
             # Save to SQLite
             self.parent_store.store(
                 child_id=chunk_id, 
                 child_text=chunk_text, 
                 parent_id=parent_id, 
-                parent_text=parent_text
+                parent_text=chunk_text[:100] + "..." # Simplified parent context
             )
-            
-            # Extract metadata
-            headings = getattr(c.meta, 'headings', []) if hasattr(c, 'meta') else []
-            section = headings[0] if headings else ""
             
             metadata = {
                 "company": company,
                 "exchange": exchange,
                 "year": year,
-                "section": section,
-                "heading_path": headings
+                "section": ""
             }
             
             enriched = enrich_chunk_text(chunk_text, metadata)
@@ -97,6 +99,7 @@ class PrecedentChunker:
                 metadata=metadata
             )
             precedent_chunks.append(p_chunk)
+            idx += 1
             
         return precedent_chunks
 
