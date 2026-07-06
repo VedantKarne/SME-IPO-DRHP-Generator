@@ -22,7 +22,7 @@ class PrecedentChunk(BaseModel):
     metadata: Dict[str, Any]
 
 class PrecedentChunker:
-    def __init__(self, db_path: str = "parent_doc_store.db"):
+    def __init__(self, db_path: str = "Databases/parent_doc_store.db"):
         self.parent_store = ParentDocStore(db_path=db_path)
         # Using bge-m3 as tokenizer to keep tokens aligned with embedding model limits
         self.chunker = HybridChunker(

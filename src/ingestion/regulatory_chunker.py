@@ -25,7 +25,7 @@ class RegulatoryChunk(BaseModel):
     superseded_by: Optional[str] = None
 
 class RegulatoryChunker:
-    def __init__(self, db_path: str = "parent_doc_store.db"):
+    def __init__(self, db_path: str = "Databases/parent_doc_store.db"):
         self.parent_store = ParentDocStore(db_path=db_path)
         
         # Basic regex to match Chapters and Regulations

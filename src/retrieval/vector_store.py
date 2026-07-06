@@ -14,7 +14,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class VectorStore:
-    def __init__(self, persist_dir: str = ".chroma"):
+    def __init__(self, persist_dir: str = "Databases/.chroma"):
         if not chromadb:
             raise RuntimeError("chromadb is not installed.")
             

@@ -3,7 +3,7 @@ import os
 from contextlib import contextmanager
 
 class ParentDocStore:
-    def __init__(self, db_path: str = "parent_doc_store.db"):
+    def __init__(self, db_path: str = "Databases/parent_doc_store.db"):
         self.db_path = db_path
         self._init_db()
 

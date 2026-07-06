@@ -7,7 +7,17 @@ desktop.ini
 .env
 venv/
 .venv/
+.venv310/
+check_yields.py
 
 implementation_plan.md
 ps04_analysis_and_diagrams.md
 PS04_Dataset_Schema_Blueprint (1).md
+
+.chroma/
+Chunked_Docs/
+Parsed_Docs/
+corpus_acquisition_guide.md
+master_implementation_plan.md
+models/
+Databases/
