@@ -5,7 +5,7 @@
 ## 📊 Progress Summary
 - **Phase 0 (Foundation)**: Deemed completed. The Database schema and Promoter Input Wizard APIs are finalized.
 - **Phase 1a (Corpus Acquisition)**: Completed. All necessary regulatory and precedent documents have been successfully downloaded by the user and stored locally in the `Original_Docs/` directory. 
-- **Phase 1b (Docling PDF Parsing Engine)**: ⏳ **PENDING**. The `pdf_parser.py` script needs to be built to intelligently route these downloaded PDFs between Docling (for complex tables) and PyMuPDF (for fast text).
+- **Phase 1b (Docling PDF Parsing Engine)**: Completed. Built `pdf_parser.py` to route digital PDFs to PyMuPDF and scanned/complex PDFs to Docling for accurate table extraction. Go/No-Go conditions verified.
 - **LLM API Sandbox Evaluation**: Completed. Benchmarked Groq, Gemini, and Cerebras for latency, large context handling, and strict JSON output capabilities.
 
 ---
@@ -55,5 +55,9 @@ The following foundational legal documents have been successfully acquired and v
   - **Groq Llama 3.1 8B Instant:** Selected as the query router and intent classifier due to its sub-second (0.97s) response time.
   - **Discarded Models:** `qwen3-32b` was discarded due to its native Chain-of-Thought (`<think>`) output breaking the strict `json.loads()` automated parsing.
 
+### 4. Test Suite and Output Isolation
+- **Decision:** Implemented a robust test suite (`test_phase_1b_pdf_parser.py`) for the PDF engine, and configured all test artifacts to output into dynamically timestamped phase-specific directories (e.g., `tests/results/phase_1b_run_[TIMESTAMP]/`).
+- **Rationale:** Prevents mock test data from polluting the primary root directories (`02_PARSED/`), maintaining a clean separation between testing environments and production data ingestion pipelines.
+
 ---
-*Ready to commence the coding portion of Phase 1 (Building `ingestion/pdf_parser.py`) in the next session.*
+*Phase 1 is fully complete. Ready to commence Phase 2 (Upgraded Hierarchical Chunking Strategy) in the next session.*
