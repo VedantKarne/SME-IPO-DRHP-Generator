@@ -179,5 +179,20 @@ This phase represents the execution of the ingestion architecture. To ensure str
 All architectural deliverables assigned to this phase in the master plan have been fulfilled and successfully stress-tested in a CPU/GPU hybrid environment.
 
 ---
+
+## 12. Pre-Phase 5 Database Re-architecture & Git Isolation
+Before officially transitioning to Phase 5 (Structured Data Extraction), we executed a critical architectural cleanup to prepare the environment for LLM agent integration. 
+
+**The Challenge:**
+Massive generated data assets (like the 535MB SQLite database, the vector directories, and the jsonl caches) were polluting the root directory. If accidentally pushed to GitHub, these files would violate the 100MB repository limit and permanently bloat the Git history. Furthermore, experimental code was accidentally leaking into production branches.
+
+**The Execution:**
+1. **Centralized Storage (`Databases/`):** We created a dedicated `Databases/` folder in the root directory and migrated `.chroma/`, `parent_doc_store.db`, and `fallback_sparse.json` into it. 
+2. **Code Refactoring:** We successfully refactored the default initialization paths in `src/retrieval/vector_store.py`, `src/retrieval/parent_doc_store.py`, `src/ingestion/precedent_chunker.py`, and `src/ingestion/regulatory_chunker.py` to seamlessly target this new `Databases/` directory without breaking downstream scripts.
+3. **Strict Git Isolation:** We completely overhauled the `.gitignore` file. We aggressively blocked `Databases/`, `models/`, `Parsed_Docs/`, and `Chunked_Docs/`. Furthermore, we utilized `git rm -r --cached` to wipe experimental sandboxes (`LLM_API_Sandbox/`) from remote Git tracking while safely preserving them on the local filesystem.
+
+**The Result:**
+The root directory is now mathematically clean, strictly version-controlled, and architecturally prepped. All underlying ingestion and retrieval mechanics are definitively decoupled from the heavy data assets they generate. We are now officially ready to construct the Gemini 2.5 Flash extraction agents in **Phase 5**.
+---
 **Conclusion:**
 By relentlessly debugging these edge cases—from recursive file slicing to Virtual Memory expansion and GPU VRAM isolation—we transformed a fragile, 10-hour, memory-leaking script into a robust, idempotent, multi-environment pipeline capable of processing massive legal libraries locally in minutes.
