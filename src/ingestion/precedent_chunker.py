@@ -1,0 +1,115 @@
+import os
+import json
+import logging
+import uuid
+from typing import List, Dict, Any
+from pydantic import BaseModel
+from docling.document_converter import DocumentConverter
+from docling.chunking import HybridChunker
+
+from src.retrieval.parent_doc_store import ParentDocStore
+from src.ingestion.context_enricher import enrich_chunk_text
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class PrecedentChunk(BaseModel):
+    chunk_id: str
+    parent_id: str
+    source_doc: str
+    text: str
+    enriched_text: str
+    metadata: Dict[str, Any]
+
+class PrecedentChunker:
+    def __init__(self, db_path: str = "parent_doc_store.db"):
+        self.parent_store = ParentDocStore(db_path=db_path)
+        # Using bge-m3 as tokenizer to keep tokens aligned with embedding model limits
+        self.chunker = HybridChunker(
+            tokenizer="BAAI/bge-m3", 
+            max_tokens=512, 
+            merge_peers=True
+        )
+        self.converter = DocumentConverter()
+
+    def _build_parent_text(self, chunk) -> str:
+        # A simple heuristic to build the parent text context if chunking provides it.
+        # HybridChunker might not easily give us the "full section". 
+        # But we can combine nearby chunks or just use the heading path text.
+        # For this prototype, we'll just return the heading path as the parent text.
+        # A more advanced version would extract all text under the same heading.
+        if hasattr(chunk, 'meta') and hasattr(chunk.meta, 'headings'):
+            return " > ".join(chunk.meta.headings)
+        return ""
+
+    def process_document(self, file_path: str, source_doc_id: str, company: str = "", exchange: str = "", year: str = "") -> List[PrecedentChunk]:
+        """
+        Process a DRHP PDF, chunk it, save parent-child maps, and return enriched chunks.
+        """
+        logger.info(f"Converting {file_path} for chunking...")
+        try:
+            result = self.converter.convert(file_path)
+            docling_document = result.document
+        except Exception as e:
+            logger.error(f"Failed to convert {file_path}: {e}")
+            return []
+
+        logger.info("Chunking document...")
+        chunks = list(self.chunker.chunk(docling_document))
+        
+        precedent_chunks = []
+        
+        for idx, c in enumerate(chunks):
+            chunk_id = f"{source_doc_id}_chunk_{idx}"
+            parent_id = f"{source_doc_id}_parent_{idx}"  # In a real scenario, parent_id would map to a unified section ID
+            
+            chunk_text = c.text
+            parent_text = self._build_parent_text(c)
+            
+            # Save to SQLite
+            self.parent_store.store(
+                child_id=chunk_id, 
+                child_text=chunk_text, 
+                parent_id=parent_id, 
+                parent_text=parent_text
+            )
+            
+            # Extract metadata
+            headings = getattr(c.meta, 'headings', []) if hasattr(c, 'meta') else []
+            section = headings[0] if headings else ""
+            
+            metadata = {
+                "company": company,
+                "exchange": exchange,
+                "year": year,
+                "section": section,
+                "heading_path": headings
+            }
+            
+            enriched = enrich_chunk_text(chunk_text, metadata)
+            
+            p_chunk = PrecedentChunk(
+                chunk_id=chunk_id,
+                parent_id=parent_id,
+                source_doc=source_doc_id,
+                text=chunk_text,
+                enriched_text=enriched,
+                metadata=metadata
+            )
+            precedent_chunks.append(p_chunk)
+            
+        return precedent_chunks
+
+def save_precedent_chunks(chunks: List[PrecedentChunk], output_dir: str):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
+    if not chunks:
+        return
+        
+    source_doc = chunks[0].source_doc
+    output_path = os.path.join(output_dir, f"{source_doc}_chunks.jsonl")
+    
+    with open(output_path, 'w', encoding='utf-8') as f:
+        for chunk in chunks:
+            f.write(chunk.model_dump_json() + '\n')
