@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 
 const INTERVIEW_SCRIPT = [
-  { ai: "Hi! I'm Nirmaan AI. I'll help you prepare your SME IPO — one step at a time.\n\nWhat does your company do?" },
-  { ai: "Great. How many years has your company been operating?" },
+  { ai: "Hi! I'm Nirmaan AI. I'll help you prepare your SME IPO — one step at a time.\n\nFirst, what is your company's name?" },
+  { ai: "Got it. And what does your company do?" },
+  { ai: "How many years has your company been operating?" },
   { ai: "And what's your approximate annual revenue for FY 2024?" },
-  { ai: "Are there any pending litigations against your directors or KMPs?" },
+  { ai: "Finally, are there any pending litigations against your directors or KMPs?" },
   { ai: null, action: 'eligibility_check' }, // triggers animation
   { ai: "Your company looks like a strong SME IPO candidate! 🎉\n\nLet me set up your personalized workspace..." },
 ];
@@ -16,8 +17,9 @@ export default function Landing({ onComplete }) {
   const [isTyping, setIsTyping] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [done, setDone] = useState(false);
+  const [userAnswers, setUserAnswers] = useState([]);
   const messagesEndRef = useRef(null);
-  const hasInit = useRef(false);  // ← guards against StrictMode double-fire
+  const hasInit = useRef(false);
 
   useEffect(() => {
     if (hasInit.current) return;
@@ -29,16 +31,36 @@ export default function Landing({ onComplete }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const showAIMessage = (scriptIndex) => {
+  const showAIMessage = (scriptIndex, currentAnswers = userAnswers) => {
     const entry = INTERVIEW_SCRIPT[scriptIndex];
     if (!entry) return;
 
     if (entry.action === 'eligibility_check') {
       setIsChecking(true);
+      
+      const [name, industry, years, revenue, litigations] = currentAnswers;
+      
+      // Update the demo DB with real answers so the workspace reflects the user's input
+      fetch('http://localhost:8000/api/demo/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: name || 'SME Demo Company', 
+          industry: industry || '', 
+          years: years || '', 
+          revenue: revenue || '', 
+          litigations: litigations || '' 
+        })
+      }).catch(console.error);
+
+      // Dynamically fail litigation if user answered yes
+      const litLower = (litigations || '').toLowerCase();
+      const hasLit = ['yes', 'yeah', 'have', 'pending', 'yup', 'true', 'one', 'two'].some(w => litLower.includes(w)) && !['no', 'not'].some(w => litLower.includes(w));
+
       setTimeout(() => {
         setIsChecking(false);
-        setMessages(prev => [...prev, { type: 'eligibility' }]);
-        setTimeout(() => showAIMessage(scriptIndex + 1), 600);
+        setMessages(prev => [...prev, { type: 'eligibility', hasLit }]);
+        setTimeout(() => showAIMessage(scriptIndex + 1, currentAnswers), 600);
       }, 2200);
       return;
     }
@@ -49,7 +71,6 @@ export default function Landing({ onComplete }) {
       setIsTyping(false);
       setMessages(prev => [...prev, { type: 'ai', text: entry.ai }]);
       
-      // If this is the last message, automatically trigger completion
       if (scriptIndex === INTERVIEW_SCRIPT.length - 1) {
         setTimeout(() => {
           setDone(true);
@@ -66,18 +87,20 @@ export default function Landing({ onComplete }) {
     const userMsg = inputVal.trim();
     setInputVal('');
     setMessages(prev => [...prev, { type: 'user', text: userMsg }]);
+    
+    const newAnswers = [...userAnswers, userMsg];
+    setUserAnswers(newAnswers);
 
     const nextStep = step + 1;
     setStep(nextStep);
 
     if (nextStep >= INTERVIEW_SCRIPT.length) {
-      // Done — navigate
       setTimeout(() => {
         setDone(true);
         setTimeout(onComplete, 800);
       }, 500);
     } else {
-      setTimeout(() => showAIMessage(nextStep), 400);
+      setTimeout(() => showAIMessage(nextStep, newAnswers), 400);
     }
   };
 
@@ -89,7 +112,6 @@ export default function Landing({ onComplete }) {
       <div className="landing-grid" />
 
       <div className="landing-content">
-        {/* Brand */}
         <div className="landing-logo">
           <div className="landing-logo-mark">N</div>
           <div className="landing-logo-text">Nirmaan AI</div>
@@ -98,7 +120,6 @@ export default function Landing({ onComplete }) {
           Build your IPO. Not your paperwork.
         </p>
 
-        {/* Interview window */}
         <div className="interview-window" style={{ width: '100%' }}>
           <div className="interview-header">
             <div className="interview-avatar">N</div>
@@ -133,7 +154,7 @@ export default function Landing({ onComplete }) {
                       { label: 'EBITDA Track Record', pass: true },
                       { label: 'Positive Net Worth', pass: true },
                       { label: 'Post-Issue Capital Limit', pass: true },
-                      { label: 'KMP Litigation', pass: false, note: '⚠️ Disclosure required' },
+                      { label: 'KMP Litigation', pass: !msg.hasLit, note: '⚠️ Disclosure required' },
                     ].map((c, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '3px 0' }}>
                         <span style={{ color: 'var(--text-secondary)' }}>{c.label}</span>

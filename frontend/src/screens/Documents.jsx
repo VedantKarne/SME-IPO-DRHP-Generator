@@ -1,4 +1,6 @@
-const CHECKLIST = [
+import { useState, useRef } from 'react';
+
+const INITIAL_CHECKLIST = [
   { icon: '📊', label: 'Audited Financial Statements (FY2022–24)', required: true, uploaded: false },
   { icon: '📋', label: 'Board Resolution for IPO', required: true, uploaded: false },
   { icon: '🏭', label: 'Factory Licence / Registration', required: true, uploaded: false },
@@ -12,11 +14,47 @@ const CHECKLIST = [
 ];
 
 export default function Documents() {
-  const uploaded = CHECKLIST.filter(d => d.uploaded).length;
-  const total = CHECKLIST.length;
+  const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
+  const [uploadingIdx, setUploadingIdx] = useState(null);
+  const fileInputRef = useRef(null);
+  const activeUploadRef = useRef(null);
+
+  const uploaded = checklist.filter(d => d.uploaded).length;
+  const total = checklist.length;
+
+  const handleUploadClick = (idx) => {
+    activeUploadRef.current = idx;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    if (!e.target.files?.length) return;
+    const idx = activeUploadRef.current;
+    if (idx === null) return;
+    
+    setUploadingIdx(idx);
+    
+    // Simulate parsing/upload delay
+    setTimeout(() => {
+      setChecklist(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], uploaded: true };
+        return next;
+      });
+      setUploadingIdx(null);
+      e.target.value = ''; // Reset input
+    }, 1500);
+  };
 
   return (
     <div className="fade-in">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        onChange={handleFileChange} 
+      />
+      
       <h1 style={{ marginBottom: 4 }}>Document Intelligence</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: '0.875rem' }}>
         AI dynamically determines required documents based on your company profile.
@@ -44,12 +82,12 @@ export default function Documents() {
 
       {/* Checklist */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {CHECKLIST.map((doc, i) => (
+        {checklist.map((doc, i) => (
           <div key={i} className="card card-sm" style={{
             display: 'flex', alignItems: 'center', gap: 14,
             borderColor: doc.uploaded ? 'rgba(16,185,129,0.2)' : doc.required ? 'rgba(244,63,94,0.15)' : 'var(--glass-border)',
             background: doc.uploaded ? 'rgba(16,185,129,0.04)' : 'var(--glass-bg)',
-            cursor: 'pointer',
+            cursor: 'default',
           }}>
             <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{doc.icon}</span>
             <div style={{ flex: 1 }}>
@@ -60,8 +98,14 @@ export default function Documents() {
             </div>
             {doc.uploaded ? (
               <span className="badge badge-success">✓ Uploaded</span>
+            ) : uploadingIdx === i ? (
+              <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, paddingRight: 8 }}>
+                Uploading...
+              </div>
             ) : (
-              <button className="btn btn-secondary btn-sm">Upload →</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => handleUploadClick(i)}>
+                Upload →
+              </button>
             )}
           </div>
         ))}

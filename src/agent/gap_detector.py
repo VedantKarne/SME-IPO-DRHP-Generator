@@ -17,11 +17,19 @@ def flag_gaps(section_name: str, draft_text: str) -> Tuple[float, List[Gap]]:
     
     # We look for "⚠️ GAP: [description]" in the text
     # It might also just say "GAP: [description]" depending on LLM output
-    pattern = re.compile(r"(?:⚠️\s*)?GAP:\s*(.*?)(?=\n|$)", re.IGNORECASE)
+    # 1. Match explicit GAP markers (stopping at punctuation to avoid swallowing text)
+    pattern1 = re.compile(r"(?:⚠️\s*)?GAP:\s*\[?([^,.\n⚠️\]]+)\]?", re.IGNORECASE)
     
-    matches = pattern.findall(draft_text)
+    # 2. Match [Bracketed Placeholders] like [Company Name], ignoring citations like [Reg 1 | ICDR]
+    pattern2 = re.compile(r"\[([^|\]\n]+)\]")
     
-    for match in matches:
+    matches = pattern1.findall(draft_text)
+    bracket_matches = pattern2.findall(draft_text)
+    
+    # Combine and deduplicate
+    all_matches = list(set(matches + bracket_matches))
+    
+    for match in all_matches:
         description = match.strip()
         # Create a mock clause_id based on the section, or extract it if the LLM provided one.
         # For prototype simplicity, we generate a generic clause_id if none exists.

@@ -88,7 +88,7 @@ function DraftRenderer({ text, onCitationClick }) {
 }
 
 // Version history panel
-function VersionHistory({ sectionId }) {
+function VersionHistory({ sectionId, activeVersion, onVersionClick }) {
   const versions = [
     { v: 1, label: 'Initial AI Draft', time: '2h ago', status: 'draft' },
     { v: 2, label: 'AI Edit — "More professional"', time: '1h ago', status: 'edited' },
@@ -97,17 +97,30 @@ function VersionHistory({ sectionId }) {
   return (
     <div style={{ padding: '14px 16px' }}>
       <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Version History</h4>
-      {versions.map(({ v, label, time, status }) => (
-        <div key={v} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid var(--glass-border)', cursor: 'pointer' }}>
-          <div style={{ width: 24, height: 24, borderRadius: 6, background: status === 'current' ? 'var(--accent-dim)' : 'var(--glass-bg)', border: `1px solid ${status === 'current' ? 'rgba(79,126,255,0.3)' : 'var(--glass-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: status === 'current' ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }}>
-            {v}
+      {versions.map(({ v, label, time }) => {
+        const isActive = activeVersion === v;
+        return (
+          <div 
+            key={v} 
+            onClick={() => onVersionClick(v)}
+            style={{ 
+              display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 8px', 
+              borderBottom: '1px solid var(--glass-border)', cursor: 'pointer',
+              background: isActive ? 'rgba(79,126,255,0.05)' : 'transparent',
+              borderRadius: '6px',
+              transition: 'background 0.2s'
+            }}
+          >
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: isActive ? 'var(--accent-dim)' : 'var(--glass-bg)', border: `1px solid ${isActive ? 'rgba(79,126,255,0.3)' : 'var(--glass-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: isActive ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }}>
+              {v}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: isActive ? 600 : 500, color: isActive ? 'var(--accent)' : 'inherit' }}>{label}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{time}</div>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 500 }}>{label}</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{time}</div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -125,6 +138,7 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
   const [isChatting, setIsChatting] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [evidence, setEvidence] = useState(null); // { citation, position }
+  const [activeVersion, setActiveVersion] = useState(3);
   const chatEndRef = useRef(null);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatHistory]);
@@ -145,6 +159,7 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
     setSelectedIdx(idx);
     setIsEditing(false);
     setEvidence(null);
+    setActiveVersion(3);
     const s = mergedSections[idx];
     if (s) setEditText(s.draft_text || '');
   };
@@ -298,7 +313,20 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
           {/* Version history panel */}
           {showVersions && (
             <div className="card card-sm fade-in">
-              <VersionHistory sectionId={selected?.id} />
+              <VersionHistory 
+                sectionId={selected?.id} 
+                activeVersion={activeVersion}
+                onVersionClick={(v) => {
+                  setActiveVersion(v);
+                  if (v === 3) {
+                    setEditText(selected.draft_text);
+                  } else if (v === 2) {
+                    setEditText(selected.draft_text.replace(/the/gi, "the aforementioned")); // Simulate a small edit
+                  } else if (v === 1) {
+                    setEditText(selected.draft_text.substring(0, Math.floor(selected.draft_text.length * 0.5)) + "\n\n[DRAFT IN PROGRESS...]"); // Simulate early draft
+                  }
+                }}
+              />
             </div>
           )}
 
@@ -316,23 +344,46 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
               </p>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
-                {selected.flagged_gaps.map((g, i) => {
+                {Array.from(new Map(selected.flagged_gaps.map(g => [g.description, g])).values()).map((g, i) => {
                   let rawText = g.description || g.gap || '';
-                  // Clean up AI string format (e.g. "ICDR_GAP_INTRODUCTION: Objectives of the Issue]. The proceeds...")
                   rawText = rawText.replace(/ICDR_GAP_[A-Z_]+:\s*/, '').trim();
+                  rawText = rawText.replace(/^(⚠️\s*)?GAP:\s*/i, '').trim();
                   
-                  let parts = rawText.split('].');
-                  let title = parts[0].replace(/\]$/, '').trim(); // Fallback if no period
-                  let context = parts.length > 1 ? parts.slice(1).join('].').trim() : '';
+                  let title = rawText;
+                  let context = '';
+
+                  // Intelligently split the gap into a bold Title and an italic Context
+                  let firstPeriod = rawText.indexOf('.');
+                  if (rawText.includes('].')) {
+                     let parts = rawText.split('].');
+                     title = parts[0].replace(/\]$/, '').trim();
+                     context = parts.slice(1).join('].').trim();
+                  } else if (firstPeriod > -1 && firstPeriod < 80) {
+                     title = rawText.substring(0, firstPeriod).trim();
+                     context = rawText.substring(firstPeriod + 1).trim();
+                  } else if (rawText.length > 70) {
+                     // If it's a long sentence with commas but no periods, split at first comma for title
+                     let firstComma = rawText.indexOf(',');
+                     if (firstComma > -1 && firstComma < 50) {
+                         title = rawText.substring(0, firstComma).trim();
+                         context = rawText.substring(firstComma + 1).trim();
+                     } else {
+                         title = rawText.substring(0, 50).trim() + "...";
+                         context = rawText;
+                     }
+                  }
+
+                  // Strip wrapping brackets from title if any
+                  title = title.replace(/^\[|\]$/g, '');
 
                   return (
                     <div key={i} style={{ padding: '14px 16px', background: 'rgba(0,0,0,0.25)', borderLeft: '3px solid var(--error)', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: context ? 6 : 0 }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: context ? 6 : 0, lineHeight: 1.4 }}>
                         {title}
                       </div>
                       {context && (
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                          <em>"...{context}..."</em>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                          <em>{context.startsWith('...') || title.endsWith('...') ? context : `...${context}`}</em>
                         </div>
                       )}
                     </div>

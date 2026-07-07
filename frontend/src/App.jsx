@@ -98,7 +98,7 @@ export default function App() {
           />
           <Route
             path="/review"
-            element={<Review sections={sections} companyId={companyId} />}
+            element={<Review sections={sections} setSections={setSections} companyId={companyId} />}
           />
           <Route path="/documents" element={<Documents />} />
         </Routes>

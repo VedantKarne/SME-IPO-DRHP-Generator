@@ -16,8 +16,8 @@ function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--accent)' }) 
   const filled = circ * (1 - anim / 100);
 
   return (
-    <div className="readiness-ring-wrap" style={{ width: size, height: size }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+    <div className="readiness-ring-wrap" style={{ width: size, height: size, margin: '0 auto' }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
         <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
         <circle
           cx={size/2} cy={size/2} r={r}
@@ -31,8 +31,8 @@ function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--accent)' }) 
         />
       </svg>
       <div className="readiness-ring-label">
-        <span className="readiness-pct">{score}%</span>
-        <span className="readiness-pct-label">Ready</span>
+        <span className="readiness-pct" style={{ fontSize: size * 0.28, lineHeight: 1 }}>{score}%</span>
+        <span className="readiness-pct-label" style={{ fontSize: size * 0.14, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.08em', marginTop: 2 }}>READY</span>
       </div>
     </div>
   );
@@ -113,8 +113,8 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
         {SUBSCORES.map(({ key, label, icon, color }) => (
           <div key={key} className="card card-sm" style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{icon}</div>
-            <ScoreRing score={r[key] || 0} size={80} stroke={7} color={color} />
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 8 }}>{label}</div>
+            <ScoreRing score={r[key] || 0} size={100} stroke={8} color={color} />
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: 12 }}>{label}</div>
           </div>
         ))}
       </div>

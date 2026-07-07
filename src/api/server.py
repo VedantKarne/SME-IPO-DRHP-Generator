@@ -239,19 +239,54 @@ def get_readiness(company_id: str):
         db.close()
 
 # ─────────────────────────────────────────────
-# DEMO ENDPOINT
+# DEMO ENDPOINTS
 # ─────────────────────────────────────────────
 @app.get("/api/demo/company")
 def get_demo_company():
     db = SessionLocal()
     try:
-        company = db.query(Company).filter(Company.name == "TechServ Solutions Ltd").first()
-        if company:
-            return {"company_id": str(company.id), "company_name": company.name}
         company = db.query(Company).first()
         if company:
             return {"company_id": str(company.id), "company_name": company.name}
         return {"company_id": None, "company_name": None}
+    finally:
+        db.close()
+
+class DemoInitRequest(BaseModel):
+    name: str
+    industry: str
+    years: str
+    revenue: str
+    litigations: str
+
+@app.post("/api/demo/init")
+def init_demo_company(request: DemoInitRequest):
+    """
+    Takes the answers from the Nirmaan Landing interview and dynamically
+    updates the seeded demo company so the workspace reflects the user's actual inputs.
+    """
+    db = SessionLocal()
+    try:
+        company = db.query(Company).first()
+        if not company:
+            return {"status": "error"}
+
+        company.name = request.name
+        
+        # Parse litigation answer roughly
+        ans = request.litigations.lower()
+        has_lit = any(word in ans for word in ["yes", "yeah", "have", "pending", "yup", "true", "one", "two"])
+        if "no" in ans or "not" in ans:
+            has_lit = False
+
+        # Update KMP litigation flag so the Eligibility Engine reacts dynamically
+        director = db.query(DirectorKMP).filter(DirectorKMP.company_id == company.id).first()
+        if director:
+            director.pending_litigation = has_lit
+            director.litigation_details = "Pending civil case" if has_lit else ""
+            
+        db.commit()
+        return {"status": "success"}
     finally:
         db.close()
 
