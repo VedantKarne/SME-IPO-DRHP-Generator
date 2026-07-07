@@ -25,6 +25,11 @@ class AgentState(TypedDict):
     draft_text: str
     human_feedback: str
     status: str
+    
+    # Validation / Scoring
+    completeness_score: float
+    revisions: int
+    gaps: List[Dict[str, Any]]
 
 # Nodes
 def regulatory_retrieval_node(state: AgentState) -> dict:
@@ -88,6 +93,10 @@ COMPANY FACTS:
 
     if state.get("human_feedback"):
         user_prompt += f"\n\nHUMAN REVISION REQUEST:\n{state['human_feedback']}\nPlease rewrite the draft incorporating this feedback."
+        
+    if state.get("revisions", 0) > 0 and state.get("gaps"):
+        gap_descriptions = [g["description"] for g in state["gaps"]]
+        user_prompt += f"\n\nSELF-CORRECTION GAP LIST:\nThe previous draft was missing the following information. Please attempt to resolve these gaps if the data is available in the company facts, otherwise explicitly output the ⚠️ GAP markers again:\n- " + "\n- ".join(gap_descriptions)
 
     messages = [
         {"role": "system", "content": DRAFT_SECTION_SYSTEM_PROMPT},
@@ -96,7 +105,36 @@ COMPANY FACTS:
     
     draft = client.generate(messages, max_tokens=2500)
     
-    return {"draft_text": draft}
+    # Increment revisions count
+    current_revisions = state.get("revisions", 0)
+    
+    return {"draft_text": draft, "revisions": current_revisions + 1}
+
+from src.agent.gap_detector import flag_gaps
+
+def gap_validator_node(state: AgentState) -> dict:
+    logger.info("Validating draft for GAP markers and calculating completeness score...")
+    draft = state.get("draft_text", "")
+    section_name = state.get("current_section", "Unknown")
+    
+    score, gaps = flag_gaps(section_name, draft)
+    
+    gap_dicts = [{"clause_id": g.clause_id, "description": g.description, "is_critical": g.is_critical} for g in gaps]
+    logger.info(f"Completeness Score: {score}. Found {len(gaps)} gaps.")
+    
+    return {"completeness_score": score, "gaps": gap_dicts}
+
+def self_correction_router(state: AgentState) -> str:
+    score = state.get("completeness_score", 1.0)
+    revisions = state.get("revisions", 0)
+    
+    # If score is below 0.75 and we haven't tried rewriting twice already, route back to drafting
+    if score < 0.75 and revisions < 2:
+        logger.info(f"Score {score} < 0.75. Routing back to draft_generation (Revision {revisions}).")
+        return "draft_generation"
+    
+    logger.info(f"Score {score} acceptable or max revisions reached. Routing to hitl_review.")
+    return "hitl_review"
 
 def hitl_review_interrupt(state: AgentState):
     logger.info("Interrupting graph for Human-in-the-Loop Review...")
@@ -135,6 +173,7 @@ def build_orchestrator() -> StateGraph:
     builder.add_node("data_fetch", data_fetch_node)
     builder.add_node("consistency_validator", consistency_validator_node)
     builder.add_node("draft_generation", draft_generation_node)
+    builder.add_node("gap_validator", gap_validator_node)
     builder.add_node("hitl_review", hitl_review_interrupt)
     
     # Control flow
@@ -149,8 +188,18 @@ def build_orchestrator() -> StateGraph:
     # 3. Draft
     builder.add_edge("consistency_validator", "draft_generation")
     
-    # 4. Review
-    builder.add_edge("draft_generation", "hitl_review")
+    # 4. Gap Validation
+    builder.add_edge("draft_generation", "gap_validator")
+    
+    # 5. Conditional Self-Correction Routing
+    builder.add_conditional_edges(
+        "gap_validator",
+        self_correction_router,
+        {
+            "draft_generation": "draft_generation",
+            "hitl_review": "hitl_review"
+        }
+    )
     
     memory = MemorySaver()
     return builder.compile(checkpointer=memory)

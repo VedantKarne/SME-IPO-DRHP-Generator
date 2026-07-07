@@ -9,6 +9,33 @@ The purpose of Phase 5 is to process raw, massive PDF precedents and extract har
 
 ---
 
+## 2. Mermaid Mindmap: Phase 5 Workflow
+```mermaid
+flowchart TD
+    classDef input fill:#e2e8f0,stroke:#475569,stroke-width:2px,color:#000000;
+    classDef llm fill:#bae6fd,stroke:#0284c7,stroke-width:2px,color:#000000;
+    classDef schema fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#000000;
+    classDef data fill:#bbf7d0,stroke:#16a34a,stroke-width:2px,color:#000000;
+
+    A["Raw DRHP PDF Document"]:::input -->|Upload via API| B{"Gemini 2.5 Flash"}:::llm
+    
+    C["Pydantic Models"]:::schema -->|ExtractionResult Schema| B
+    
+    B --> D{"Rate Limit Check /<br/>Tenacity Retry"}:::logic
+    D -->|ResourceExhausted| E["Wait & Exponential Backoff"]:::logic
+    E --> B
+    
+    D -->|Success| F["Structured JSON Output"]:::output
+    
+    F --> G["Financial Statements"]:::data
+    F --> H["Director & KMP Info"]:::data
+    F --> I["Offer Details"]:::data
+    
+    G & H & I --> J[("SQLite app_state.db")]:::db
+```
+
+---
+
 ## 🌟 Key Features Added to the Current System
 
 ### 1. Database ORM Abstraction (`db_session.py`)
