@@ -1,87 +1,126 @@
 import os
-import logging
-from typing import List, Dict, Any
-try:
-    from docx import Document
-    HAS_DOCX = True
-except ImportError:
-    HAS_DOCX = False
+import uuid
+from sqlalchemy.orm import Session
+from src.extraction.schema import GeneratedSection
+from docx import Document
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 
-logger = logging.getLogger(__name__)
+# Hardcoded ordering map based on SEBI DRHP TOC
+SEBI_TOC_ORDER = {
+    "Cover Page & General Information": 1,
+    "Risk Factors": 2,
+    "Introduction": 3,
+    "General Information": 4,
+    "Capital Structure": 5,
+    "Objects of the Offer": 6,
+    "Basis of Issue Price": 7,
+    "Statement of Tax Benefits": 8,
+    "About the Company": 9,
+    "Industry Overview": 10,
+    "Our Business": 11,
+    "Key Industry Regulations": 12,
+    "History and Corporate Structure": 13,
+    "Management & Board of Directors": 14,
+    "Key Managerial Personnel (KMP)": 15,
+    "Our Promoters & Promoter Group": 16,
+    "Related Party Transactions": 17,
+    "Dividend Policy": 18,
+    "Financial Statements (3 Years)": 19,
+    "Management Discussion & Analysis": 20,
+    "Corporate Governance": 21,
+    "Terms of the Issue": 22,
+    "Other Regulatory & Statutory Disclosures": 23,
+    "Material Contracts & Documents": 24,
+    "Declaration & Undertakings": 25
+}
 
-SEBI_TOC_ORDER = [
-    "Cover Page & General Information",
-    "Risk Factors",
-    "Introduction / Summary of Business",
-    "General Information",
-    "Capital Structure",
-    "Objects of the Offer",
-    "Basis of Issue Price",
-    "Statement of Tax Benefits",
-    "About the Company / Business Overview",
-    "Industry Overview",
-    "Our Business",
-    "Key Industry Regulations",
-    "History and Corporate Structure",
-    "Management & Board of Directors",
-    "Key Managerial Personnel",
-    "Our Promoters & Promoter Group",
-    "Related Party Transactions",
-    "Dividend Policy",
-    "Financial Statements",
-    "Management Discussion & Analysis",
-    "Corporate Governance",
-    "Terms of the Issue",
-    "Other Regulatory & Statutory Disclosures",
-    "Material Contracts & Documents",
-    "Declaration & Undertakings"
-]
+def sort_by_sebi_toc(sections: list[GeneratedSection]) -> list[GeneratedSection]:
+    """Sorts sections by their canonical SEBI position, defaulting to 99 if unknown."""
+    return sorted(sections, key=lambda s: SEBI_TOC_ORDER.get(s.section_name, 99))
 
-def document_assembler_node(finalized_sections: List[Dict[str, str]], company_name: str, output_dir: str = "Output") -> str:
-    """
-    Sorts finalized sections by SEBI TOC order and exports to a DOCX file.
-    """
-    logger.info(f"Assembling DRHP document for {company_name}...")
-    
-    # Sort sections based on SEBI_TOC_ORDER
-    def get_sort_index(section_dict: dict) -> int:
-        name = section_dict.get("section_name", "")
-        for i, toc_name in enumerate(SEBI_TOC_ORDER):
-            if toc_name.lower() in name.lower():
-                return i
-        return 99 # Unknown sections go to the end
-        
-    sorted_sections = sorted(finalized_sections, key=get_sort_index)
-    
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        
-    output_path = os.path.join(output_dir, f"DRHP_{company_name.replace(' ', '_')}.docx")
-    
-    if not HAS_DOCX:
-        logger.error("python-docx is not installed. Exporting to plain text instead.")
-        txt_path = output_path.replace(".docx", ".txt")
-        with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(f"DRAFT RED HERRING PROSPECTUS - {company_name.upper()}\n")
-            f.write("="*60 + "\n\n")
-            for sec in sorted_sections:
-                f.write(f"### {sec.get('section_name', 'Unnamed Section')} ###\n\n")
-                f.write(sec.get("draft_text", "") + "\n\n")
-        return txt_path
-
-    # Build DOCX
+def build_docx(sections: list[GeneratedSection], output_path: str):
+    """Builds a .docx file containing the finalized sections and citations."""
     doc = Document()
-    doc.add_heading(f'Draft Red Herring Prospectus', 0)
-    doc.add_heading(company_name.upper(), 1)
+    doc.add_heading("SME IPO Draft Red Herring Prospectus (DRHP)", 0)
     
-    doc.add_page_break()
-    
-    for sec in sorted_sections:
-        doc.add_heading(sec.get("section_name", "Unnamed Section"), level=2)
-        doc.add_paragraph(sec.get("draft_text", ""))
+    for sec in sections:
+        doc.add_heading(sec.section_name, level=1)
+        doc.add_paragraph(sec.draft_text)
+        
+        # Add citations as footnotes/end of section
+        if sec.supporting_clause_ids:
+            citation_p = doc.add_paragraph()
+            citation_p.add_run("Regulatory Citations: ").bold = True
+            citation_p.add_run(", ".join(sec.supporting_clause_ids))
+            
         doc.add_page_break()
         
     doc.save(output_path)
-    logger.info(f"Document successfully exported to: {output_path}")
+
+def build_pdf(sections: list[GeneratedSection], output_path: str):
+    """Builds a simpler PDF using ReportLab for the hackathon demo."""
+    doc = SimpleDocTemplate(output_path, pagesize=letter)
+    styles = getSampleStyleSheet()
+    Story = []
     
-    return output_path
+    Story.append(Paragraph("SME IPO Draft Red Herring Prospectus (DRHP)", styles['Title']))
+    Story.append(Spacer(1, 12))
+    
+    for sec in sections:
+        Story.append(Paragraph(sec.section_name, styles['Heading1']))
+        Story.append(Spacer(1, 12))
+        
+        # We need to replace newlines with <br/> for ReportLab Paragraphs
+        safe_text = sec.draft_text.replace('\n', '<br/>')
+        Story.append(Paragraph(safe_text, styles['Normal']))
+        Story.append(Spacer(1, 12))
+        
+        if sec.supporting_clause_ids:
+            citations = "<b>Regulatory Citations:</b> " + ", ".join(sec.supporting_clause_ids)
+            Story.append(Paragraph(citations, styles['Normal']))
+            
+        Story.append(Spacer(1, 24))
+        
+    doc.build(Story)
+
+def document_assembler_node(company_id: str, db: Session) -> dict:
+    """
+    1. Fetch all finalized sections from generated_section table.
+    2. Sort by SEBI DRHP Table of Contents order.
+    3. Export to: (a) python-docx DOCX, (b) reportlab PDF.
+    4. Return local file paths.
+    """
+    try:
+        comp_uuid = uuid.UUID(str(company_id))
+    except ValueError:
+        raise ValueError(f"Invalid company UUID: {company_id}")
+        
+    # In a real app we'd filter by status IN ('promoter_reviewed', 'intermediary_certified')
+    # For Phase 10 demo testing, we'll just fetch all sections for the company.
+    sections = db.query(GeneratedSection).filter(
+        GeneratedSection.company_id == comp_uuid
+    ).all()
+    
+    if not sections:
+        return {"error": "No sections found for assembly"}
+        
+    ordered_sections = sort_by_sebi_toc(sections)
+    
+    # Create exports directory if it doesn't exist
+    export_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "exports")
+    os.makedirs(export_dir, exist_ok=True)
+    
+    docx_path = os.path.join(export_dir, f"DRHP_{company_id}.docx")
+    pdf_path = os.path.join(export_dir, f"DRHP_{company_id}.pdf")
+    
+    build_docx(ordered_sections, docx_path)
+    build_pdf(ordered_sections, pdf_path)
+    
+    return {
+        "status": "success",
+        "docx_path": docx_path,
+        "pdf_path": pdf_path,
+        "sections_included": len(ordered_sections)
+    }

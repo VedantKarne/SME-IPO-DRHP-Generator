@@ -1,7 +1,9 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.extraction.schema import Base
+from src.extraction.schema import Base, GeneratedSection
 from src.api import wizard
 
 # Setup DB Engine (using SQLite for local testing before PostgreSQL)
@@ -14,11 +16,55 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SME IPO Offer Document Generator API")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allow Vite frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Dependency override for router
 def get_db():
     db = SessionLocal()
     try:
         yield db
+    finally:
+        db.close()
+
+@app.get("/api/sections/{company_id}")
+def get_company_sections(company_id: str):
+    import uuid
+    db = SessionLocal()
+    try:
+        sec_uuid = uuid.UUID(company_id)
+        sections = db.query(GeneratedSection).filter(GeneratedSection.company_id == sec_uuid).all()
+        # Return standard dict for frontend
+        return [{
+            "id": str(s.id),
+            "name": s.section_name,
+            "status": s.status,
+            "locked": s.is_locked,
+            "score": s.completeness_score or 0.85,
+            "draft_text": s.draft_text
+        } for s in sections]
+    finally:
+        db.close()
+
+
+@app.get("/api/demo/company")
+def get_demo_company():
+    db = SessionLocal()
+    from src.extraction.schema import Company
+    try:
+        company = db.query(Company).filter(Company.name == "TechServ Solutions Ltd").first()
+        if company:
+            return {"company_id": str(company.id)}
+        # Fallback to the first company in DB if TechServ isn't there
+        company = db.query(Company).first()
+        if company:
+            return {"company_id": str(company.id)}
+        return {"company_id": None}
     finally:
         db.close()
 
