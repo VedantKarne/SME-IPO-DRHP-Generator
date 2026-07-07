@@ -37,32 +37,18 @@
 ## 4. Phase Mindmap (Mermaid)
 
 ```mermaid
-mindmap
-  root((Phase 15<br/>Interactive Demo<br/>Polish))
-    Backend Extraction
-      Smart Regex Parsing
-        Target Bracket Placeholders
-        Stop at commas/punctuation
-        Prevent Paragraph Swallowing
-      Demo Database Reset
-        Regenerate clean mock data
-    Frontend UI Refinements
-      Workspace
-        Dynamic Gap Titling
-        Avoid 'Missing Information'
-      Landing Page
-        Center Alignment
-        Sizing & Readability Fixes
-    Interactive Workflows
-      Document Intelligence
-        Hidden File Inputs
-        Simulated Upload Delays
-        Dynamic Progress Bars
-      Banker Review
-        Inline Commenting UI
-        Returned to Issuer State
-        No Page Reloads
-      Version History
-        Clickable Time Travel
-        Simulated Draft Restorations
+graph TD
+    A[Start: Identify UX & Extraction Issues] --> B[Fix Landing Page UI & Alignment]
+    B --> C[Rewrite Backend Gap Extraction Regex]
+    C --> D[Refine Frontend Gap Splitting Logic]
+    D --> E[Reset Demo Database & Reparse Data]
+    E --> F[Wire Up Interactive Document Uploads]
+    F --> G[Build Interactive Version History]
+    G --> H[Implement Banker Review Actions<br/>Comment / Request Changes]
+    H --> I[Add 'Returned to Issuer' Workflow State]
+    I --> J[End: Polish Complete & Scripts Organized]
+
+    classDef default fill:#1e1e2f,stroke:#4f7eff,stroke-width:2px,color:#fff;
+    classDef highlight fill:#4f7eff,stroke:#fff,stroke-width:2px,color:#fff;
+    class I,J highlight;
 ```
