@@ -1,6 +1,10 @@
 import uvicorn
 import uuid
 import os
+import sys
+
+# Add project root to sys.path so 'src' can be resolved
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.api.server import app, SessionLocal, engine
 from src.utils.demo_generator import SyntheticPromoterGenerator
 from src.extraction.schema import GeneratedSection, Company, Base

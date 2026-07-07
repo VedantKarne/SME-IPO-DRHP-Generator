@@ -1,10 +1,17 @@
 import sys
+import os
+
+# Add project root to sys.path so 'src' can be resolved
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.extraction.schema import GeneratedSection
 from src.agent.gap_detector import flag_gaps
 
-engine = create_engine("sqlite:///./test_wizard.db")
+db_path = os.path.join(PROJECT_ROOT, "test_wizard.db")
+engine = create_engine(f"sqlite:///{db_path}")
 SessionLocal = sessionmaker(bind=engine)
 
 def reparse():
