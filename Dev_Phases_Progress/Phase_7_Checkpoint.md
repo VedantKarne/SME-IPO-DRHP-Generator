@@ -13,7 +13,7 @@ flowchart TD
     classDef db fill:#bbf7d0,stroke:#16a34a,stroke-width:2px,color:#000000;
     classDef output fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#000000;
 
-    A["Frontend React UI"]:::api -->|GET /api/eligibility/{company_id}| B["FastAPI Router"]:::api
+    A["Frontend React UI"]:::api -->|GET /api/eligibility/company_id| B["FastAPI Router"]:::api
     B --> C{"EligibilityEngine"}:::logic
     
     C -->|Fetch SQL Data| D[("PostgreSQL / SQLite")]:::db

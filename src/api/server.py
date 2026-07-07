@@ -26,6 +26,16 @@ def get_db():
 app.dependency_overrides[wizard.get_db] = get_db
 app.include_router(wizard.router)
 
+from src.api.chat_edit_router import router as chat_edit_router
+from src.api.locking_router import router as locking_router
+from src.api.impact_router import router as impact_router
+from src.api.copilot_router import router as copilot_router
+
+app.include_router(chat_edit_router)
+app.include_router(locking_router)
+app.include_router(impact_router)
+app.include_router(copilot_router)
+
 @app.get("/")
 def read_root():
     return {"message": "SME IPO Wizard API is running"}
