@@ -21,4 +21,5 @@ corpus_acquisition_guide.md
 master_implementation_plan.md
 models/
 Databases/
-LLM_API_Sandbox/.env
+LLM_API_Sandbox/
+Data_Flow_Diagram.md
