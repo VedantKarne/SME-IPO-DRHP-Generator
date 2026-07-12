@@ -130,6 +130,11 @@ def index_chunks(reg_chunks, prec_chunks, batch_size=32):
     from src.retrieval.raptor import build_raptor_tree
     from src.retrieval.bge_m3_embedder import BGEM3Embedder
     from src.retrieval.vector_store import VectorStore
+    from src.ingestion.runners.accelerated_precedent_embedder import (
+        get_hardware_acceleration, 
+        clear_hardware_cache, 
+        embed_precedent_chunks_accelerated
+    )
 
     logger.info("Initializing Vector Store and Embedder...")
     vector_store = VectorStore()
@@ -165,14 +170,17 @@ def index_chunks(reg_chunks, prec_chunks, batch_size=32):
         logger.warning("No regulatory chunks found to build RAPTOR tree.")
 
     # 2. Embed and Index Regulatory Nodes in Batches
-    logger.info(f"Indexing {len(final_reg_nodes)} regulatory/RAPTOR nodes in batches of {batch_size}...")
-    for i in tqdm(range(0, len(final_reg_nodes), batch_size), desc="Indexing Regulatory Nodes"):
+    device, optimal_batch_size = get_hardware_acceleration()
+    batch_size = optimal_batch_size # Override default with optimal hardware batch size
+    
+    logger.info(f"Indexing {len(final_reg_nodes)} regulatory/RAPTOR nodes on {device.upper()} in batches of {batch_size}...")
+    for i in tqdm(range(0, len(final_reg_nodes), batch_size), desc=f"{device.upper()} Indexing Regulatory Nodes"):
         batch = final_reg_nodes[i:i+batch_size]
         texts = [n["text"] for n in batch]
         ids = [n["id"] for n in batch]
         metadatas = [n["metadata"] for n in batch]
         
-        vectors = embedder.embed_chunks(texts)
+        vectors = embedder.embed_chunks(texts, batch_size=batch_size)
         vector_store.add_chunks(
             collection_name="regulatory_clauses",
             ids=ids,
@@ -184,34 +192,13 @@ def index_chunks(reg_chunks, prec_chunks, batch_size=32):
         
         del vectors
         gc.collect()
+        clear_hardware_cache(device)
 
     # 3. Embed and Index Precedent Chunks in Batches
-    logger.info(f"Indexing {len(prec_chunks)} precedent chunks in batches of {batch_size}...")
-    for i in tqdm(range(0, len(prec_chunks), batch_size), desc="Indexing Precedent Chunks"):
-        batch = prec_chunks[i:i+batch_size]
-        texts = [c.text for c in batch]
-        ids = [c.chunk_id for c in batch]
-        metadatas = [{
-            "doc_type": "precedent",
-            "parent_id": c.parent_id,
-            "company": c.metadata.get("company", "Unknown"),
-            "exchange": c.metadata.get("exchange", "SME"),
-            "year": c.metadata.get("year", "2026"),
-            "section": c.metadata.get("section", "")
-        } for c in batch]
-        
-        vectors = embedder.embed_chunks(texts)
-        vector_store.add_chunks(
-            collection_name="precedent_chunks",
-            ids=ids,
-            documents=texts,
-            metadatas=metadatas,
-            dense_vecs=vectors["dense"],
-            sparse_vecs=vectors["sparse"]
-        )
-        
-        del vectors
-        gc.collect()
+    if prec_chunks:
+        embed_precedent_chunks_accelerated(prec_chunks, vector_store, embedder, batch_size=batch_size)
+    else:
+        logger.warning("No precedent chunks found to index.")
 
     logger.info("Ingestion pipeline completed successfully.")
     

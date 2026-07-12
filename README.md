@@ -149,7 +149,7 @@ Original_Docs/
 
 Then run the ingestion pipeline:
 ```bash
-python -m src.ingestion.runners.master_ingestion_runner
+python -m src.ingestion.runners.main_ingestion_runner
 ```
 
 > This step: (1) parses PDFs via PyMuPDF + Docling, (2) chunks text, (3) builds a RAPTOR summary tree via Groq, (4) embeds with BGE-M3, (5) indexes in ChromaDB. Time: ~5–30 min depending on PDF count.
@@ -400,8 +400,8 @@ SME-IPO-DRHP-Generator/
 │   │   ├── precedent_chunker.py      # DRHP section-aware chunking
 │   │   ├── context_enricher.py       # Heading path injection for regulatory chunks
 │   │   └── runners/
-│   │       ├── master_ingestion_runner.py  # Orchestrates the full ingestion pipeline
-│   │       └── gpu_precedent_embedder.py   # Batch GPU embedder for large precedent sets
+│   │       ├── main_ingestion_runner.py        # Orchestrates the full ingestion pipeline
+│   │       └── accelerated_precedent_embedder.py # Hardware-accelerated batch embedder
 │   └── retrieval/                    # RAG retrieval stack
 │       ├── bge_m3_embedder.py        # BGEM3Embedder — dense + sparse, MPS-accelerated
 │       ├── vector_store.py           # ChromaDB PersistentClient + fallback sparse JSON
