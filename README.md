@@ -28,11 +28,12 @@
 
 | Landing — Nirmaan Interview | IPO Readiness Dashboard |
 |:---:|:---:|
-| ![Landing](images/Image1.png) | ![Dashboard](images/Image2.png) |
+| ![Landing](images/Chatbot_images/Chatbot_1.png) | ![Dashboard](images/Image2.png) |
+| ![Landing](images/Chatbot_images/Chatbot_1.png) | ![Dashboard](images/Dashboard_Image2.png) |
 
 | Document Workspace — 25-Section Editor | Gap Detection & Evidence Mapping |
 |:---:|:---:|
-| ![Workspace](images/Image3.png) | ![Gaps](images/Image4.png) |
+| ![Workspace](images/Workspace_images/Dashboard.png) | ![Gaps](images/Workspace_images/Gap_Detection.png) |
 
 ---
 
