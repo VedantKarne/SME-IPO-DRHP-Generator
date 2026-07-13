@@ -8,14 +8,17 @@ from src.extraction.schema import Base, GeneratedSection, Company, FinancialStat
 from src.api import wizard
 
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────
-# DATABASE SETUP — unified to one SQLite for demo
+# DATABASE SETUP — unified to use the shared app_state.db
 # ─────────────────────────────────────────────
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_wizard.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base.metadata.create_all(bind=engine)
+from src.extraction.db_session import SessionLocal, engine, init_db
+
+# Initialize the tables in the shared database
+init_db()
 
 # ─────────────────────────────────────────────
 # APP + CORS
@@ -76,7 +79,7 @@ def run_agent(request: AgentRunRequest):
     """
     Triggers the full LangGraph pipeline for a given section.
     Runs: RAG retrieval → consistency check → Groq drafting → gap validation → HITL interrupt.
-    Saves the result to the generated_section table.
+    Saves the result (including thread_id) to the generated_section table.
     """
     db = SessionLocal()
     try:
@@ -85,8 +88,13 @@ def run_agent(request: AgentRunRequest):
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
 
-        # Build the initial agent state
         from src.agent.orchestrator import graph, AgentState
+        
+        # Bug 1 Fix: Generate thread_id here and persist it to the DB so the
+        # HITL resume endpoint can retrieve and use it.
+        thread_id = str(uuid.uuid4())
+        config = {"configurable": {"thread_id": thread_id}}
+
         initial_state: AgentState = {
             "company_name": company.name,
             "current_section": request.section_name,
@@ -97,48 +105,46 @@ def run_agent(request: AgentRunRequest):
             "draft_text": "",
             "human_feedback": "",
             "status": "draft",
+            "langgraph_thread_id": thread_id,
             "completeness_score": 0.0,
             "revisions": 0,
             "gaps": []
         }
 
-        # Generate a unique thread ID per run
-        thread_id = str(uuid.uuid4())
-        config = {"configurable": {"thread_id": thread_id}}
-
-        # Run the graph — it will pause at HITL interrupt
-        # We run in "interrupt before hitl_review" mode so the agent completes
-        # drafting + gap validation, then we snapshot the result without blocking.
         try:
-            result = graph.invoke(initial_state, config=config)
-        except Exception as agent_error:
-            # LangGraph raises an interrupt exception — that's normal
-            # We need to snapshot the state at the interrupt point
-            state_snapshot = graph.get_state(config)
-            result = state_snapshot.values
+            graph.invoke(initial_state, config=config)
+        except Exception as agent_exc:
+            # Some LangGraph versions raise GraphInterrupt; others return silently.
+            # We log it but always fall through to read state from checkpointer below.
+            logger.warning(f"graph.invoke raised (may be normal interrupt): {agent_exc}")
+
+        # Always read the accumulated state from the MemorySaver checkpointer.
+        # This is the only reliable source of truth for both:
+        #   (a) Normal completion  — state has final values
+        #   (b) HITL interrupt     — graph.invoke() returns {}, state is in checkpointer
+        state_snapshot = graph.get_state(config)
+        result = state_snapshot.values if state_snapshot and state_snapshot.values else {}
 
         draft_text = result.get("draft_text", "")
         completeness_score = result.get("completeness_score", 0.0)
         gaps = result.get("gaps", [])
 
-        # Check if a section already exists for this company+section
         existing = db.query(GeneratedSection).filter(
             GeneratedSection.company_id == comp_uuid,
             GeneratedSection.section_name == request.section_name
         ).first()
 
         if existing:
-            # Update existing section
             existing.draft_text = draft_text
             existing.completeness_score = completeness_score
             existing.flagged_gaps = gaps
             existing.status = "draft"
             existing.is_locked = False
+            existing.langgraph_thread_id = thread_id  # Bug 1 Fix: always refresh thread_id
             db.commit()
             db.refresh(existing)
             section_id = str(existing.id)
         else:
-            # Create new section
             new_section = GeneratedSection(
                 company_id=comp_uuid,
                 section_name=request.section_name,
@@ -146,7 +152,8 @@ def run_agent(request: AgentRunRequest):
                 completeness_score=completeness_score,
                 flagged_gaps=gaps,
                 status="draft",
-                is_locked=False
+                is_locked=False,
+                langgraph_thread_id=thread_id  # Bug 1 Fix: persist thread_id
             )
             db.add(new_section)
             db.commit()
@@ -159,6 +166,7 @@ def run_agent(request: AgentRunRequest):
             "section_name": request.section_name,
             "completeness_score": completeness_score,
             "gap_count": len(gaps),
+            "langgraph_thread_id": thread_id,  # Bug 1 Fix: expose to frontend
             "draft_preview": draft_text[:300] + "..." if len(draft_text) > 300 else draft_text
         }
 
@@ -168,6 +176,7 @@ def run_agent(request: AgentRunRequest):
         raise HTTPException(status_code=500, detail=f"Agent run failed: {str(e)}")
     finally:
         db.close()
+
 
 # ─────────────────────────────────────────────
 # PRIORITY 1 — GET /api/eligibility/{company_id}
@@ -306,6 +315,95 @@ app.include_router(locking_router)
 app.include_router(impact_router)
 app.include_router(copilot_router)
 
+# ─────────────────────────────────────────────
+# Bug 1 Fix: HITL Resume Endpoints mounted on the MAIN app.
+# Previously these lived in a dead-letter hitl_server.py that ran
+# as a separate process and had no access to the same MemorySaver graph.
+# ─────────────────────────────────────────────
+from langgraph.types import Command as LangGraphCommand
+from pydantic import BaseModel as PydanticBaseModel
+from typing import Optional as OptionalType
+
+class HitlFeedbackRequest(PydanticBaseModel):
+    action: str  # "approve", "revise", "reject"
+    feedback: OptionalType[str] = None
+
+@app.get("/api/hitl/pending/{section_id}")
+def get_hitl_pending(section_id: str):
+    """
+    Returns the HITL interrupt payload for a section that is paused awaiting human review.
+    Uses the langgraph_thread_id stored in the DB to retrieve the correct graph state.
+    """
+    db = SessionLocal()
+    try:
+        from src.agent.orchestrator import graph
+        sec_uuid = uuid.UUID(section_id)
+        section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+        if not section:
+            raise HTTPException(status_code=404, detail="Section not found")
+        if not section.langgraph_thread_id:
+            raise HTTPException(status_code=404, detail="No active HITL thread for this section. Run the agent first.")
+
+        config = {"configurable": {"thread_id": section.langgraph_thread_id}}
+        state = graph.get_state(config)
+
+        if not state.next:
+            return {"status": "completed_or_not_paused"}
+
+        pending_tasks = state.tasks
+        if not pending_tasks or not pending_tasks[0].interrupts:
+            return {"status": "no_interrupts_found"}
+
+        payload = pending_tasks[0].interrupts[0].value
+        return {"status": "pending_review", "payload": payload}
+    finally:
+        db.close()
+
+@app.post("/api/hitl/submit/{section_id}")
+def submit_hitl_feedback(section_id: str, req: HitlFeedbackRequest):
+    """
+    Resumes a paused LangGraph HITL interrupt with the human's decision.
+    The thread_id is looked up from the DB, so no in-memory state is required.
+    """
+    db = SessionLocal()
+    try:
+        from src.agent.orchestrator import graph
+        sec_uuid = uuid.UUID(section_id)
+        section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+        if not section:
+            raise HTTPException(status_code=404, detail="Section not found")
+        if not section.langgraph_thread_id:
+            raise HTTPException(status_code=404, detail="No active HITL thread for this section.")
+
+        config = {"configurable": {"thread_id": section.langgraph_thread_id}}
+        resume_payload = {"action": req.action, "feedback": req.feedback}
+
+        # Stream the resumed graph until it completes or pauses again
+        for event in graph.stream(LangGraphCommand(resume=resume_payload), config=config):
+            pass
+
+        new_state = graph.get_state(config)
+        final_status = new_state.values.get("status", "unknown")
+
+        # Sync DB status with graph outcome
+        if req.action == "approve":
+            section.status = "promoter_reviewed"
+        elif req.action == "reject":
+            section.status = "rejected"
+        db.commit()
+
+        if not new_state.next:
+            return {"status": "completed", "section_status": final_status}
+        else:
+            return {"status": "paused_again", "next_nodes": new_state.next}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"HITL resume failed: {str(e)}")
+    finally:
+        db.close()
+
 @app.get("/")
 def read_root():
     return {"message": "SME IPO Wizard API is running"}
+

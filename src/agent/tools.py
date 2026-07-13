@@ -69,7 +69,8 @@ def rag_search(
 
 def get_company_data(company_name: str) -> str:
     """
-    Fetches structured company facts, financials, and director details from the database.
+    Fetches structured company facts, financials, director details, and offer
+    details from the database. All fields the LLM needs to draft any DRHP section.
     """
     db = SessionLocal()
     try:
@@ -80,12 +81,17 @@ def get_company_data(company_name: str) -> str:
         financials = db.query(FinancialStatement).filter(FinancialStatement.company_id == company.id).all()
         directors = db.query(DirectorKMP).filter(DirectorKMP.company_id == company.id).all()
         
+        # Bug 6 Fix: Also fetch OfferDetails — previously absent, causing all offer-related
+        # fields (share count, price, issue size) to always surface as ⚠️ GAP markers.
+        from src.extraction.schema import OfferDetails
+        offer = db.query(OfferDetails).filter(OfferDetails.company_id == company.id).first()
+        
         output = [f"Company Name: {company.name}", f"CIN: {company.cin}", f"Incorporation: {company.incorporation_date}"]
         
         if financials:
             output.append("\nFINANCIALS (Lakhs):")
             for f in financials:
-                output.append(f"FY{f.fiscal_year}: Rev={f.revenue_lakhs}, EBITDA={f.ebitda_lakhs}, PAT={f.pat_lakhs}, NetWorth={f.net_worth_lakhs}")
+                output.append(f"FY{f.fiscal_year}: Rev={f.revenue_lakhs}, EBITDA={f.ebitda_lakhs}, PAT={f.pat_lakhs}, NetWorth={f.net_worth_lakhs}, PaidUpCapital={f.paid_up_capital_lakhs}")
                 
         if directors:
             output.append("\nDIRECTORS & KMP:")
@@ -94,7 +100,18 @@ def get_company_data(company_name: str) -> str:
                 output.append(f"- {d.name} ({d.designation}) | DIN: {d.din} | Pending Litigation: {litigation}")
                 if d.pending_litigation and d.litigation_details:
                     output.append(f"  Litigation Details: {d.litigation_details}")
+
+        if offer:
+            output.append("\nOFFER DETAILS:")
+            output.append(f"Total Shares Offered: {offer.total_shares_offered}")
+            output.append(f"Price Per Share (Rs): {offer.price_per_share}")
+            output.append(f"Total Issue Size (Lakhs): {offer.total_issue_size_lakhs}")
+            if offer.objects_of_offer:
+                output.append(f"Objects of Offer: {offer.objects_of_offer}")
+        else:
+            output.append("\nOFFER DETAILS: Not yet configured.")
                     
         return "\n".join(output)
     finally:
         db.close()
+

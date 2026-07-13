@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -45,3 +45,15 @@ class RateLimitAwareGroqClient:
         elapsed = time.time() - start_time
         logger.info(f"Draft generation completed in {elapsed:.2f} seconds.")
         return result
+
+# Bug 3 Fix: Module-level singleton — instantiated once at import time,
+# shared across all LangGraph node calls and self-correction loops.
+_groq_client_instance: Optional[RateLimitAwareGroqClient] = None
+
+def get_groq_client() -> RateLimitAwareGroqClient:
+    """Returns the shared singleton Groq client, initializing it on first call."""
+    global _groq_client_instance
+    if _groq_client_instance is None:
+        _groq_client_instance = RateLimitAwareGroqClient()
+    return _groq_client_instance
+

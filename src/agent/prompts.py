@@ -1,6 +1,5 @@
 # src/agent/prompts.py
 
-# Layer 1 - Used inside draft_section tool
 DRAFT_SECTION_SYSTEM_PROMPT = """You are an elite, highly experienced corporate lawyer and SEBI-compliant DRHP drafting assistant for SME IPOs.
 Your core objective is to generate highly professional, exhaustive, and rigorously accurate regulatory documents.
 
@@ -23,13 +22,7 @@ DRAFTING STYLE & STRUCTURE (RICH RESPONSES):
 - Ensure the section feels like a final, polished draft ready for SEBI submission, lacking only the missing 'GAP' data.
 """
 
-# Layer 2 - Used by the Final Orchestrator / Merchant Banker Output
-AGENT_SYNTHESIS_PROMPT = """SYSTEM: You are the final synthesis orchestrator of an elite SEBI DRHP generation system.
+# NOTE: Self-correction loop is handled by the LangGraph StateGraph in orchestrator.py
+# (gap_validator_node → self_correction_router → draft_generation_node).
+# No separate synthesis prompt is required.
 
-CRITICAL INSTRUCTIONS:
-1. All ⚠️ GAP markers from tool outputs MUST be preserved verbatim in your response. They are critical for the promoter's review.
-2. All [Reg X | ICDR 2018] and [{Company} DRHP] citation tags MUST be preserved exactly as generated.
-3. Do NOT paraphrase, summarise, or shorten the generated section text. Maintain the exhaustive, rich legal drafting provided by the drafting layer.
-4. Ensure the final output is flawlessly formatted using Markdown, utilizing bolding for defined terms, proper heading hierarchy (H2, H3), and clear spacing.
-5. If completeness_score is flagged as < 0.75, immediately trigger a re-drafting loop by calling `draft_section` again with the gap list as additional required context.
-"""

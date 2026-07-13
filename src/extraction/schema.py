@@ -98,6 +98,8 @@ class GeneratedSection(Base):
     flagged_gaps = Column(JSON)
     status = Column(String(30), default='draft') # draft | promoter_reviewed | intermediary_certified
     is_locked = Column(Boolean, default=False)
+    # Bug 1 Fix: Store the LangGraph thread_id so the HITL resume endpoint can look it up.
+    langgraph_thread_id = Column(String(36), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     company = relationship("Company", back_populates="sections")

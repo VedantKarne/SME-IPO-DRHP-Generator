@@ -15,19 +15,30 @@ def flag_gaps(section_name: str, draft_text: str) -> Tuple[float, List[Gap]]:
     """
     gaps = []
     
-    # We look for "⚠️ GAP: [description]" in the text
-    # It might also just say "GAP: [description]" depending on LLM output
-    # 1. Match explicit GAP markers (stopping at punctuation to avoid swallowing text)
+    # Pattern 1: Explicit ⚠️ GAP: markers — these are the primary, authoritative gap signals
     pattern1 = re.compile(r"(?:⚠️\s*)?GAP:\s*\[?([^,.\n⚠️\]]+)\]?", re.IGNORECASE)
     
-    # 2. Match [Bracketed Placeholders] like [Company Name], ignoring citations like [Reg 1 | ICDR]
-    pattern2 = re.compile(r"\[([^|\]\n]+)\]")
+    # Bug 4 Fix: Pattern 2 now uses a negative lookahead to EXCLUDE known citation formats.
+    # Valid citations contain a pipe '|' character: [Reg 14 | ICDR 2018] or [Company DRHP | Section | Year]
+    # We also exclude short bracket content that is clearly a cross-reference (e.g., [See Section 3]).
+    # Only match brackets that look like unfilled placeholders: [Insert Company Name], [Date Here], etc.
+    CITATION_KEYWORDS = {"icdr", "drhp", "reg", "regulation", "section", "schedule", "see"}
+    pattern2 = re.compile(r"\[([^|\]\n]{4,60})\]")  # 4-60 chars, no pipe = not a citation
     
-    matches = pattern1.findall(draft_text)
-    bracket_matches = pattern2.findall(draft_text)
+    explicit_gaps = pattern1.findall(draft_text)
+    bracket_candidates = pattern2.findall(draft_text)
     
-    # Combine and deduplicate
-    all_matches = list(set(matches + bracket_matches))
+    # Filter out bracket matches that are citations or cross-references by keyword
+    filtered_bracket_gaps = []
+    for match in bracket_candidates:
+        lower_match = match.strip().lower()
+        # Skip if it starts with or contains any known citation keyword
+        if any(lower_match.startswith(kw) or f" {kw}" in lower_match for kw in CITATION_KEYWORDS):
+            continue
+        filtered_bracket_gaps.append(match)
+    
+    # Combine and deduplicate — explicit GAP markers take priority
+    all_matches = list(set(explicit_gaps + filtered_bracket_gaps))
     
     for match in all_matches:
         description = match.strip()
