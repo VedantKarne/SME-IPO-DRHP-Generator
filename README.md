@@ -38,7 +38,7 @@
 
 ## 🌟 What Makes This a Production-Grade Platform
 
-Nirmaan AI is not a "GenAI wrapper." It is a precision-engineered, multi-layer regulatory AI system that solves the fundamental challenges that break standard LLM pipelines in the legal and compliance domain:
+It is a precision-engineered, multi-layer regulatory AI system that solves the fundamental challenges that break standard LLM pipelines in the legal and compliance domain:
 
 - ⚖️ **Dual-Corpus Hybrid RAG with RAPTOR**: Regulatory clauses (SEBI ICDR 2018) and real precedent DRHP filings are indexed in separate ChromaDB collections. A RAPTOR-lite summary tree (Leaf → Category → Theme → Root) enables hierarchical understanding — the system finds both exact regulatory clauses AND high-level thematic context in one retrieval pass.
 
