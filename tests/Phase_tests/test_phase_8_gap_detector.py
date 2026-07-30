@@ -18,8 +18,8 @@ def test_flag_gaps_parsing():
     # 2 gaps found -> 1.0 - (0.1 * 2) = 0.8
     assert len(gaps) == 2
     assert score == 0.8
-    assert gaps[0].description == "The company_facts is missing the post-issue paid up capital."
-    assert gaps[1].description == "Missing auditor certification for FY24."
+    assert gaps[0].description == "The company_facts is missing the post-issue paid up capital"
+    assert gaps[1].description == "Missing auditor certification for FY24"
     assert gaps[0].clause_id == "ICDR_GAP_CAPITAL_STRUCTURE"
 
 def test_explain_gap_to_promoter():

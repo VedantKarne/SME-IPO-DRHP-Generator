@@ -4,7 +4,7 @@ import operator
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt, Command
 
-from src.agent.tools import rag_search, get_company_data
+from src.agent.tools import rag_search, get_company_data, get_client_document_context
 from src.agent.prompts import DRAFT_SECTION_SYSTEM_PROMPT
 from src.agent.groq_client import get_groq_client  # Bug 3 Fix: use singleton getter
 
@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class AgentState(TypedDict):
     company_name: str
+    company_id: str          # UUID string — used to filter client_documents in Vector Store
     current_section: str
     
     # Contexts — use Annotated[str, operator.add] so parallel node updates
@@ -58,9 +59,33 @@ def precedent_retrieval_node(state: AgentState) -> dict:
     return {"precedent_context": context}
 
 def data_fetch_node(state: AgentState) -> dict:
-    logger.info(f"Fetching structured company facts for {state['company_name']}...")
-    facts = get_company_data(state["company_name"])
-    return {"company_facts": facts}
+    logger.info(f"Fetching structured company facts and client document context for {state['company_name']}...")
+
+    # 1. Structured DB facts (financials, directors, offer details)
+    structured_facts = get_company_data(state["company_name"])
+
+    # 2. Narrative context from uploaded client documents (Vector Store)
+    company_id = state.get("company_id", "")
+    section_name = state.get("current_section", "")
+    narrative_context = ""
+    if company_id:
+        narrative_context = get_client_document_context(
+            company_id=company_id,
+            section_name=section_name,
+            k=5
+        )
+
+    # Merge both into company_facts for the drafting prompt
+    if narrative_context:
+        combined = (
+            f"{structured_facts}\n\n"
+            f"UPLOADED DOCUMENT EXCERPTS (relevant to '{section_name}'):\n"
+            f"{narrative_context}"
+        )
+    else:
+        combined = structured_facts
+
+    return {"company_facts": combined}
 
 # Bug 2 Fix: Explicit join/aggregator node that LangGraph waits for only after
 # ALL three upstream parallel nodes have delivered their results.

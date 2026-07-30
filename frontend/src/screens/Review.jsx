@@ -94,7 +94,7 @@ export default function Review({ sections, setSections, companyId }) {
                 ↩ Request Changes
               </button>
               <button className="btn btn-success btn-sm" onClick={async () => {
-                const res = await fetch(`http://localhost:8000/api/sections/${s.id}/approve`, { method: 'POST' });
+                const res = await fetch(`http://127.0.0.1:8000/api/sections/${s.id}/approve`, { method: 'POST' });
                 if (res.ok) {
                     setSections(prev => prev.map(sec => sec.id === s.id ? { ...sec, locked: true } : sec));
                 }

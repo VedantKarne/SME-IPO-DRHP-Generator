@@ -23,6 +23,23 @@ class Company(Base):
     offers = relationship("OfferDetails", back_populates="company", cascade="all, delete-orphan")
     sections = relationship("GeneratedSection", back_populates="company", cascade="all, delete-orphan")
     readiness_scores = relationship("ReadinessScore", back_populates="company", cascade="all, delete-orphan")
+    uploaded_documents = relationship("UploadedDocument", back_populates="company", cascade="all, delete-orphan")
+    financial_tables = relationship("FinancialTable", back_populates="company", cascade="all, delete-orphan")
+    users = relationship("CompanyUser", back_populates="company", cascade="all, delete-orphan")
+
+class CompanyUser(Base):
+    __tablename__ = 'company_user'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(30), default='promoter')  # 'promoter' | 'merchant_banker' | 'admin'
+    created_at = Column(DateTime, server_default=func.now())
+    last_login = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    
+    company = relationship("Company", back_populates="users")
 
 
 class ReadinessScore(Base):
@@ -37,6 +54,7 @@ class ReadinessScore(Base):
     legal_score = Column(Integer)
     risk_score = Column(Integer)
     next_action = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     company = relationship("Company", back_populates="readiness_scores")
 
@@ -98,9 +116,9 @@ class GeneratedSection(Base):
     flagged_gaps = Column(JSON)
     status = Column(String(30), default='draft') # draft | promoter_reviewed | intermediary_certified
     is_locked = Column(Boolean, default=False)
-    # Bug 1 Fix: Store the LangGraph thread_id so the HITL resume endpoint can look it up.
     langgraph_thread_id = Column(String(36), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     company = relationship("Company", back_populates="sections")
     messages = relationship("ChatMessage", back_populates="section", cascade="all, delete-orphan")
@@ -134,3 +152,36 @@ class AuditLog(Base):
     model_used = Column(String(100))
     latency_ms = Column(Integer)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class UploadedDocument(Base):
+    """Tracks the upload and processing status of each client-submitted document."""
+    __tablename__ = 'uploaded_document'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    filename = Column(String(255), nullable=False)
+    doc_type = Column(String(50), default='other')  # 'financial_statement' | 'board_resolution' | 'moa' | 'other'
+    status = Column(String(20), default='pending')  # 'pending' | 'processing' | 'done' | 'error'
+    error_message = Column(Text, nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    company = relationship("Company", back_populates="uploaded_documents")
+
+
+class FinancialTable(Base):
+    """Stores structured JSON representations of financial tables extracted from documents."""
+    __tablename__ = 'financial_table'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    source_file = Column(String(255))
+    page = Column(Integer, nullable=True)
+    statement_type = Column(String(100), nullable=True)  # 'Profit & Loss' | 'Balance Sheet' | 'Cash Flow'
+    years = Column(JSON, nullable=True)  # e.g. [2022, 2023, 2024]
+    table_json = Column(JSON)  # {table_title, columns, rows, units, currency}
+    units = Column(String(50), nullable=True)
+    currency = Column(String(10), default='INR')
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    company = relationship("Company", back_populates="financial_tables")

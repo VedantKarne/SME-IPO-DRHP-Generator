@@ -32,6 +32,43 @@ class PrecedentChunker:
         )
         self.converter = DocumentConverter()
 
+    def _classify_industry(self, text_sample: str) -> str:
+        """
+        Uses Groq to classify the industry of a precedent DRHP from a sample of text.
+        Returns one of: Manufacturing | SaaS | Healthcare | FMCG | Financial Services | Infrastructure | Other
+        Falls back to 'Other' if Groq is unavailable.
+        """
+        industries = ["Manufacturing", "SaaS", "Healthcare", "FMCG", "Financial Services", "Infrastructure", "Other"]
+        try:
+            api_key = os.getenv("GROQ_API_KEY") if hasattr(__import__('os'), 'getenv') else None
+            import os as _os
+            api_key = _os.getenv("GROQ_API_KEY")
+            if not api_key:
+                return "Other"
+
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            prompt = (
+                f"You are a financial analyst. Classify the primary industry of the company described in this DRHP text excerpt.\n"
+                f"Choose exactly one from: {', '.join(industries)}\n\n"
+                f"Text:\n{text_sample[:3000]}\n\n"
+                f"Respond with ONLY the industry name."
+            )
+            completion = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                max_tokens=10,
+            )
+            result = completion.choices[0].message.content.strip()
+            for ind in industries:
+                if ind.lower() in result.lower():
+                    return ind
+        except Exception as e:
+            logger.warning(f"Industry classification failed: {e}. Defaulting to 'Other'.")
+        return "Other"
+
+
     def _build_parent_text(self, chunk) -> str:
         # A simple heuristic to build the parent text context if chunking provides it.
         # HybridChunker might not easily give us the "full section". 
@@ -48,12 +85,20 @@ class PrecedentChunker:
         """
         pass
 
-    def process_text(self, text: str, source_doc_id: str, company: str = "", exchange: str = "", year: str = "") -> List[PrecedentChunk]:
+    def process_text(self, text: str, source_doc_id: str, company: str = "", exchange: str = "", year: str = "", industry: str = "") -> List[PrecedentChunk]:
         """
         Process raw text from a DRHP, chunk it, save parent-child maps, and return enriched chunks.
         Bypasses Docling to use the fast PyMuPDF extracted text.
+        If industry is not provided, it is auto-classified via Groq using the first 3000 chars.
         """
         logger.info(f"Chunking {source_doc_id} from raw text...")
+        
+        # Auto-classify industry if not provided
+        if not industry:
+            logger.info(f"Auto-classifying industry for {source_doc_id}...")
+            industry = self._classify_industry(text[:3000])
+            logger.info(f"Industry classified as: {industry}")
+
         
         # Simple overlap chunking (since HybridChunker needs Docling document)
         # Using ~512 words per chunk with 50 words overlap
@@ -85,8 +130,10 @@ class PrecedentChunker:
                 "company": company,
                 "exchange": exchange,
                 "year": year,
+                "industry": industry,
                 "section": ""
             }
+
             
             enriched = enrich_chunk_text(chunk_text, metadata)
             

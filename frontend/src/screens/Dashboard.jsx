@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:8000';
+const API = 'http://127.0.0.1:8000';
 
 function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--accent)' }) {
   const r = (size - stroke) / 2;

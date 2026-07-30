@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { authedFetch } from '../utils/auth';
 
-const API = 'http://localhost:8000';
+const API = 'http://127.0.0.1:8000';
 
 const SECTIONS_25 = [
   "Cover Page & General Information", "Risk Factors", "Introduction", "General Information",
@@ -146,7 +147,7 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
   // Build merged list: DB sections + not-yet-generated stubs
   const mergedSections = SECTIONS_25.map((name, idx) => {
     const existing = sections.find(s => s.name === name);
-    return existing || { id: null, name, status: 'pending', draft_text: '', score: 0, locked: false, flagged_gaps: [] };
+    return existing || { id: null, name, status: 'pending', draft_text: '', score: 0, locked: false, flagged_gaps: [], sync_status: 'red', missing_docs: [], unsynced_docs: [] };
   });
 
   const selected = mergedSections[selectedIdx];
@@ -170,14 +171,14 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
     setGeneratingName(sectionName);
     setEvidence(null);
     try {
-      const res = await fetch(`${API}/api/agent/run`, {
+      const res = await authedFetch(`${API}/api/agent/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_id: companyId, section_name: sectionName })
       });
       if (res.ok) {
         // Re-fetch sections from server
-        const secRes = await fetch(`${API}/api/sections/${companyId}`);
+        const secRes = await authedFetch(`${API}/api/sections/${companyId}`);
         if (secRes.ok) {
           const updated = await secRes.json();
           setSections(updated);
@@ -190,9 +191,9 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
 
   const handleApprove = async () => {
     if (!selected?.id) return;
-    const res = await fetch(`${API}/api/sections/${selected.id}/approve`, { method: 'POST' });
+    const res = await authedFetch(`${API}/api/sections/${selected.id}/approve`, { method: 'POST' });
     if (res.ok) {
-      const secRes = await fetch(`${API}/api/sections/${companyId}`);
+      const secRes = await authedFetch(`${API}/api/sections/${companyId}`);
       if (secRes.ok) setSections(await secRes.json());
     }
   };
@@ -206,20 +207,20 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
     setIsChatting(true);
     try {
       if (selected.locked) {
-        const res = await fetch(`${API}/api/copilot/ask`, {
+        const res = await authedFetch(`${API}/api/copilot/ask`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ company_id: companyId, current_section: selected.name, question: prompt })
         });
         const data = await res.json();
         setChatHistory(prev => [...prev, { role: 'ai', text: data.answer }]);
       } else {
-        const res = await fetch(`${API}/api/sections/${selected.id}/chat`, {
+        const res = await authedFetch(`${API}/api/sections/${selected.id}/chat`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt })
         });
         if (res.ok) {
           const data = await res.json();
-          const secRes = await fetch(`${API}/api/sections/${companyId}`);
+          const secRes = await authedFetch(`${API}/api/sections/${companyId}`);
           if (secRes.ok) setSections(await secRes.json());
           setChatHistory(prev => [...prev, { role: 'ai', text: '✅ Done! I\'ve updated the draft. Review the changes in the editor.' }]);
         } else {
@@ -259,7 +260,12 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
                 <span className="section-item-name" style={{ flex: 1 }}>{s.name}</span>
-                <span style={{ fontSize: '0.7rem', color: statusColor(s), flexShrink: 0 }}>{statusLabel(s)}</span>
+                <span 
+                  title={s.sync_status === 'red' ? `Missing docs: ${s.missing_docs?.join(', ')}` : s.sync_status === 'orange' ? `Unsynced docs: ${s.unsynced_docs?.join(', ')}` : 'All required docs synced'}
+                  style={{ fontSize: '0.8rem', flexShrink: 0, cursor: 'help' }}
+                >
+                  {s.sync_status === 'red' ? '🔴' : s.sync_status === 'orange' ? '🟠' : '🟢'}
+                </span>
               </div>
               {s.score > 0 && (
                 <div className="section-item-score">
@@ -395,6 +401,29 @@ export default function Workspace({ companyId, sections, setSections, onCurrentS
 
           {/* Main Editor Body */}
           <div className="editor-body" style={{ position: 'relative' }}>
+          
+            {/* Sync Warning Banner — only shown when specific docs are newer than the draft */}
+            {selected?.sync_status === 'orange' && !selected?.locked && selected?.unsynced_docs?.length > 0 && (
+              <div className="gap-banner fade-in" style={{ padding: '20px 24px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-md)', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: '1.4rem' }}>⚠️</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--warning)' }}>
+                    New Document Data Available
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6 }}>
+                  New documents <strong>({selected.unsynced_docs.join(', ')})</strong> have been uploaded since this section was last generated. The current draft does not reflect this new information.
+                </p>
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => handleGenerate(selected?.name)}
+                  disabled={isGenerating}
+                >
+                  {isGenerating && generatingName === selected?.name ? <><span className="spin">⟳</span> Syncing...</> : '⚡ Sync documents to this section'}
+                </button>
+              </div>
+            )}
+
             {/* Not generated yet — show generate CTA */}
             {!selected?.draft_text && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: 16 }}>

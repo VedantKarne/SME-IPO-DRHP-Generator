@@ -1,25 +1,61 @@
+# ── Python ────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
-*.db
-*.sqlite
-desktop.ini
+*.pyo
+*.pyd
+*.pycache
+*.egg-info/
+dist/
+build/
 
-.env
+# ── Virtual environments ───────────────────────────────────────────────
 venv/
 .venv/
 .venv310/
-check_yields.py
+env/
 
-implementation_plan.md
-ps04_analysis_and_diagrams.md
-PS04_Dataset_Schema_Blueprint (1).md
+# ── Environment & secrets ──────────────────────────────────────────────
+.env
+.env.*
+*.secret
 
+# ── Databases & vector stores ─────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+Databases/
 .chroma/
+
+# ── macOS system files ─────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── Client-uploaded documents (privacy — never commit real client data) ─
+Uploaded_Docs/
+Original_Docs/Client/
+
+# ── Parsed / chunked / processed intermediate files ──────────────────
 Chunked_Docs/
 Parsed_Docs/
+
+# ── Test results & artifacts ──────────────────────────────────────────
+tests/results/
+
+# ── Frontend build artifacts ──────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/build/
+
+# ── Models & large binaries ───────────────────────────────────────────
+models/
+
+# ── Misc project-specific ignores ────────────────────────────────────
+LLM_API_Sandbox/
 corpus_acquisition_guide.md
 master_implementation_plan.md
-models/
-Databases/
-LLM_API_Sandbox/
 Data_Flow_Diagram.md
+check_yields.py
+desktop.ini

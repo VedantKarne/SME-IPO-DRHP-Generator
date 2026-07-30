@@ -1,0 +1,150 @@
+# =============================================================
+# SEBI Hackathon Project — requirements.txt
+# Tailored for macOS Apple Silicon (arm64) — Apple M-series
+# Metal / MPS / CoreML / ANE acceleration where applicable
+# Python 3.10+ recommended (3.9 minimum)
+# =============================================================
+#
+# INSTALL ORDER (important for Metal stack):
+#   1. pip install -r requirements.txt
+#   2. Verify MPS with:
+#        python3 -c "import torch; print(torch.backends.mps.is_available())"
+#      Should print: True
+#
+# NOTE: Do NOT use --index-url https://download.pytorch.org/whl/cpu
+#       The standard PyPI torch wheel for macOS arm64 already includes
+#       the MPS (Metal Performance Shaders) backend — no special index needed.
+# =============================================================
+
+
+# ── 1. Core Runtime ──────────────────────────────────────────
+pydantic>=2.0
+python-dotenv
+tqdm
+
+
+# ── 2. API / Backend ─────────────────────────────────────────
+fastapi
+uvicorn==0.39.0             # pinned — confirmed in project .venv
+httpx                       # required by fastapi.testclient.TestClient
+
+
+# ── 3. Database / ORM ────────────────────────────────────────
+sqlalchemy
+
+
+# ── 4. LLM / AI API Clients ──────────────────────────────────
+# All three are remote API calls — no local GPU / Metal needed.
+groq                        # groq_client.py, raptor.py
+google-generativeai         # kpi_extractor.py — Gemini 2.5 Flash
+google-api-core             # google.api_core.exceptions.ResourceExhausted (directly imported)
+
+
+# ── 5. Agentic Orchestration ─────────────────────────────────
+langgraph                   # orchestrator.py, hitl_server.py — StateGraph, interrupt, Command
+
+
+# ── 6. Retry / Resilience ────────────────────────────────────
+tenacity                    # kpi_extractor.py, groq_client.py — exponential backoff
+
+
+# ── 7. PDF / Document Processing ─────────────────────────────
+pymupdf                     # `import fitz` — ingestion/pdf_parser.py
+docling                     # DocumentConverter + HybridChunker — pdf_parser.py, precedent_chunker.py
+#   Docling uses torch internally for layout/OCR models.
+#   On Apple Silicon it will automatically use MPS via the torch backend below.
+
+
+# ── 8. Vector Database ───────────────────────────────────────
+chromadb                    # retrieval/vector_store.py
+#   ChromaDB's ONNX-based default embedder (not used here — we use FlagEmbedding)
+#   falls back to CPU. No Metal-specific install needed for chromadb itself.
+
+
+# ── 9. Embeddings — Metal / MPS Accelerated ──────────────────
+#
+# [MPS] PyTorch — standard macOS arm64 wheel includes MPS backend.
+#   DO NOT add --index-url or install the CPU-only wheel.
+#   MPS gives GPU acceleration via Metal on all M-series chips.
+#   Requirement: macOS 12.3+ (you are on 26.5.2 — fully supported).
+torch                       # MPS backend auto-enabled on Apple M5 via Metal
+#
+# [MPS] HuggingFace Accelerate — handles MPS device placement for
+#   transformer models including FlagEmbedding / BGE-M3.
+#   Without this, device dispatch may silently fall to CPU.
+accelerate                  # HuggingFace device placement — enables MPS dispatch for FlagEmbedding
+#
+# [MPS] FlagEmbedding — BGE-M3 dual-encoder (dense + sparse).
+#   Internally uses torch; will use MPS automatically when torch MPS is active.
+#   use_fp16=True (already set in bge_m3_embedder.py) works correctly on M-series.
+FlagEmbedding               # `from FlagEmbedding import BGEM3FlagModel` — bge_m3_embedder.py
+
+
+# ── 10. Re-ranking — CoreML / ANE Accelerated ────────────────
+#
+# [CoreML] ONNX Runtime — FlashRank uses onnxruntime internally to run
+#   the MiniLM cross-encoder (ms-marco-MiniLM-L-12-v2) stored in ./models/.
+#   On macOS arm64, the official onnxruntime wheel now ships with the
+#   CoreML Execution Provider (delegates to Apple Neural Engine + GPU).
+#   No longer need onnxruntime-silicon (deprecated community build).
+#   CoreML EP is activated at session creation — not pip-level config.
+onnxruntime                 # CoreML EP included in arm64 wheel — offloads FlashRank to ANE/GPU
+flashrank                   # `from flashrank import Ranker, RerankRequest` — flashrank_reranker.py
+#   flashrank installs onnxruntime as a transitive dep; pinning it above
+#   ensures arm64 wheel is resolved first.
+
+
+# ── 11. Testing / Development ────────────────────────────────
+pytest                      # all tests/Phase_tests/*.py
+
+
+# ── 12. Optional (LLM Sandbox only) ──────────────────────────
+# Only used in LLM_API_Sandbox/test_llms.py for Cerebras OpenAI-compat endpoint.
+# Pure API call — no local compute / Metal relevance.
+openai
+
+
+# =============================================================
+# METAL ACCELERATION SUMMARY
+# =============================================================
+# Package          | Accelerator          | Backend
+# -----------------|----------------------|--------------------
+# torch            | Metal GPU (MPS)      | torch.backends.mps
+# FlagEmbedding    | Metal GPU (MPS)      | via torch MPS
+# accelerate       | Metal GPU (MPS)      | HF device dispatch
+# onnxruntime      | Apple Neural Engine  | CoreML EP (auto)
+# flashrank        | Apple Neural Engine  | via onnxruntime CoreML
+# docling          | Metal GPU (MPS)      | via torch MPS
+# =============================================================
+#
+# VERIFY AFTER INSTALL:
+#   python3 -c "
+#   import torch, onnxruntime as ort
+#   print('MPS available  :', torch.backends.mps.is_available())
+#   print('ORT providers  :', ort.get_available_providers())
+#   "
+# =============================================================
+#   Expected: MPS available: True
+#             ORT providers: [..., 'CoreMLExecutionProvider', ...]
+# =============================================================
+
+
+# ── 13. OCR Fallback ─────────────────────────────────────────────────────────
+pytesseract>=0.3.10         # src/ingestion/pdf_parser.py — Tesseract OCR tertiary fallback
+pdf2image>=1.16.3           # pdf_parser.py — PDF page to PIL Image conversion
+Pillow>=10.1.0              # pdf_parser.py — image preprocessing (grayscale)
+#
+# System Tesseract binary (install separately — not pip-installable):
+#   macOS:   brew install tesseract poppler
+#   Ubuntu:  sudo apt install tesseract-ocr poppler-utils
+#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
+
+
+# ── 14. Table & Document Extraction ─────────────────────────────────────────
+pdfplumber                  # src/ingestion/financial_table_parser.py (active) + table_extractor.py
+
+
+# ── 15. Document Classifier — LayoutLMv3 (fine-tuning phase only) ────────────
+# Uncomment when labelled training data (50-100 samples/category) is available:
+# transformers              # src/extraction/doc_classifier.py — LayoutLMv3 pipeline stub
+# datasets                  # HuggingFace Datasets API for fine-tuning LayoutLMv3

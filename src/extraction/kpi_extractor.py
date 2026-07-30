@@ -1,5 +1,6 @@
+from __future__ import annotations
 import os
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel
 import google.generativeai as genai
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -13,24 +14,24 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 class FinancialStatement(BaseModel):
     fiscal_year: int
-    revenue_lakhs: float | None
-    ebitda_lakhs: float | None
-    pat_lakhs: float | None
-    net_worth_lakhs: float | None
-    paid_up_capital_lakhs: float | None
+    revenue_lakhs: Optional[float]
+    ebitda_lakhs: Optional[float]
+    pat_lakhs: Optional[float]
+    net_worth_lakhs: Optional[float]
+    paid_up_capital_lakhs: Optional[float]
     data_confidence: Literal["high", "medium", "low"]
 
 class DirectorKMP(BaseModel):
     name: str
-    din: str | None
-    designation: str | None
+    din: Optional[str]
+    designation: Optional[str]
     past_conviction: bool
     pending_litigation: bool
-    litigation_details: str | None
+    litigation_details: Optional[str]
 
 class ExtractionResult(BaseModel):
     company_name: str
-    cin: str | None
+    cin: Optional[str]
     financials: list[FinancialStatement]
     directors: list[DirectorKMP]
     objects_of_offer: list[str]

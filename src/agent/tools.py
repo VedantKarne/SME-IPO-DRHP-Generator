@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Literal, Optional
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 from src.retrieval.bge_m3_embedder import BGEM3Embedder
-from src.retrieval.vector_store import VectorStore
+from src.retrieval.vector_store import VectorStore, COLLECTION_CLIENT
 from src.retrieval.parent_doc_store import ParentDocStore
 from src.retrieval.flashrank_reranker import FlashRankReranker
 from src.retrieval.hybrid_retriever import HybridRetriever
@@ -114,4 +114,50 @@ def get_company_data(company_name: str) -> str:
         return "\n".join(output)
     finally:
         db.close()
+def get_client_document_context(company_id: str, section_name: str, k: int = 5) -> str:
+    """
+    Retrieves narrative context from documents uploaded by the active client company.
+    Queries the 'client_documents' ChromaDB collection, filtered by company_id and
+    optionally by the DRHP section the chunks were mapped to.
 
+    This is the critical bridge between uploaded documents (raw PDFs, financials, 
+    contracts) and the AI drafting pipeline. Without this, the agent only sees
+    structured DB rows and misses all narrative/operational detail.
+    """
+    if not _retriever or not _embedder:
+        return ""
+
+    try:
+        # Embed the section query to find the most relevant client chunks
+        query = f"Company information relevant to DRHP section: {section_name}"
+        query_vectors = _embedder.embed_chunks([query])
+        query_dense = query_vectors["dense"][0]
+
+        # Query client_documents with company_id filter
+        raw_results = _vector_store.query_dense(
+            collection_name=COLLECTION_CLIENT,
+            query_dense_vec=query_dense,
+            n_results=k,
+            where={"company_id": company_id}
+        )
+
+        docs = raw_results.get("documents", [[]])[0]
+        metadatas = raw_results.get("metadatas", [[]])[0]
+
+        if not docs:
+            return ""
+
+        formatted = []
+        for doc, meta in zip(docs, metadatas):
+            source = meta.get("source_file", "uploaded document")
+            section_tag = meta.get("section", "")
+            page = meta.get("page", "")
+            page_str = f" (p.{page})" if page else ""
+            tag = f"[{source}{page_str} → {section_tag}]" if section_tag else f"[{source}{page_str}]"
+            formatted.append(f"{tag}\n{doc}")
+
+        return "\n\n---\n\n".join(formatted)
+
+    except Exception as e:
+        logger.warning(f"get_client_document_context failed for company {company_id}: {e}")
+        return ""

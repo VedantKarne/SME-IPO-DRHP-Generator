@@ -13,6 +13,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Known collection names as constants for convenient reference by other modules
+COLLECTION_REGULATORY = "regulatory_clauses"
+COLLECTION_PRECEDENT = "precedent_chunks"
+COLLECTION_CLIENT = "client_documents"
+
 class VectorStore:
     def __init__(self, persist_dir: str = "Databases/.chroma"):
         if not chromadb:
@@ -34,15 +39,23 @@ class VectorStore:
         # Initialize fallback store universally as the Chroma python client API for native sparse is experimental
         self.fallback_sparse_index = {}
         self._load_fallback_sparse()
-            
-        self._init_collections()
-
-    def _init_collections(self):
-        # We use default L2 distance for dense. 
-        # For sparse, Chroma handles it internally (usually inner product or similar) if supported.
-        self.reg_collection = self.client.get_or_create_collection(name="regulatory_clauses")
-        self.prec_collection = self.client.get_or_create_collection(name="precedent_chunks")
         
+        # In-memory cache of collection objects to avoid repeated get_or_create calls
+        self._collection_cache: Dict[str, Any] = {}
+        
+        # Pre-initialize the known core collections
+        self._get_or_create_collection(COLLECTION_REGULATORY)
+        self._get_or_create_collection(COLLECTION_PRECEDENT)
+        self._get_or_create_collection(COLLECTION_CLIENT)
+
+    def _get_or_create_collection(self, name: str):
+        """Returns a ChromaDB collection by name, creating it if it doesn't exist.
+        Results are cached to avoid repeated round-trips.
+        """
+        if name not in self._collection_cache:
+            self._collection_cache[name] = self.client.get_or_create_collection(name=name)
+        return self._collection_cache[name]
+
     def _load_fallback_sparse(self):
         fallback_path = os.path.join(self.persist_dir, "fallback_sparse.json")
         if os.path.exists(fallback_path):
@@ -60,12 +73,12 @@ class VectorStore:
                    metadatas: List[Dict[str, Any]], dense_vecs: List[List[float]], 
                    sparse_vecs: List[Dict[str, float]]):
         """
-        Ingests vectors into ChromaDB. Handles fallback if sparse is not natively supported.
+        Ingests vectors into ChromaDB. Supports any collection name dynamically.
         """
         if not ids:
             return
             
-        collection = self.reg_collection if collection_name == "regulatory_clauses" else self.prec_collection
+        collection = self._get_or_create_collection(collection_name)
         
         # Ensure metadata values are basic types (str, int, float, bool)
         clean_metadatas = []
@@ -83,20 +96,6 @@ class VectorStore:
                     clean_m[k] = str(v)
             clean_metadatas.append(clean_m)
 
-        if self.supports_sparse:
-            # Native sparse support: Chroma Python client doesn't yet expose sparse directly in standard add(), 
-            # or rather, it might require specific kwargs if it's an advanced feature.
-            # Assuming hypothetical future/current API:
-            # (Note: Current chromadb python API doesn't officially document a separate sparse_embeddings parameter in standard Collection.add. 
-            # It usually requires using a specific embedding function or passing it via embeddings.
-            # We will pass dense as embeddings. For now, we will store sparse in fallback if the client throws or just use fallback to be safe if the API is volatile.)
-            
-            # Since the exact kwarg for sparse in Chroma 0.5+ python client is still experimental/undocumented for direct insertion alongside dense,
-            # we will store dense in Chroma and use the fallback for sparse universally to guarantee stability for the hackathon,
-            # or try to pass it if we know the exact API. 
-            # We'll use the fallback universally for sparse to be 100% safe, making it robust.
-            pass
-            
         # Upsert dense to Chroma (avoids DuplicateIDError if re-running pipeline)
         collection.upsert(
             ids=ids,
@@ -112,7 +111,8 @@ class VectorStore:
         self._save_fallback_sparse()
 
     def query_dense(self, collection_name: str, query_dense_vec: List[float], n_results: int = 5, where: Optional[Dict] = None):
-        collection = self.reg_collection if collection_name == "regulatory_clauses" else self.prec_collection
+        """Query a collection by dense vector. Supports any collection name and optional metadata filter."""
+        collection = self._get_or_create_collection(collection_name)
         
         results = collection.query(
             query_embeddings=[query_dense_vec],
@@ -127,5 +127,26 @@ class VectorStore:
         return self.fallback_sparse_index.get(doc_id, {})
         
     def count(self, collection_name: str) -> int:
-        collection = self.reg_collection if collection_name == "regulatory_clauses" else self.prec_collection
+        """Return the number of documents in a named collection."""
+        collection = self._get_or_create_collection(collection_name)
         return collection.count()
+
+    def delete_by_metadata(self, collection_name: str, where: Dict):
+        """Delete chunks matching metadata filter from Chroma and sparse store."""
+        collection = self._get_or_create_collection(collection_name)
+        # Get IDs first to delete from sparse fallback
+        try:
+            results = collection.get(where=where, include=[])
+            if results and results["ids"]:
+                for chunk_id in results["ids"]:
+                    if chunk_id in self.fallback_sparse_index:
+                        del self.fallback_sparse_index[chunk_id]
+                self._save_fallback_sparse()
+                
+                # Delete from Chroma
+                collection.delete(where=where)
+                return len(results["ids"])
+            return 0
+        except Exception as e:
+            print(f"Error during vector deletion: {e}")
+            return 0

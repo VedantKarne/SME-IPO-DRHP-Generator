@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -9,6 +9,9 @@ from src.api import wizard
 
 import uuid
 import logging
+
+from src.api.auth_router import router as auth_router, get_current_user
+from src.api.session_router import router as session_router
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +30,14 @@ app = FastAPI(title="SME IPO Offer Document Generator API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
+app.include_router(session_router)
 
 # ─────────────────────────────────────────────
 # DB DEPENDENCY
@@ -47,22 +53,153 @@ def get_db():
 # PRIORITY 1 — GET /api/sections/{company_id}
 # Now includes flagged_gaps in the response
 # ─────────────────────────────────────────────
+SECTION_DOC_MAP = {
+    "Financial Statements (3 Years)": ["0"],
+    "Financial Information": ["0"],
+    "Management Discussion & Analysis": ["0"],
+    "Capital Structure": ["0", "9"],
+    "General Information": ["1", "8"],
+    "Cover Page & General Information": ["1", "8"],
+    "History and Corporate Structure": ["1", "9"],
+    "Objects of the Offer": ["1"],
+    "Government and Other Approvals": ["2", "3", "5", "8"],
+    "Other Regulatory & Statutory Disclosures": ["2", "3", "5", "8"],
+    "Our Business": ["2", "3", "4", "5", "6"],
+    "Risk Factors": ["2", "3", "4", "6", "7"],
+    "Outstanding Litigations and Material Developments": ["7"]
+}
+
+DOC_TYPE_LABELS = {
+    "0": "Audited Financial Statements",
+    "1": "Board Resolution for IPO",
+    "2": "Factory Licence / Registration",
+    "3": "Pollution Certificate",
+    "4": "Factory Insurance Policy",
+    "5": "Trademark Certificates",
+    "6": "Vendor & Customer Contracts",
+    "7": "Litigation / Legal Notices",
+    "8": "GST Registration Certificate",
+    "9": "Memorandum & Articles of Association"
+}
+
+SECTIONS_25 = [
+    "Cover Page & General Information", "Risk Factors", "Introduction", "General Information",
+    "Capital Structure", "Objects of the Offer", "Basis of Issue Price", "Statement of Tax Benefits",
+    "About the Company", "Industry Overview", "Our Business", "Key Industry Regulations",
+    "History and Corporate Structure", "Management & Board of Directors",
+    "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group",
+    "Related Party Transactions", "Dividend Policy", "Financial Statements (3 Years)",
+    "Management Discussion & Analysis", "Corporate Governance", "Terms of the Issue",
+    "Other Regulatory & Statutory Disclosures", "Material Contracts & Documents",
+    "Declaration & Undertakings"
+]
+
 @app.get("/api/sections/{company_id}")
-def get_company_sections(company_id: str):
+def get_company_sections(company_id: str, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
         sec_uuid = uuid.UUID(company_id)
         sections = db.query(GeneratedSection).filter(GeneratedSection.company_id == sec_uuid).all()
-        return [{
-            "id": str(s.id),
-            "name": s.section_name,
-            "status": s.status,
-            "locked": s.is_locked,
-            "score": s.completeness_score or 0.0,
-            "draft_text": s.draft_text or "",
-            "flagged_gaps": s.flagged_gaps or [],              # ← was missing before
-            "supporting_clause_ids": s.supporting_clause_ids or []
-        } for s in sections]
+        section_map = {s.section_name: s for s in sections}
+        
+        from src.extraction.schema import UploadedDocument
+        uploaded_docs = db.query(UploadedDocument).filter(
+            UploadedDocument.company_id == sec_uuid,
+            UploadedDocument.status == 'done'
+        ).all()
+        
+        doc_latest_uploads = {}
+        for doc in uploaded_docs:
+            if doc.uploaded_at:
+                if doc.doc_type not in doc_latest_uploads or doc.uploaded_at > doc_latest_uploads[doc.doc_type]:
+                    doc_latest_uploads[doc.doc_type] = doc.uploaded_at
+                
+        result = []
+        for s_name in SECTIONS_25:
+            s = section_map.get(s_name)
+            has_draft = bool(s and s.draft_text)
+            is_locked = bool(s and s.is_locked)
+            flagged_gaps = s.flagged_gaps if s else []
+            has_gaps = bool(flagged_gaps)
+
+            required_doc_types = SECTION_DOC_MAP.get(s_name, [])
+            missing_docs = []
+            unsynced_docs = []
+
+            all_required_present = True
+            stale = False
+
+            for dtype in required_doc_types:
+                if dtype not in doc_latest_uploads:
+                    missing_docs.append(DOC_TYPE_LABELS.get(dtype, dtype))
+                    all_required_present = False
+                else:
+                    doc_uploaded_at = doc_latest_uploads[dtype]
+                    section_updated_at = s.updated_at or s.created_at if s else None
+                    if not section_updated_at or doc_uploaded_at > section_updated_at:
+                        unsynced_docs.append(DOC_TYPE_LABELS.get(dtype, dtype))
+                        stale = True
+
+            # ── State Machine ──────────────────────────────────────────────────────
+            # 🟢 GREEN  : Section is fully complete.
+            #             Conditions: draft exists + all required docs synced (not stale)
+            #             + NO flagged gaps remaining (or section is locked/approved).
+            #             Locked sections are always Green regardless of gaps.
+            #
+            # 🟠 ORANGE : Section is in-progress — something can be done RIGHT NOW.
+            #             Covers:
+            #               (a) All required docs are present but section not yet generated.
+            #               (b) Draft exists but a new doc was uploaded after it (stale).
+            #               (c) Draft exists but flagged gaps remain to be resolved.
+            #
+            # 🔴 RED    : Section is BLOCKED. Cannot proceed until:
+            #               (a) A required document is uploaded (if doc-dependent), OR
+            #               (b) Section has no doc deps and hasn't been generated at all.
+            # ─────────────────────────────────────────────────────────────────────
+
+            if is_locked:
+                # Promoter-approved sections are always GREEN regardless of gaps
+                sync_status = "green"
+
+            elif not required_doc_types:
+                # Doc-independent sections (rely on promoter onboarding data only).
+                if not has_draft:
+                    sync_status = "red"       # Nothing generated yet
+                elif has_gaps:
+                    sync_status = "orange"    # Generated but gaps remain
+                else:
+                    sync_status = "green"     # Generated and fully complete
+
+            elif not all_required_present:
+                # At least one required document is completely missing → BLOCKED
+                sync_status = "red"
+
+            elif not has_draft or stale:
+                # All docs present but section not yet generated, or doc re-uploaded after draft
+                sync_status = "orange"
+
+            elif has_gaps:
+                # Draft exists, docs synced, but flagged gaps still outstanding
+                sync_status = "orange"
+
+            else:
+                # Draft exists, all docs synced, no flagged gaps → FULLY COMPLETE
+                sync_status = "green"
+
+            result.append({
+                "id": str(s.id) if s else None,
+                "name": s_name,
+                "status": s.status if s else "pending",
+                "locked": is_locked,
+                "score": s.completeness_score if s else 0.0,
+                "draft_text": s.draft_text if s else "",
+                "flagged_gaps": flagged_gaps,
+                "supporting_clause_ids": s.supporting_clause_ids if s else [],
+                "sync_status": sync_status,
+                "missing_docs": missing_docs,
+                "unsynced_docs": unsynced_docs
+            })
+        return result
     finally:
         db.close()
 
@@ -75,7 +212,7 @@ class AgentRunRequest(BaseModel):
     section_name: str
 
 @app.post("/api/agent/run")
-def run_agent(request: AgentRunRequest):
+def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current_user)):
     """
     Triggers the full LangGraph pipeline for a given section.
     Runs: RAG retrieval → consistency check → Groq drafting → gap validation → HITL interrupt.
@@ -97,6 +234,7 @@ def run_agent(request: AgentRunRequest):
 
         initial_state: AgentState = {
             "company_name": company.name,
+            "company_id": str(company.id),       # ← Pass company_id for client_documents retrieval
             "current_section": request.section_name,
             "regulatory_context": "",
             "precedent_context": "",
@@ -110,6 +248,7 @@ def run_agent(request: AgentRunRequest):
             "revisions": 0,
             "gaps": []
         }
+
 
         try:
             graph.invoke(initial_state, config=config)
@@ -128,6 +267,24 @@ def run_agent(request: AgentRunRequest):
         draft_text = result.get("draft_text", "")
         completeness_score = result.get("completeness_score", 0.0)
         gaps = result.get("gaps", [])
+
+        # ── Post-process: strip inline ⚠️ GAP markers from the draft text ─────────
+        # The gap_detector extracts them into `gaps` (flagged_gaps). We must also
+        # clean the draft so readers see only the finished prose, not placeholder tokens.
+        import re
+
+        # Remove full lines that are *only* a GAP marker (e.g. a standalone bullet line)
+        draft_text = re.sub(r"^[ \t]*(?:⚠️\s*)?GAP:\s*[^\n]+$", "", draft_text, flags=re.MULTILINE | re.IGNORECASE)
+
+        # Remove inline GAP markers embedded mid-sentence
+        draft_text = re.sub(r"(?:⚠️\s*)?GAP:\s*\[?[^,.;\n⚠️\]]+\]?", "[information pending]", draft_text, flags=re.IGNORECASE)
+
+        # Clean up leftover ⚠️ emoji if any remain orphaned
+        draft_text = re.sub(r"⚠️\s*", "", draft_text)
+
+        # Collapse multiple blank lines caused by removed markers
+        draft_text = re.sub(r"\n{3,}", "\n\n", draft_text).strip()
+        # ─────────────────────────────────────────────────────────────────────────
 
         existing = db.query(GeneratedSection).filter(
             GeneratedSection.company_id == comp_uuid,
@@ -183,7 +340,7 @@ def run_agent(request: AgentRunRequest):
 # The live Eligibility Engine result
 # ─────────────────────────────────────────────
 @app.get("/api/eligibility/{company_id}")
-def check_eligibility(company_id: str):
+def check_eligibility(company_id: str, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
         from src.eligibility.checker import EligibilityEngine
@@ -202,7 +359,7 @@ def check_eligibility(company_id: str):
 # IPO Readiness Dashboard sub-scores
 # ─────────────────────────────────────────────
 @app.get("/api/readiness/{company_id}")
-def get_readiness(company_id: str):
+def get_readiness(company_id: str, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
         comp_uuid = uuid.UUID(company_id)
@@ -248,37 +405,35 @@ def get_readiness(company_id: str):
         db.close()
 
 # ─────────────────────────────────────────────
-# DEMO ENDPOINTS
+# AUTH endpoints (ME & SETUP) replacing Demo
 # ─────────────────────────────────────────────
-@app.get("/api/demo/company")
-def get_demo_company():
-    db = SessionLocal()
-    try:
-        company = db.query(Company).first()
-        if company:
-            return {"company_id": str(company.id), "company_name": company.name}
-        return {"company_id": None, "company_name": None}
-    finally:
-        db.close()
+@app.get("/api/auth/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "company_id": current_user.get("company_id"),
+        "company_name": current_user.get("company_name"),
+        "role": current_user.get("role")
+    }
 
-class DemoInitRequest(BaseModel):
+class SetupRequest(BaseModel):
     name: str
     industry: str
     years: str
     revenue: str
     litigations: str
 
-@app.post("/api/demo/init")
-def init_demo_company(request: DemoInitRequest):
+@app.post("/api/companies/{company_id}/setup")
+def setup_company(company_id: str, request: SetupRequest, current_user: dict = Depends(get_current_user)):
     """
     Takes the answers from the Nirmaan Landing interview and dynamically
-    updates the seeded demo company so the workspace reflects the user's actual inputs.
+    updates the company so the workspace reflects the user's actual inputs.
     """
     db = SessionLocal()
     try:
-        company = db.query(Company).first()
+        comp_uuid = uuid.UUID(company_id)
+        company = db.query(Company).filter(Company.id == comp_uuid).first()
         if not company:
-            return {"status": "error"}
+            return {"status": "error", "detail": "Company not found"}
 
         company.name = request.name
         
@@ -314,6 +469,13 @@ app.include_router(chat_edit_router)
 app.include_router(locking_router)
 app.include_router(impact_router)
 app.include_router(copilot_router)
+
+from src.api.document_upload_router import router as document_upload_router
+app.include_router(document_upload_router)
+
+from src.api.admin_router import router as admin_router
+app.include_router(admin_router)
+
 
 # ─────────────────────────────────────────────
 # Bug 1 Fix: HITL Resume Endpoints mounted on the MAIN app.

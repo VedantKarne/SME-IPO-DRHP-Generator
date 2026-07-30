@@ -1,14 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { clearToken } from '../utils/auth';
+import { broadcastUpdate } from '../utils/tabSync';
 
-const API = 'http://localhost:8000';
+
+const API = 'http://127.0.0.1:8000';
 
 const NAV = [
-  { path: '/dashboard',  icon: '📊', label: 'Dashboard' },
-  { path: '/workspace',  icon: '📝', label: 'Document Workspace' },
-  { path: '/documents',  icon: '📁', label: 'Documents' },
-  { path: '/eligibility',icon: '✅', label: 'Eligibility Engine' },
-  { path: '/review',     icon: '👤', label: 'Banker Review' },
+  { path: '/dashboard',       icon: '📊', label: 'Dashboard' },
+  { path: '/workspace',       icon: '📝', label: 'Document Workspace' },
+  { path: '/documents',       icon: '📁', label: 'Documents' },
+  { path: '/eligibility',     icon: '✅', label: 'Eligibility Engine' },
+  { path: '/review',          icon: '👤', label: 'Banker Review' },
+  { path: '/knowledge-base',  icon: '🧠', label: 'Knowledge Base' },
 ];
 
 function CopilotRail({ companyId, currentSection }) {
@@ -135,7 +139,15 @@ export default function AppShell({ children, companyId, companyName, approvedCou
         </div>
 
         {companyName && (
-          <div className="sidebar-company">{companyName}</div>
+          <div className="sidebar-company">
+            {companyName}
+            <button 
+              onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
+              style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Log out
+            </button>
+          </div>
         )}
 
         <nav className="sidebar-nav">

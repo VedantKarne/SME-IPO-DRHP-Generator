@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { authedFetch, decodeToken, getToken } from '../utils/auth';
 
 const INTERVIEW_SCRIPT = [
   { ai: "Hi! I'm Nirmaan AI. I'll help you prepare your SME IPO — one step at a time.\n\nFirst, what is your company's name?" },
@@ -40,10 +41,14 @@ export default function Landing({ onComplete }) {
       
       const [name, industry, years, revenue, litigations] = currentAnswers;
       
-      // Update the demo DB with real answers so the workspace reflects the user's input
-      fetch('http://localhost:8000/api/demo/init', {
+      // Get company_id from token
+      const token = getToken();
+      if (!token) return;
+      const { company_id } = decodeToken(token);
+
+      // Update the DB with real answers so the workspace reflects the user's input
+      authedFetch(`http://127.0.0.1:8000/api/companies/${company_id}/setup`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name: name || 'SME Demo Company', 
           industry: industry || '', 
