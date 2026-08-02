@@ -3,40 +3,46 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import uuid
 
-from src.extraction.schema import GeneratedSection, ChatMessage
+from src.extraction.schema import GeneratedSection, ChatMessage, Company
 from src.agent.groq_client import RateLimitAwareGroqClient
-# We assume there's a get_db dependency. We'll import it from server or create a local one.
-# For now, we will import SessionLocal from server, but to avoid circular imports, it's better to pass it.
-# Actually, we can define get_db in a common dependencies module, or just import it from where it's defined.
-# In src/api/server.py, get_db is defined. We will import SessionLocal here directly for simplicity.
 from src.api.server import get_db
 
-router = APIRouter(prefix="/api/sections", tags=["Chat Edit"])
+router = APIRouter(prefix="/api/canvas", tags=["Chat Edit"])
 
 class ChatEditRequest(BaseModel):
+    company_id: str
+    section_name: str
     prompt: str
 
 class ChatEditResponse(BaseModel):
     section_id: str
     new_draft_text: str
 
-@router.post("/{section_id}/chat", response_model=ChatEditResponse)
-def chat_edit_section(section_id: str, request: ChatEditRequest, db: Session = Depends(get_db)):
+@router.post("/chat-edit", response_model=ChatEditResponse)
+def chat_edit_section(request: ChatEditRequest, db: Session = Depends(get_db)):
     """
-    1. Loads current draft_text.
+    1. Loads current draft_text using company_id and section_name.
     2. Checks if section is locked.
     3. Calls Groq Llama 3.3 to apply the user's edit.
     4. Updates draft_text and appends to chat_message.
     5. Returns new text.
     """
     try:
-        sec_uuid = uuid.UUID(section_id)
+        comp_uuid = uuid.UUID(request.company_id)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid section_id UUID format")
+        raise HTTPException(status_code=400, detail="Invalid company_id UUID format")
         
-    section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+    company = db.query(Company).filter(Company.id == comp_uuid).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    section = db.query(GeneratedSection).filter(
+        GeneratedSection.company_id == comp_uuid,
+        GeneratedSection.section_name == request.section_name
+    ).first()
+    
     if not section:
-        raise HTTPException(status_code=404, detail="Section not found")
+        raise HTTPException(status_code=404, detail="Section not found. Please generate it first.")
         
     if section.is_locked:
         raise HTTPException(status_code=403, detail="Section is approved and locked for editing")

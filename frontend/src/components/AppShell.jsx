@@ -126,66 +126,11 @@ function CopilotRail({ companyId, currentSection }) {
   );
 }
 
-export default function AppShell({ children, companyId, companyName, approvedCount, currentSection }) {
+export default function AppShell({ children, companyId, currentSection }) {
   const location = useLocation();
 
   return (
     <div className="shell">
-      {/* Sidebar */}
-      <aside className="shell-sidebar">
-        <div className="sidebar-brand">
-          <div className="sidebar-brand-logo">N</div>
-          <div className="sidebar-brand-name">Nirmaan</div>
-        </div>
-
-        {companyName && (
-          <div className="sidebar-company">
-            {companyName}
-            <button 
-              onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
-              style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Log out
-            </button>
-          </div>
-        )}
-
-        <nav className="sidebar-nav">
-          {NAV.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <hr className="sidebar-divider" />
-
-        {/* Progress tracker */}
-        <div className="sidebar-progress">
-          <div className="progress-label">Sections Complete</div>
-          <div>
-            <span className="progress-count">{approvedCount}</span>
-            <span className="progress-sub"> / 25</span>
-          </div>
-          <div className="progress-bar-track">
-            <div className="progress-bar-fill" style={{ width: `${(approvedCount / 25) * 100}%` }} />
-          </div>
-        </div>
-
-        <div className="sidebar-status">
-          <div className="status-dot" />
-          <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600 }}>System Online</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Groq + BGE-M3</div>
-          </div>
-        </div>
-      </aside>
-
       {/* Main */}
       <main className="shell-main">{children}</main>
 

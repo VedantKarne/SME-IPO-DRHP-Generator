@@ -8,7 +8,7 @@ class SyntheticPromoterGenerator:
     Generates realistic mock data for end-to-end testing of the DRHP pipeline.
     """
     def generate(self, sector: str = "IT_Services") -> tuple[Company, list[FinancialStatement], list[DirectorKMP], OfferDetails]:
-        company_id = uuid.uuid4()
+        company_id = uuid.UUID("125f4a85-7c56-44cd-b243-46cac3d78dc0")
         
         # 1. Mock Company
         # CIN format: U{NIC_CODE}YYYY{STATE_CODE}PLC{6DIGITS}

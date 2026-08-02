@@ -1,0 +1,371 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Install dependencies and scaffold the canvas directory structure": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221597
+      },
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350234599
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351809672
+      }
+    ],
+    "2.1 Create `frontend/src/canvas/services/canvasApi.js` with all API functions": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221716
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350296731
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350507528
+      }
+    ],
+    "3.1 Create `frontend/src/canvas/versions/versionStore.js`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221747
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350297574
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350508342
+      }
+    ],
+    "3.3 Create `frontend/src/canvas/services/canvasStore.js`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221777
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350298397
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350509080
+      }
+    ],
+    "4.1 Create `frontend/src/canvas/editor/markdownToTipTap.js`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221802
+      },
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350520336
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351814561
+      }
+    ],
+    "4.3 Create `frontend/src/canvas/editor/EditorPanel.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221834
+      },
+      {
+        "executionId": "d22d0edf-d0d7-4a56-8776-934c58eac0aa",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350900843
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351819527
+      }
+    ],
+    "5.1 Create `frontend/src/canvas/editor/AIToolbar.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221870
+      },
+      {
+        "executionId": "d22d0edf-d0d7-4a56-8776-934c58eac0aa",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350901548
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351824599
+      }
+    ],
+    "5.3 Create `frontend/src/canvas/editor/SelectionPopup.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221900
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351865307
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352331853
+      }
+    ],
+    "6. Checkpoint — Ensure editor core works end-to-end": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221945
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352347494
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352562975
+      }
+    ],
+    "7.1 Create `frontend/src/canvas/diff/DiffViewerModal.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350221967
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351865972
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352332539
+      }
+    ],
+    "8.1 Update `SelectionPopup` and `EditorPanel` to handle Diff Viewer Accept/Reject": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222003
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352569475
+      }
+    ],
+    "9.1 Create `frontend/src/canvas/prompt/WholeDocPrompt.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222029
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352570600
+      }
+    ],
+    "10.1 Create `frontend/src/canvas/copilot/AISideChat.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222052
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352571628
+      }
+    ],
+    "11.1 Create `frontend/src/canvas/versions/VersionHistoryPanel.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222082
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352572410
+      }
+    ],
+    "11.2 Add `Ctrl+S` / `Cmd+S` manual save to create a `manual_save` Version entry": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222102
+      }
+    ],
+    "12.1 Create `frontend/src/canvas/evidence/EvidencePanel.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222126
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352573276
+      }
+    ],
+    "13.1 Create a `SmartSuggestionsPanel.jsx` in `frontend/src/canvas/`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222148
+      }
+    ],
+    "14. Checkpoint — Ensure all AI panels work with mock data": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222174
+      }
+    ],
+    "15.1 Create `frontend/src/canvas/copilot/InlineAIPalette.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222209
+      }
+    ],
+    "16.1 Create `frontend/src/canvas/shortcuts/useKeyboardShortcuts.js`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222242
+      }
+    ],
+    "16.2 Create `frontend/src/canvas/shortcuts/ShortcutsModal.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222264
+      }
+    ],
+    "17.1 Create `frontend/src/canvas/toolbar/ExportDropdown.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222294
+      }
+    ],
+    "17.2 Create a `useToast` hook and `ToastContainer` component in `frontend/src/canvas/`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222316
+      },
+      {
+        "executionId": "d22d0edf-d0d7-4a56-8776-934c58eac0aa",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350902532
+      },
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351853392
+      }
+    ],
+    "18.1 Create a `PromptHistoryPanel.jsx` in `frontend/src/canvas/`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222343
+      }
+    ],
+    "19.1 Create `frontend/src/canvas/editor/SectionSidebar.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222367
+      }
+    ],
+    "19.3 Create `frontend/src/canvas/CanvasRoot.jsx`": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222392
+      }
+    ],
+    "20. Update `App.jsx` to mount `CanvasRoot` on `/workspace` route": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222418
+      }
+    ],
+    "21. Checkpoint — Full demo flow end-to-end": [
+      {
+        "executionId": "ee39a9b0-306a-4331-a812-742d0ccae60b",
+        "chatSessionId": "sess_b6bf78b0-c962-4ed9-a46e-cf8021ddece4",
+        "timestamp": 1785350222452
+      }
+    ],
+    "2. Implement the `canvasApi.js` service layer with mock fallbacks": [
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350507553
+      }
+    ],
+    "3. Implement Zustand stores": [
+      {
+        "executionId": "7cf034f2-6d1f-43be-bb80-dbfcbf593ba1",
+        "chatSessionId": "sess_a97ee99c-04a6-4959-b3a0-9fd429e89b1b",
+        "timestamp": 1785350509146
+      }
+    ],
+    "4. Implement `markdownToTipTap` utility and the `EditorPanel`": [
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785351819582
+      }
+    ],
+    "5. Implement the `AIToolbar` and `SelectionPopup`": [
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352331912
+      }
+    ],
+    "7. Implement the `DiffViewerModal`": [
+      {
+        "executionId": "f7094130-d697-49a9-aacb-c613d269a5c6",
+        "chatSessionId": "sess_b4270b79-4ba3-4e72-888c-0472966b0c98",
+        "timestamp": 1785352332571
+      }
+    ]
+  }
+}

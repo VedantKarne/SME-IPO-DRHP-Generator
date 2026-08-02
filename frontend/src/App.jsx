@@ -9,6 +9,8 @@ import Documents from './screens/Documents';
 import KnowledgeBase from './screens/KnowledgeBase';
 import Auth from './screens/Auth';
 import AppShell from './components/AppShell';
+import GlobalSidebar from './components/GlobalSidebar';
+import CanvasRoot from './canvas/CanvasRoot';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
 
@@ -88,49 +90,56 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppShell
-        companyId={companyId}
-        companyName={companyName}
-        approvedCount={approvedCount}
-        currentSection={currentSection}
-      >
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route
-            path="/dashboard"
-            element={
-              <Dashboard
-                companyId={companyId}
-                companyName={companyName}
-                sections={sections}
-                readiness={readiness}
-                eligibility={eligibility}
-              />
-            }
-          />
-          <Route
-            path="/workspace"
-            element={
-              <Workspace
-                companyId={companyId}
-                sections={sections}
-                setSections={setSections}
-                onCurrentSectionChange={setCurrentSection}
-              />
-            }
-          />
-          <Route
-            path="/eligibility"
-            element={<Eligibility eligibility={eligibility} />}
-          />
-          <Route
-            path="/review"
-            element={<Review sections={sections} setSections={setSections} companyId={companyId} />}
-          />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/knowledge-base" element={<KnowledgeBase />} />
-        </Routes>
-      </AppShell>
+      <GlobalSidebar companyName={companyName} approvedCount={approvedCount} />
+      <Routes>
+        <Route
+          path="/workspace"
+          element={
+            <CanvasRoot
+              companyId={companyId}
+              companyName={companyName}
+              sections={sections}
+            />
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <AppShell
+              companyId={companyId}
+              companyName={companyName}
+              approvedCount={approvedCount}
+              currentSection={currentSection}
+            >
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <Dashboard
+                      companyId={companyId}
+                      companyName={companyName}
+                      sections={sections}
+                      readiness={readiness}
+                      eligibility={eligibility}
+                    />
+                  }
+                />
+                <Route
+                  path="/eligibility"
+                  element={<Eligibility eligibility={eligibility} />}
+                />
+                <Route
+                  path="/review"
+                  element={<Review sections={sections} setSections={setSections} companyId={companyId} />}
+                />
+                <Route path="/documents" element={<Documents />} />
+                <Route path="/knowledge-base" element={<KnowledgeBase />} />
+              </Routes>
+            </AppShell>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }

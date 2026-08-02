@@ -1,0 +1,151 @@
+/**
+ * CanvasLayout.jsx
+ *
+ * Layout matching the screenshot exactly:
+ *
+ *  ┌─────────────────────────────────────────────────────────┐
+ *  │  CanvasAppBar  (full-width, 52px)                       │
+ *  ├────────┬────────────────────────────────┬───────────────┤
+ *  │        │ DocumentToolbar (42px)          │               │
+ *  │ Sidebar│──────────────────────────────  │ CopilotPanel  │
+ *  │        │ DocumentCanvas (scrollable)    │               │
+ *  └────────┴────────────────────────────────┴───────────────┘
+ *
+ * - AppBar spans all columns via CSS grid row 1
+ * - Sidebar + center + copilot share row 2
+ * - Copilot is resizable (drag handle); collapses to 0 when closed
+ */
+
+import { useState, useRef, useCallback, useEffect } from 'react';
+import useCanvasStore from '../services/canvasStore.js';
+import useToast, { ToastContainer } from '../toolbar/useToast.jsx';
+import CanvasAppBar     from './CanvasAppBar.jsx';
+import DocumentSidebar  from './DocumentSidebar.jsx';
+import DocumentToolbar  from './DocumentToolbar.jsx';
+import DocumentCanvas   from './DocumentCanvas.jsx';
+import CopilotPanel     from './CopilotPanel.jsx';
+
+const COPILOT_DEFAULT_W = 330;
+const COPILOT_MIN_W     = 260;
+const COPILOT_MAX_W     = 520;
+
+// ---------------------------------------------------------------------------
+// CanvasLayout
+// ---------------------------------------------------------------------------
+export default function CanvasLayout({ companyId, companyName }) {
+  const [copilotOpen,   setCopilotOpen]   = useState(true);
+  const [copilotWidth,  setCopilotWidth]  = useState(COPILOT_DEFAULT_W);
+  const [lastSaveLabel, setLastSaveLabel] = useState('Saved just now');
+
+  const isDragging  = useRef(false);
+  const dragStartX  = useRef(0);
+  const dragStartW  = useRef(COPILOT_DEFAULT_W);
+
+  const toggleCopilot = useCallback(() => setCopilotOpen((v) => !v), []);
+
+  const editorRefs   = useRef({});
+  const containerRef = useRef(null);
+
+  const activeSectionIdx  = useCanvasStore((s) => s.activeSectionIdx);
+  const sections          = useCanvasStore((s) => s.sections);
+  const activeSectionName = sections[activeSectionIdx]?.name ?? '';
+  const activeEditor      = editorRefs.current[activeSectionName] ?? null;
+
+  // Toast system
+  const { toasts, showToast, dismissToast } = useToast();
+
+  // Autosave callback
+  const handleAutosave = useCallback((sectionName) => {
+    const shortName = sectionName.length > 28
+      ? sectionName.slice(0, 28) + '…'
+      : sectionName;
+    setLastSaveLabel('Saved just now');
+    showToast(`Autosaved — ${shortName}`, 'success', 2000);
+  }, [showToast]);
+
+  // Copilot resize drag
+  const onResizeStart = useCallback((e) => {
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartW.current = copilotWidth;
+    document.body.style.cursor    = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMove(ev) {
+      if (!isDragging.current) return;
+      const delta = dragStartX.current - ev.clientX;
+      const newW  = Math.min(COPILOT_MAX_W, Math.max(COPILOT_MIN_W, dragStartW.current + delta));
+      setCopilotWidth(newW);
+    }
+    function onUp() {
+      isDragging.current            = false;
+      document.body.style.cursor    = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup',   onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup',   onUp);
+  }, [copilotWidth]);
+
+  const copilotColW = copilotOpen ? `${copilotWidth}px` : '0px';
+
+  return (
+    <div
+      className={`canvas-layout${copilotOpen ? ' canvas-layout--copilot-open' : ' canvas-layout--copilot-closed'}`}
+      style={{ '--doc-copilot-w': copilotColW }}
+    >
+      {/* ── Full-width AppBar — spans all columns ── */}
+      <CanvasAppBar
+        companyName={companyName}
+        lastSaveLabel={lastSaveLabel}
+        copilotOpen={copilotOpen}
+        onToggleCopilot={toggleCopilot}
+      />
+
+      {/* ── Left Sidebar ── */}
+      <DocumentSidebar containerRef={containerRef} />
+
+      {/* ── Center: toolbar + document ── */}
+      <div className="canvas-layout__center">
+        <DocumentToolbar
+          activeEditor={activeEditor}
+          companyId={companyId}
+          activeSectionName={activeSectionName}
+          copilotOpen={copilotOpen}
+          onToggleCopilot={toggleCopilot}
+          showToast={showToast}
+        />
+        <DocumentCanvas
+          companyId={companyId}
+          editorRefs={editorRefs}
+          containerRef={containerRef}
+          onAutosave={handleAutosave}
+        />
+      </div>
+
+      {/* ── Resize handle ── */}
+      {copilotOpen && (
+        <div
+          className="canvas-copilot-resize"
+          onMouseDown={onResizeStart}
+          aria-hidden="true"
+          role="separator"
+          title="Drag to resize Copilot"
+        />
+      )}
+
+      {/* ── Right Copilot panel ── */}
+      <CopilotPanel
+        isOpen={copilotOpen}
+        onClose={toggleCopilot}
+        companyId={companyId}
+        activeSectionName={activeSectionName}
+        activeEditor={activeEditor}
+      />
+
+      {/* ── Toast notifications ── */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+    </div>
+  );
+}

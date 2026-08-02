@@ -324,6 +324,7 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
             "completeness_score": completeness_score,
             "gap_count": len(gaps),
             "langgraph_thread_id": thread_id,  # Bug 1 Fix: expose to frontend
+            "draft_text": draft_text,
             "draft_preview": draft_text[:300] + "..." if len(draft_text) > 300 else draft_text
         }
 
@@ -464,11 +465,15 @@ from src.api.chat_edit_router import router as chat_edit_router
 from src.api.locking_router import router as locking_router
 from src.api.impact_router import router as impact_router
 from src.api.copilot_router import router as copilot_router
+from src.api.canvas_router import router as canvas_router
+from src.api.export_router import router as export_router
 
 app.include_router(chat_edit_router)
 app.include_router(locking_router)
 app.include_router(impact_router)
 app.include_router(copilot_router)
+app.include_router(canvas_router)
+app.include_router(export_router)
 
 from src.api.document_upload_router import router as document_upload_router
 app.include_router(document_upload_router)
