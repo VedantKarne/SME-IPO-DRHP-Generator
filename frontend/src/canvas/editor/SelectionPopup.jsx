@@ -228,7 +228,7 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
     editor.chain().focus().deleteSelection().insertContent(proposed).run();
 
     // Capture a version snapshot
-    addVersion(sectionName, {
+    addVersion(companyId, sectionName, {
       id: crypto.randomUUID(),
       sectionName,
       label: `AI Rewrite — ${actionLabel}`,

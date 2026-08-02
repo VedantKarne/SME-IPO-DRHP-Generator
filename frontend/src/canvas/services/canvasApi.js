@@ -596,6 +596,41 @@ export async function exportFull(companyId, fmt) {
 }
 
 // ---------------------------------------------------------------------------
+// Version History
+// ---------------------------------------------------------------------------
+
+export async function getVersions(companyId, sectionName) {
+  try {
+    const res = await fetch(`${API_BASE}/api/sections/${encodeURIComponent(companyId)}/${encodeURIComponent(sectionName)}/versions`);
+    await assertOk(res);
+    return await res.json();
+  } catch (error) {
+    console.error("Error fetching versions:", error);
+    return [];
+  }
+}
+
+export async function saveVersion(companyId, sectionName, entry) {
+  try {
+    const res = await fetch(`${API_BASE}/api/sections/${encodeURIComponent(companyId)}/${encodeURIComponent(sectionName)}/versions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label: entry.label,
+        source: entry.source,
+        content: entry.content,
+        author_label: entry.authorLabel,
+      }),
+    });
+    await assertOk(res);
+    return await res.json();
+  } catch (error) {
+    console.error("Error saving version:", error);
+    return { status: "error" };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Re-export mock data for use in other modules (e.g., CanvasRoot, EvidencePanel)
 // ---------------------------------------------------------------------------
 export { SECTIONS_25, EVIDENCE_MAP };

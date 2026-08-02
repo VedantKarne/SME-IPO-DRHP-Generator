@@ -136,6 +136,21 @@ class ChatMessage(Base):
     section = relationship("GeneratedSection", back_populates="messages")
 
 
+class SectionVersion(Base):
+    __tablename__ = 'section_version'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    section_name = Column(String(100), nullable=False)
+    label = Column(String(255), nullable=False)
+    source = Column(String(50)) # 'ai_rewrite' | 'ai_prompt' | 'manual_save' | 'ai_chat' | 'approval'
+    content = Column(JSON, nullable=False) # TipTap JSON
+    author_label = Column(String(50)) # 'AI' | 'User'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    company = relationship("Company")
+
+
 class AuditLog(Base):
     __tablename__ = 'audit_log'
     

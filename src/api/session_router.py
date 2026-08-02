@@ -67,3 +67,26 @@ def restore_session(current_user: dict = Depends(get_current_user), db: Session 
             } for d in docs
         ]
     }
+
+@router.post("/api/eligibility/run")
+def run_eligibility_check(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    company_id_str = current_user.get("company_id")
+    import uuid
+    try:
+        company_id = uuid.UUID(company_id_str)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid company_id in token")
+
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    from src.eligibility.checker import EligibilityEngine
+    try:
+        engine = EligibilityEngine(db)
+        eligibility = engine.check_all(company_id_str).model_dump()
+        return {"status": "success", "eligibility": eligibility}
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Eligibility check failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

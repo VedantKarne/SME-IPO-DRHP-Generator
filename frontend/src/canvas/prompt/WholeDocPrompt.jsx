@@ -43,7 +43,7 @@ export default function WholeDocPrompt({ editor, companyId, sectionName }) {
       editor.commands.setContent(markdownToTipTap(responseText));
 
       // Create a version snapshot
-      addVersion(sectionName, {
+      addVersion(companyId, sectionName, {
         id: crypto.randomUUID(),
         sectionName,
         label: `AI Prompt — ${trimmed.substring(0, 40)}`,

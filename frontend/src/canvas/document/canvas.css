@@ -2690,3 +2690,153 @@ body.authoring-mode .shell-main {
   }
   .doc-sidebar { display: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Evidence Panel & Cards */
+/* ------------------------------------------------------------------ */
+
+.evidence-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  height: 100%;
+}
+
+.evidence-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.evidence-panel__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.evidence-panel__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+/* Base Card Style matching cp-suggestion-card */
+.evidence-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.evidence-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.04);
+  transform: translateY(-1px);
+}
+
+.evidence-card__doc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.evidence-card__reg {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.evidence-card__reg-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.evidence-card__reg-number {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.evidence-card__chapter {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.evidence-card__page {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.evidence-card__confidence {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.evidence-card__confidence-value {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.evidence-card__confidence-value--high {
+  color: var(--success);
+}
+
+.evidence-card__badge {
+  font-size: 0.7rem;
+  padding: 4px 8px;
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 4px;
+  margin-top: 6px;
+  align-self: flex-start;
+  display: inline-flex;
+  font-weight: 500;
+}
+
+.evidence-panel__loading,
+.evidence-panel__empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+

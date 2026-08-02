@@ -181,7 +181,7 @@ export default function DocumentToolbar({
         ed.commands.setContent(markdownToTipTap(proposed));
       }
       flashSection(activeSectionName);
-      addVersion(activeSectionName, {
+      addVersion(companyId, activeSectionName, {
         id: crypto.randomUUID(),
         sectionName: activeSectionName,
         label: `AI — ${actionLabel}`,
@@ -210,7 +210,7 @@ export default function DocumentToolbar({
       const proposed = result?.proposed_text ?? fullText;
       ed.commands.setContent(markdownToTipTap(proposed));
       flashSection(activeSectionName);
-      addVersion(activeSectionName, {
+      addVersion(companyId, activeSectionName, {
         id: crypto.randomUUID(),
         sectionName: activeSectionName,
         label: `AI Prompt — ${trimmed.slice(0, 40)}`,

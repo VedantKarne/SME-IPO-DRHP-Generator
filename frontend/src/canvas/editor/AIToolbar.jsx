@@ -86,7 +86,7 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
         } else {
           editor.commands.setContent(markdownToTipTap(proposed));
         }
-        addVersion(sectionName, {
+        addVersion(companyId, sectionName, {
           id: crypto.randomUUID(),
           sectionName,
           label: `AI Toolbar — ${label}`,

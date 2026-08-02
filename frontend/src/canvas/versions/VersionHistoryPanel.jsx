@@ -30,26 +30,51 @@ function timeAgo(isoTimestamp) {
 // ---------------------------------------------------------------------------
 const SOURCE_META = {
   ai_rewrite:  { icon: "✦", label: "AI Rewrite",  colorVar: "var(--accent)" },
-  ai_prompt:   { icon: "⚡", label: "AI Prompt",   colorVar: "var(--purple)" },
-  manual_save: { icon: "💾", label: "Manual Save", colorVar: "var(--text-secondary)" },
-  ai_chat:     { icon: "💬", label: "AI Chat",     colorVar: "var(--accent)" },
-  approval:    { icon: "✓",  label: "Approved",    colorVar: "var(--success)" },
-};
+function timeAgo(dateString) {
+  const d = new Date(dateString);
+  const diff = (new Date() - d) / 1000; // seconds
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return d.toLocaleDateString();
+}
+
+// ---------------------------------------------------------------------------
+// sourceMeta — UI mapping for different sources
+// ---------------------------------------------------------------------------
 function sourceMeta(source) {
-  return SOURCE_META[source] ?? { icon: "○", label: "Saved", colorVar: "var(--text-muted)" };
+  switch (source) {
+    case "ai_rewrite":
+    case "ai_prompt":
+    case "ai_chat":
+      return { icon: "✦", label: "AI", colorVar: "var(--accent)" }; // Purple for AI
+    case "approval":
+      return { icon: "✓", label: "Approved", colorVar: "var(--success)" }; // Green for approvals
+    case "manual_save":
+    default:
+      return { icon: "📝", label: "Manual Save", colorVar: "var(--text-secondary)" }; // Gray for manual/unknown
+  }
 }
 
 // ---------------------------------------------------------------------------
 // VersionHistoryPanel
 // ---------------------------------------------------------------------------
-export default function VersionHistoryPanel({ editor, activeSectionName }) {
-  const getVersions = useVersionStore((s) => s.getVersions);
-  const addVersion  = useVersionStore((s) => s.addVersion);
+export default function VersionHistoryPanel({ editor, activeSectionName, companyId }) {
+  const getVersions  = useVersionStore((s) => s.getVersions);
+  const addVersion   = useVersionStore((s) => s.addVersion);
+  const loadVersions = useVersionStore((s) => s.loadVersions);
 
   const [previewIdx,  setPreviewIdx]  = useState(null);
   const [compareMode, setCompareMode] = useState(false);
   const [compareIdxA, setCompareIdxA] = useState(null);
   const [compareIdxB, setCompareIdxB] = useState(null);
+
+  // Load versions from backend on mount or section change
+  useEffect(() => {
+    if (companyId && activeSectionName) {
+      loadVersions(companyId, activeSectionName);
+    }
+  }, [companyId, activeSectionName, loadVersions]);
 
   const versions = activeSectionName ? getVersions(activeSectionName) : [];
   const count    = versions.length;
@@ -70,7 +95,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName }) {
     if (!editor || !activeSectionName) return;
     editor.setEditable(true);
     editor.commands.setContent(entry.content);
-    addVersion(activeSectionName, {
+    addVersion(companyId, activeSectionName, {
       id: crypto.randomUUID(),
       sectionName: activeSectionName,
       label: `Restored: ${entry.label}`,

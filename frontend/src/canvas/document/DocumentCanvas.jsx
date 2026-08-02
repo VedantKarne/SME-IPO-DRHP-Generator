@@ -396,7 +396,7 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave }) {
             'json'
           );
         } catch { /* silent */ }
-        addVersion(section.name, {
+        addVersion(companyId, section.name, {
           id: crypto.randomUUID(),
           sectionName: section.name,
           label: 'Auto-save',

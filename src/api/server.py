@@ -405,6 +405,78 @@ def get_readiness(company_id: str, current_user: dict = Depends(get_current_user
     finally:
         db.close()
 
+
+# ─────────────────────────────────────────────
+# VERSION HISTORY endpoints
+# ─────────────────────────────────────────────
+
+from src.extraction.schema import SectionVersion
+
+class VersionCreateRequest(BaseModel):
+    label: str
+    source: str
+    content: dict
+    author_label: str
+
+@app.get("/api/sections/{company_id}/{section_name}/versions")
+def get_versions(company_id: str, section_name: str):
+    db = next(get_db())
+    try:
+        versions = db.query(SectionVersion).filter(
+            SectionVersion.company_id == company_id,
+            SectionVersion.section_name == section_name
+        ).order_by(SectionVersion.created_at.desc()).limit(50).all()
+        
+        return [
+            {
+                "id": str(v.id),
+                "sectionName": v.section_name,
+                "label": v.label,
+                "source": v.source,
+                "content": v.content,
+                "authorLabel": v.author_label,
+                "timestamp": v.created_at.isoformat()
+            }
+            for v in versions
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+@app.post("/api/sections/{company_id}/{section_name}/versions")
+def save_version(company_id: str, section_name: str, req: VersionCreateRequest):
+    db = next(get_db())
+    try:
+        new_version = SectionVersion(
+            company_id=company_id,
+            section_name=section_name,
+            label=req.label,
+            source=req.source,
+            content=req.content,
+            author_label=req.author_label
+        )
+        db.add(new_version)
+        
+        # Enforce max versions per section
+        versions = db.query(SectionVersion).filter(
+            SectionVersion.company_id == company_id,
+            SectionVersion.section_name == section_name
+        ).order_by(SectionVersion.created_at.desc()).all()
+        
+        if len(versions) > 50:
+            for v in versions[50:]:
+                db.delete(v)
+                
+        db.commit()
+        return {"status": "success", "id": str(new_version.id)}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
+
 # ─────────────────────────────────────────────
 # AUTH endpoints (ME & SETUP) replacing Demo
 # ─────────────────────────────────────────────

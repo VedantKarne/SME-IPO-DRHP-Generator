@@ -17,18 +17,38 @@ import { create } from 'zustand';
 
 const MAX_VERSIONS_PER_SECTION = 50;
 
+import * as canvasApi from '../services/canvasApi.js';
+
 const useVersionStore = create((set, get) => ({
   /** @type {Record<string, VersionEntry[]>} Keyed by sectionName, sorted newest-first */
   versions: {},
 
   /**
-   * Add a new version entry for a section.
-   * Prepends the entry (newest-first) and trims to MAX_VERSIONS_PER_SECTION.
+   * Load versions from the backend for a specific section.
    *
+   * @param {string} companyId
+   * @param {string} sectionName
+   */
+  loadVersions: async (companyId, sectionName) => {
+    if (!companyId || !sectionName) return;
+    const data = await canvasApi.getVersions(companyId, sectionName);
+    set((state) => ({
+      versions: {
+        ...state.versions,
+        [sectionName]: data,
+      },
+    }));
+  },
+
+  /**
+   * Add a new version entry for a section and persist to backend.
+   * Optimistically updates the UI.
+   *
+   * @param {string} companyId
    * @param {string} sectionName
    * @param {object} entry - VersionEntry object
    */
-  addVersion: (sectionName, entry) => {
+  addVersion: (companyId, sectionName, entry) => {
     set((state) => {
       const existing = state.versions[sectionName] || [];
       const updated = [entry, ...existing].slice(0, MAX_VERSIONS_PER_SECTION);
@@ -39,6 +59,11 @@ const useVersionStore = create((set, get) => ({
         },
       };
     });
+    
+    // Save to backend asynchronously
+    if (companyId) {
+      canvasApi.saveVersion(companyId, sectionName, entry);
+    }
   },
 
   /**
