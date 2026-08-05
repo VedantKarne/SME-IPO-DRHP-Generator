@@ -30,7 +30,15 @@ app = FastAPI(title="SME IPO Offer Document Generator API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -354,6 +362,38 @@ def check_eligibility(company_id: str, current_user: dict = Depends(get_current_
         raise HTTPException(status_code=500, detail=f"Eligibility check failed: {str(e)}")
     finally:
         db.close()
+
+# ─────────────────────────────────────────────
+# CONSISTENCY CHECKS — GET /api/consistency/{company_id}
+# Runs all data-consistency validation rules and returns results.
+# Independent of LangGraph — called by the Dashboard at page load.
+# ─────────────────────────────────────────────
+@app.get("/api/consistency/{company_id}")
+def run_consistency_checks(company_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Run all consistency validation rules for the given company.
+
+    Returns a structured report with:
+      - has_issues: bool
+      - issue_count: int
+      - checks: list of {field, fix, severity} dicts
+
+    An empty checks list means the data is fully consistent.
+    """
+    db = SessionLocal()
+    try:
+        from src.agent.consistency_checker import run_all_checks_by_id
+        errors = run_all_checks_by_id(company_id=company_id, db=db)
+        return {
+            "has_issues": len(errors) > 0,
+            "issue_count": len(errors),
+            "checks": errors,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Consistency check failed: {str(e)}")
+    finally:
+        db.close()
+
 
 # ─────────────────────────────────────────────
 # PRIORITY 3 — GET /api/readiness/{company_id}

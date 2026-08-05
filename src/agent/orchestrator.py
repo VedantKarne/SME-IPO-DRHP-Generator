@@ -102,34 +102,22 @@ def context_aggregator_node(state: AgentState) -> dict:
 def consistency_validator_node(state: AgentState) -> dict:
     logger.info("Running consistency validations...")
     errors = []
-    
-    # Bug 5 Fix: Replaced fragile substring match ("NetWorth=-") with a proper
-    # structured DB lookup so zero net worth is also caught, and the check is
-    # independent of the exact string format of get_company_data() output.
+
     try:
         from src.extraction.db_session import SessionLocal
-        from src.extraction.schema import Company, FinancialStatement
+        from src.agent.consistency_checker import run_all_checks
+
         db = SessionLocal()
         try:
-            company = db.query(Company).filter(
-                Company.name.ilike(f"%{state['company_name']}%")
-            ).first()
-            if company:
-                latest_fin = db.query(FinancialStatement).filter(
-                    FinancialStatement.company_id == company.id
-                ).order_by(FinancialStatement.fiscal_year.desc()).first()
-                
-                if latest_fin and latest_fin.net_worth_lakhs is not None:
-                    if float(latest_fin.net_worth_lakhs) <= 0:
-                        errors.append({
-                            "field": "net_worth_lakhs",
-                            "fix": f"Company has non-positive net worth (Rs {latest_fin.net_worth_lakhs} Lakhs). SEBI ICDR Reg 229(1)(b) requires positive net worth. Eligibility may be compromised."
-                        })
+            errors = run_all_checks(
+                company_name=state["company_name"],
+                db=db,
+            )
         finally:
             db.close()
     except Exception as e:
-        logger.warning(f"Consistency validator DB check failed: {e}")
-        
+        logger.warning(f"Consistency validator failed: {e}")
+
     return {"consistency_errors": errors}
 
 def draft_generation_node(state: AgentState) -> dict:

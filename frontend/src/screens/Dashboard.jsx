@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authedFetch } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -52,11 +53,38 @@ const NEXT_ACTIONS = [
   { icon: '✅', title: 'Get Merchant Banker approval', desc: '2 sections awaiting intermediary certification', urgent: false },
 ];
 
-export default function Dashboard({ companyId, companyName, sections, readiness, eligibility }) {
+export default function Dashboard({ companyId, companyName, sections, readiness, eligibility: propEligibility, consistency: propConsistency }) {
   const navigate = useNavigate();
+  const [eligibilityData, setEligibilityData] = useState(propEligibility || null);
+  const [consistencyData, setConsistencyData] = useState(propConsistency || null);
+
+  useEffect(() => {
+    if (propEligibility) setEligibilityData(propEligibility);
+    if (propConsistency) setConsistencyData(propConsistency);
+  }, [propEligibility, propConsistency]);
+
+  useEffect(() => {
+    if (!companyId) return;
+    
+    // Fetch eligibility if not present
+    authedFetch(`${API}/api/eligibility/${companyId}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setEligibilityData(data); })
+      .catch(err => console.error('Eligibility fetch error:', err));
+
+    // Fetch consistency if not present
+    authedFetch(`${API}/api/consistency/${companyId}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setConsistencyData(data); })
+      .catch(err => console.error('Consistency fetch error:', err));
+  }, [companyId]);
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const promoterName = 'Vedant';
+
+  const eligibility = eligibilityData;
+  const consistency = consistencyData;
 
   const r = readiness || {};
   const overall = r.overall_score || 0;
@@ -120,7 +148,8 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
       </div>
 
       {/* Section quick overview */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Sections status */}
         <div className="card">
           <h3 style={{ marginBottom: 14, fontSize: '0.95rem' }}>Section Pipeline</h3>
@@ -160,6 +189,60 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
             </div>
           ) : (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</p>
+          )}
+        </div>
+        </div>
+
+        {/* Data Consistency Checks */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <h3 style={{ fontSize: '0.95rem', margin: 0 }}>🔍 Data Consistency Checks</h3>
+            {consistency && (
+              <span className={`badge ${consistency.has_issues ? 'badge-error' : 'badge-success'}`}
+                style={{ fontSize: '0.72rem' }}>
+                {consistency.has_issues
+                  ? `${consistency.issue_count} Issue${consistency.issue_count > 1 ? 's' : ''} Found`
+                  : '✓ All Clear'}
+              </span>
+            )}
+          </div>
+
+          {!consistency ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</p>
+          ) : !consistency.has_issues ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8 }}>
+              <span style={{ fontSize: '1.2rem' }}>✅</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                All financial figures, capital structure components, and turnover data are internally consistent.
+              </span>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
+              {consistency.checks.map((check, i) => {
+                const isCritical = check.severity === 'critical';
+                return (
+                  <div key={i} style={{
+                    padding: '12px 14px',
+                    background: isCritical ? 'rgba(244,63,94,0.05)' : 'rgba(245,158,11,0.05)',
+                    border: `1px solid ${isCritical ? 'rgba(244,63,94,0.2)' : 'rgba(245,158,11,0.25)'}`,
+                    borderLeft: `3px solid ${isCritical ? 'var(--error)' : 'var(--warning)'}`,
+                    borderRadius: 8,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'monospace' }}>
+                        {check.field.replace(/_/g, ' ')}
+                      </span>
+                      <span className={`badge ${isCritical ? 'badge-error' : 'badge-warning'}`} style={{ fontSize: '0.68rem', flexShrink: 0 }}>
+                        {isCritical ? '⚠ Critical' : '⚡ Warning'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+                      {check.fix}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>

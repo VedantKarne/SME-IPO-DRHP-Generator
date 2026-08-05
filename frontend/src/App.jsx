@@ -24,6 +24,7 @@ export default function App() {
   const [sections, setSections] = useState([]);
   const [eligibility, setEligibility] = useState(null);
   const [readiness, setReadiness] = useState(null);
+  const [consistency, setConsistency] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
 
   useEffect(() => { 
@@ -59,6 +60,7 @@ export default function App() {
         setSections(data.sections || []);
         setEligibility(data.eligibility || null);
         setReadiness(data.readiness || null);
+        setConsistency(data.consistency || null);
       }
     } catch (e) { console.error('Bootstrap error:', e); }
   };
@@ -122,6 +124,7 @@ export default function App() {
                       sections={sections}
                       readiness={readiness}
                       eligibility={eligibility}
+                      consistency={consistency}
                     />
                   }
                 />

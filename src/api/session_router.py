@@ -45,18 +45,32 @@ def restore_session(current_user: dict = Depends(get_current_user), db: Session 
         eligibility = None
     from src.api.server import get_company_sections
     sections_data = get_company_sections(company_id_str, current_user)
-        
+
+    # Run consistency checks to expose them on the Dashboard
+    from src.agent.consistency_checker import run_all_checks_by_id
+    try:
+        consistency_errors = run_all_checks_by_id(company_id=company_id_str, db=db)
+        consistency = {
+            "has_issues": len(consistency_errors) > 0,
+            "issue_count": len(consistency_errors),
+            "checks": consistency_errors,
+        }
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Consistency check failed in session restore: {e}")
+        consistency = {"has_issues": False, "issue_count": 0, "checks": []}
+
     return {
         "company_id": str(company.id),
         "company_name": company.name,
         "sections": sections_data,
         "eligibility": eligibility,
+        "consistency": consistency,
         "readiness": {
             "score": readiness.overall_score if readiness else 0,
-            "financial_readiness": readiness.financial_score if readiness else 0,
-            "business_readiness": readiness.business_score if readiness else 0,
+            "financial_readiness": readiness.financials_score if readiness else 0,
             "legal_readiness": readiness.legal_score if readiness else 0,
-            "missing_docs": readiness.missing_documents if readiness else []
+            "compliance_readiness": readiness.compliance_score if readiness else 0,
         },
         "uploaded_documents": [
             {
