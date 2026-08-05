@@ -188,9 +188,14 @@ export default function EvidencePanel({ editor, companyId, sectionName }) {
         </div>
       )}
 
-      {/* Error state — silently falls back to empty (mock data covers this path) */}
-      {isError && !isLoading && Array.isArray(citations) && citations.length === 0 && (
-        <p className="evidence-panel__empty">No citations found for this section.</p>
+      {/* Error state — distinct from "no citations". Reporting a failed lookup
+          as an empty result would tell the user this section has no regulatory
+          backing, when in fact we simply could not find out. */}
+      {isError && !isLoading && (
+        <div className="evidence-panel__error" role="alert">
+          <p>Could not load citations for this section.</p>
+          <button type="button" onClick={() => refetch()}>Retry</button>
+        </div>
       )}
 
       {/* Empty state */}
@@ -199,7 +204,7 @@ export default function EvidencePanel({ editor, companyId, sectionName }) {
       )}
 
       {/* Citation cards */}
-      {!isLoading && Array.isArray(citations) && citations.length > 0 && (
+      {!isLoading && !isError && Array.isArray(citations) && citations.length > 0 && (
         <ul className="evidence-panel__list" aria-label="Citation list">
           {citations.map((citation) => (
             <li key={`${citation.reg}-${citation.doc}`} className="evidence-panel__item">

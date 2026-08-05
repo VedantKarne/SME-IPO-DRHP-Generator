@@ -87,7 +87,7 @@ function calculatePopupPosition(coords) {
 // SelectionPopup
 // ---------------------------------------------------------------------------
 
-export default function SelectionPopup({ editor, companyId, sectionName, section }) {
+export default function SelectionPopup({ editor, companyId, sectionName, section, showToast }) {
   const addVersion = useVersionStore((s) => s.addVersion);
 
   // Lazily loaded DiffViewerModal
@@ -105,6 +105,7 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
 
   // Diff viewer state
   const [diffState, setDiffState] = useState(null); // { original, proposed, actionLabel } | null
+  const [actionError, setActionError] = useState(null); // string | null
 
   const popupRef = useRef(null);
 
@@ -160,6 +161,7 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
   const dismiss = useCallback(() => {
     setVisible(false);
     setLoadingAction(null);
+    setActionError(null);
   }, []);
 
   // Escape key and outside-click dismissal
@@ -198,19 +200,30 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
       if (!selectedText) return;
 
       setLoadingAction(actionId);
+      setActionError(null);
 
       try {
         const result = await canvasApi.rewrite(companyId, sectionName, selectedText, actionId);
-        const proposedText = result?.proposed_text ?? selectedText;
+        const proposedText = result?.proposed_text;
+
+        // An empty proposal is a failed rewrite, not a valid one. Opening the
+        // diff viewer with the original text on both sides would present a
+        // no-op as a successful AI suggestion.
+        if (!proposedText) {
+          setActionError('The AI returned an empty rewrite. Please try again.');
+          return;
+        }
 
         setDiffState({
           original: selectedText,
           proposed: proposedText,
           actionLabel,
         });
-      } catch {
-        // canvasApi.rewrite never throws — mock fallback is always returned.
-        // This catch is a safety net.
+      } catch (e) {
+        // canvasApi.rewrite throws ApiError on any failure. Show it — the
+        // previous behaviour substituted canned text from a mock bank.
+        console.error('Rewrite failed:', e);
+        setActionError(e?.message ?? 'Rewrite failed.');
       } finally {
         setLoadingAction(null);
       }
@@ -227,7 +240,9 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
     // Replace the selected text range with the proposed replacement
     editor.chain().focus().deleteSelection().insertContent(proposed).run();
 
-    // Capture a version snapshot
+    // Capture a version snapshot. addVersion rolls back its optimistic insert
+    // and rejects if the write fails, so surface that instead of leaving an
+    // unhandled rejection.
     addVersion(companyId, sectionName, {
       id: crypto.randomUUID(),
       sectionName,
@@ -236,11 +251,18 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
       source: 'ai_rewrite',
       content: editor.getJSON(),
       authorLabel: 'AI',
+    }).catch((e) => {
+      console.error('Version save failed:', e);
+      showToast?.(
+        'Edit applied, but the version snapshot could not be saved.',
+        'error',
+        5000
+      );
     });
 
     setDiffState(null);
     dismiss();
-  }, [diffState, editor, sectionName, addVersion, dismiss]);
+  }, [diffState, editor, companyId, sectionName, addVersion, dismiss, showToast]);
 
   // ── Diff viewer Reject ─────────────────────────────────────────────────
   const handleReject = useCallback(() => {
@@ -361,6 +383,31 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
               outline-offset: 2px;
             }
           `}</style>
+        </div>
+      )}
+
+      {/* ── Action failure notice ──────────────────────────────────────── */}
+      {visible && !diffState && actionError && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed',
+            top: position.top + 44,
+            left: position.left,
+            zIndex: 1000,
+            maxWidth: '320px',
+            padding: '6px 10px',
+            fontSize: '12px',
+            lineHeight: 1.4,
+            borderRadius: '6px',
+            background: 'var(--error-dim, rgba(220,60,60,0.14))',
+            border: '1px solid var(--error, #dc3c3c)',
+            color: 'var(--text-primary, #e0e0e0)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+          }}
+        >
+          {actionError}
         </div>
       )}
 

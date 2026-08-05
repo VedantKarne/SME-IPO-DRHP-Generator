@@ -174,14 +174,17 @@ export default function DocumentToolbar({
         ? ed.getText()
         : ed.state.doc.textBetween(ed.state.selection.from, ed.state.selection.to, ' ');
       const result   = await canvasApi.rewrite(companyId, activeSectionName, selectedText, actionId);
-      const proposed = result?.proposed_text ?? selectedText;
+      const proposed = result?.proposed_text;
+      // Falling back to the original text here would report success for a
+      // rewrite that actually produced nothing.
+      if (!proposed) throw new Error('the AI returned an empty rewrite');
       if (!ed.state.selection.empty) {
         ed.chain().focus().deleteSelection().insertContent(proposed).run();
       } else {
         ed.commands.setContent(markdownToTipTap(proposed));
       }
       flashSection(activeSectionName);
-      addVersion(companyId, activeSectionName, {
+      await addVersion(companyId, activeSectionName, {
         id: crypto.randomUUID(),
         sectionName: activeSectionName,
         label: `AI — ${actionLabel}`,
@@ -191,8 +194,9 @@ export default function DocumentToolbar({
         authorLabel: 'AI',
       });
       showToast?.(`✦ ${actionLabel} applied`, 'success', 2800);
-    } catch {
-      showToast?.(`${actionLabel} failed — try again`, 'error', 3500);
+    } catch (err) {
+      console.error(`${actionLabel} failed:`, err);
+      showToast?.(`${actionLabel} failed — ${err.message}`, 'error', 5000);
     } finally {
       setAiLoading(null);
     }
@@ -207,10 +211,11 @@ export default function DocumentToolbar({
     try {
       const fullText = ed.getText();
       const result   = await canvasApi.prompt(companyId, activeSectionName, trimmed, fullText);
-      const proposed = result?.proposed_text ?? fullText;
+      const proposed = result?.proposed_text;
+      if (!proposed) throw new Error('the AI returned an empty result');
       ed.commands.setContent(markdownToTipTap(proposed));
       flashSection(activeSectionName);
-      addVersion(companyId, activeSectionName, {
+      await addVersion(companyId, activeSectionName, {
         id: crypto.randomUUID(),
         sectionName: activeSectionName,
         label: `AI Prompt — ${trimmed.slice(0, 40)}`,
@@ -228,8 +233,9 @@ export default function DocumentToolbar({
       });
       showToast?.('✦ Instruction applied', 'success', 2800);
       setPromptText('');
-    } catch {
-      showToast?.('Instruction failed — try again', 'error', 3500);
+    } catch (err) {
+      console.error('Whole-section prompt failed:', err);
+      showToast?.(`Instruction failed — ${err.message}`, 'error', 5000);
     } finally {
       setPromptBusy(false);
       promptRef.current?.focus();

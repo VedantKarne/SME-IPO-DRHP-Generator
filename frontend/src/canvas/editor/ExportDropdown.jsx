@@ -44,8 +44,9 @@ export default function ExportDropdown({ editor, companyId, sectionName }) {
         a.click();
         URL.revokeObjectURL(url);
         setToast({ type: "success", msg: `${opt.label} downloaded` });
-      } catch {
-        setToast({ type: "error", msg: "Export failed — try again" });
+      } catch (e) {
+        console.error('Export failed:', e);
+        setToast({ type: "error", msg: `Export failed — ${e?.message ?? 'try again'}` });
       } finally {
         setBusy(null);
         setTimeout(() => setToast(null), 3000);

@@ -25,19 +25,13 @@ function timeAgo(isoTimestamp) {
   return rtf.format(-Math.floor(diffDay / 30), "month");
 }
 
-// ---------------------------------------------------------------------------
-// Source → meta
-// ---------------------------------------------------------------------------
-const SOURCE_META = {
-  ai_rewrite:  { icon: "✦", label: "AI Rewrite",  colorVar: "var(--accent)" },
-function timeAgo(dateString) {
-  const d = new Date(dateString);
-  const diff = (new Date() - d) / 1000; // seconds
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return d.toLocaleDateString();
-}
+// NOTE: this file previously contained the tail of a second, older copy of
+// itself — a truncated `SOURCE_META` object literal that was never closed,
+// plus a duplicate `timeAgo`. The unclosed literal made the whole module a
+// syntax error, so it could not be imported and this panel has never actually
+// rendered. Both leftovers are removed here; `SOURCE_META` had no references
+// anywhere and `sourceMeta()` below is the live equivalent. Mounting this
+// panel in the UI is separate, follow-up work.
 
 // ---------------------------------------------------------------------------
 // sourceMeta — UI mapping for different sources
@@ -64,6 +58,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
   const addVersion   = useVersionStore((s) => s.addVersion);
   const loadVersions = useVersionStore((s) => s.loadVersions);
 
+  const [loadError,   setLoadError]   = useState(null);
   const [previewIdx,  setPreviewIdx]  = useState(null);
   const [compareMode, setCompareMode] = useState(false);
   const [compareIdxA, setCompareIdxA] = useState(null);
@@ -71,9 +66,14 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
 
   // Load versions from backend on mount or section change
   useEffect(() => {
-    if (companyId && activeSectionName) {
-      loadVersions(companyId, activeSectionName);
-    }
+    if (!companyId || !activeSectionName) return;
+    setLoadError(null);
+    // loadVersions throws on failure. Without this handler the panel would
+    // render an empty list, which reads as "this section has no history".
+    loadVersions(companyId, activeSectionName).catch((e) => {
+      console.error('Could not load version history:', e);
+      setLoadError(e?.message ?? 'Could not load version history.');
+    });
   }, [companyId, activeSectionName, loadVersions]);
 
   const versions = activeSectionName ? getVersions(activeSectionName) : [];
@@ -103,6 +103,9 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
       source: entry.source,
       content: entry.content,
       authorLabel: entry.authorLabel ?? "User",
+    }).catch((err) => {
+      console.error('Could not save restore point:', err);
+      setLoadError('Content restored in the editor, but the restore point was not saved.');
     });
     setPreviewIdx(null);
     setCompareMode(false);
@@ -122,6 +125,13 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
   // ------------------------------------------------------------------
   return (
     <section className="version-panel" aria-label="Version history">
+      {/* Load/save failure — distinct from "no versions yet" */}
+      {loadError && (
+        <div className="canvas-error" role="alert">
+          <span aria-hidden="true">⚠</span> {loadError}
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="version-panel__header">
         <div className="version-panel__title-row">

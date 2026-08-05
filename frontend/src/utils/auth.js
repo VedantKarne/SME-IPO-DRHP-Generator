@@ -17,10 +17,14 @@ export const isTokenExpired = (t) => {
 };
 
 export const authedFetch = (url, opts = {}) => {
+  // FormData bodies must NOT carry an explicit Content-Type — the browser needs
+  // to set it itself so it can include the multipart boundary.
+  const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+
   return fetch(url, {
     ...opts,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...opts.headers,
       Authorization: `Bearer ${getToken()}`
     }

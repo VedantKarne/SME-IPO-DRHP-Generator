@@ -20,6 +20,7 @@ import useVersionStore from "../versions/versionStore.js";
 export default function WholeDocPrompt({ editor, companyId, sectionName }) {
   const [promptText, setPromptText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const inputRef = useRef(null);
 
   const appendPromptHistory = useCanvasStore((s) => s.appendPromptHistory);
@@ -33,17 +34,21 @@ export default function WholeDocPrompt({ editor, companyId, sectionName }) {
     if (!trimmed || !editor || loading) return;
 
     setLoading(true);
+    setError(null);
 
     try {
       const fullText = editor.getText();
       const response = await canvasApi.prompt(companyId, sectionName, trimmed, fullText);
-      const responseText = response?.proposed_text ?? "";
+      const responseText = response?.proposed_text;
+
+      // An empty response must not overwrite the user's draft with nothing.
+      if (!responseText) throw new Error('The AI returned an empty result.');
 
       // Update editor content
       editor.commands.setContent(markdownToTipTap(responseText));
 
       // Create a version snapshot
-      addVersion(companyId, sectionName, {
+      await addVersion(companyId, sectionName, {
         id: crypto.randomUUID(),
         sectionName,
         label: `AI Prompt — ${trimmed.substring(0, 40)}`,
@@ -63,9 +68,12 @@ export default function WholeDocPrompt({ editor, companyId, sectionName }) {
       });
 
       // Retain the prompt text — user must clear it manually (Requirement 4.5)
-    } catch {
-      // canvasApi.prompt always returns a mock on failure, so this branch
-      // should never be reached. Silently ignore as a safety net.
+    } catch (e) {
+      // canvasApi.prompt throws on any failure. Show it: the previous
+      // behaviour silently discarded the error and left the editor unchanged,
+      // which looked identical to a successful no-op edit.
+      console.error('Whole-document prompt failed:', e);
+      setError(e?.message ?? 'The request failed.');
     } finally {
       setLoading(false);
       // Return focus to input after submission
@@ -238,6 +246,13 @@ export default function WholeDocPrompt({ editor, companyId, sectionName }) {
           </svg>
         )}
       </button>
+
+      {/* Failure notice — the draft is left untouched when this appears */}
+      {error && (
+        <p className="whole-doc-prompt__error" role="alert">
+          <span aria-hidden="true">⚠</span> {error}
+        </p>
+      )}
     </form>
   );
 }
