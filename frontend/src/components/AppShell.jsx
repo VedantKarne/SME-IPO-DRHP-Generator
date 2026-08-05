@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { clearToken } from '../utils/auth';
+import { clearToken, authedFetch } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 
 
@@ -33,7 +33,7 @@ function CopilotRail({ companyId, currentSection }) {
     setMessages(prev => [...prev, { role: 'user', text: q }]);
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/copilot/ask`, {
+      const res = await authedFetch(`${API}/api/copilot/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ company_id: companyId, current_section: currentSection || 'General', question: q })
@@ -97,7 +97,7 @@ function CopilotRail({ companyId, currentSection }) {
               setTimeout(() => {
                 setMessages(prev => [...prev, { role: 'user', text: p }]);
                 setLoading(true);
-                fetch(`${API}/api/copilot/ask`, {
+                authedFetch(`${API}/api/copilot/ask`, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ company_id: companyId, current_section: currentSection || 'General', question: p })
                 }).then(r => r.ok ? r.json() : null)
