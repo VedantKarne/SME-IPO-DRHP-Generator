@@ -6,6 +6,7 @@ from jose import jwt
 import bcrypt
 import os
 import uuid
+from dotenv import load_dotenv
 
 from src.extraction.db_session import SessionLocal
 from src.extraction.schema import Company, CompanyUser
@@ -16,7 +17,22 @@ router = APIRouter()
 # using bcrypt directly to avoid passlib bugs with bcrypt>=4.0.0
 
 # JWT config
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+# Load .env here rather than relying on some other module having imported first.
+# Only src/agent/groq_client.py called load_dotenv(), so whether JWT_SECRET_KEY
+# was visible depended on import order.
+load_dotenv()
+
+# No default. This module previously fell back to a literal secret committed to
+# git, and since JWT_SECRET_KEY was never set anywhere, that public value was
+# what actually signed every token — anyone with the repo could mint a valid
+# session for any company. Fail at import rather than start up insecure.
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "JWT_SECRET_KEY is not set. Generate one with:\n"
+        "    python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+        "and add it to your .env file (see .env.example)."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 
@@ -34,6 +50,24 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def require_company_access(current_user: dict, company_id) -> str:
+    """
+    Assert the authenticated caller owns `company_id`, and return it as a string.
+
+    Authentication alone is not enough for this application: a token is scoped
+    to one company, and every company's DRHP is confidential to it. Without
+    this check any logged-in user could read or mutate another company's
+    sections, drafts, approvals and exports.
+
+    Raises 403 on mismatch. Mirrors the check already used in
+    document_upload_router.
+    """
+    company_id_str = str(company_id)
+    if str(current_user.get("company_id")) != company_id_str:
+        raise HTTPException(status_code=403, detail="Not authorized for this company")
+    return company_id_str
+
 
 def get_db():
     db = SessionLocal()

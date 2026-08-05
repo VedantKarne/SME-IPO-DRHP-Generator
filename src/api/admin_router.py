@@ -2,8 +2,10 @@
 src/api/admin_router.py
 
 Admin API for Knowledge Base (ChromaDB) inspection.
-No authentication is enforced here — add Depends(get_current_user) if
-you want to restrict these endpoints to logged-in users.
+
+All endpoints require a valid bearer token. These expose the contents of the
+shared regulatory/precedent corpus and allow arbitrary semantic search over
+it, so they are not safe to leave open.
 
 Endpoints:
   GET  /api/admin/collections  — list all ChromaDB collections with doc counts
@@ -12,8 +14,10 @@ Endpoints:
 import logging
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from src.api.auth_router import get_current_user
 
 # Top-level imports so tests can patch these at module scope
 from src.retrieval.vector_store import VectorStore
@@ -50,7 +54,7 @@ class ChunkResult(BaseModel):
 
 
 @router.get("/collections", response_model=List[CollectionInfo])
-def list_collections():
+def list_collections(current_user: dict = Depends(get_current_user)):
     """
     Returns all ChromaDB collections with their document (chunk) counts.
     Used by KnowledgeBase.jsx to populate the collection selector.
@@ -74,7 +78,10 @@ def list_collections():
 
 
 @router.post("/search", response_model=List[ChunkResult])
-def admin_search(request: SearchRequest):
+def admin_search(
+    request: SearchRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Hybrid (dense + sparse RRF) search within a named ChromaDB collection.
     Accepts { collection, query, k } and returns top-k results with scores.

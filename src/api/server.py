@@ -10,7 +10,7 @@ from src.api import wizard
 import uuid
 import logging
 
-from src.api.auth_router import router as auth_router, get_current_user
+from src.api.auth_router import router as auth_router, get_current_user, require_company_access
 from src.api.session_router import router as session_router
 
 logger = logging.getLogger(__name__)
@@ -459,7 +459,12 @@ class VersionCreateRequest(BaseModel):
     author_label: str
 
 @app.get("/api/sections/{company_id}/{section_name}/versions")
-def get_versions(company_id: str, section_name: str):
+def get_versions(
+    company_id: str,
+    section_name: str,
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, company_id)
     db = next(get_db())
     try:
         versions = db.query(SectionVersion).filter(
@@ -485,7 +490,13 @@ def get_versions(company_id: str, section_name: str):
         db.close()
 
 @app.post("/api/sections/{company_id}/{section_name}/versions")
-def save_version(company_id: str, section_name: str, req: VersionCreateRequest):
+def save_version(
+    company_id: str,
+    section_name: str,
+    req: VersionCreateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, company_id)
     db = next(get_db())
     try:
         new_version = SectionVersion(
@@ -608,7 +619,10 @@ class HitlFeedbackRequest(PydanticBaseModel):
     feedback: OptionalType[str] = None
 
 @app.get("/api/hitl/pending/{section_id}")
-def get_hitl_pending(section_id: str):
+def get_hitl_pending(
+    section_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Returns the HITL interrupt payload for a section that is paused awaiting human review.
     Uses the langgraph_thread_id stored in the DB to retrieve the correct graph state.
@@ -620,6 +634,7 @@ def get_hitl_pending(section_id: str):
         section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
         if not section:
             raise HTTPException(status_code=404, detail="Section not found")
+        require_company_access(current_user, section.company_id)
         if not section.langgraph_thread_id:
             raise HTTPException(status_code=404, detail="No active HITL thread for this section. Run the agent first.")
 
@@ -639,7 +654,11 @@ def get_hitl_pending(section_id: str):
         db.close()
 
 @app.post("/api/hitl/submit/{section_id}")
-def submit_hitl_feedback(section_id: str, req: HitlFeedbackRequest):
+def submit_hitl_feedback(
+    section_id: str,
+    req: HitlFeedbackRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Resumes a paused LangGraph HITL interrupt with the human's decision.
     The thread_id is looked up from the DB, so no in-memory state is required.
@@ -651,6 +670,7 @@ def submit_hitl_feedback(section_id: str, req: HitlFeedbackRequest):
         section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
         if not section:
             raise HTTPException(status_code=404, detail="Section not found")
+        require_company_access(current_user, section.company_id)
         if not section.langgraph_thread_id:
             raise HTTPException(status_code=404, detail="No active HITL thread for this section.")
 

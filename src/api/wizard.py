@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import date
 from src.extraction.schema import Company, FinancialStatement, DirectorKMP, OfferDetails
+from src.api.auth_router import get_current_user, require_company_access
 
 router = APIRouter(prefix="/api/wizard", tags=["wizard"])
 
@@ -41,7 +42,11 @@ class OfferCreate(BaseModel):
     objects_of_offer: List[str] = []
 
 @router.post("/company")
-def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
+def create_company(
+    company: CompanyCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     db_company = db.query(Company).filter(Company.cin == company.cin).first()
     if db_company:
         raise HTTPException(status_code=400, detail="Company with this CIN already exists")
@@ -59,7 +64,13 @@ def create_company(company: CompanyCreate, db: Session = Depends(get_db)):
     return {"id": str(new_company.id), "message": "Company created successfully"}
 
 @router.post("/financials/{company_id}")
-def add_financials(company_id: uuid.UUID, financials: List[FinancialStatementCreate], db: Session = Depends(get_db)):
+def add_financials(
+    company_id: uuid.UUID,
+    financials: List[FinancialStatementCreate],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, company_id)
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -79,7 +90,13 @@ def add_financials(company_id: uuid.UUID, financials: List[FinancialStatementCre
     return {"message": f"Added {len(financials)} financial statements"}
 
 @router.post("/directors/{company_id}")
-def add_directors(company_id: uuid.UUID, directors: List[DirectorCreate], db: Session = Depends(get_db)):
+def add_directors(
+    company_id: uuid.UUID,
+    directors: List[DirectorCreate],
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, company_id)
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -99,7 +116,13 @@ def add_directors(company_id: uuid.UUID, directors: List[DirectorCreate], db: Se
     return {"message": f"Added {len(directors)} directors/KMPs"}
 
 @router.post("/offer/{company_id}")
-def add_offer_details(company_id: uuid.UUID, offer: OfferCreate, db: Session = Depends(get_db)):
+def add_offer_details(
+    company_id: uuid.UUID,
+    offer: OfferCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, company_id)
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")

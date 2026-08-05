@@ -18,6 +18,8 @@ env/
 .env
 .env.*
 *.secret
+# ...but the placeholder template is meant to be committed.
+!.env.example
 
 # ── Databases & vector stores ─────────────────────────────────────────
 *.db

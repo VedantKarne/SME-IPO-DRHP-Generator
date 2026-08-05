@@ -72,12 +72,22 @@ echo ""
 # ── 1. Check .env ─────────────────────────────────────────────────────────────
 if [[ ! -f "$ENV_FILE" ]]; then
   warn ".env not found. Creating a template at $ENV_FILE"
-  cat > "$ENV_FILE" <<'EOF'
+  cat > "$ENV_FILE" <<EOF
 GROQ_API_KEY=gsk_your_key_here
 GEMINI_API_KEY=your_gemini_key_here
+JWT_SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || openssl rand -hex 32)
 EOF
   warn "Fill in your API keys in .env, then re-run ./run.sh"
+  warn "A random JWT_SECRET_KEY has been generated for you."
   exit 1
+fi
+
+# JWT_SECRET_KEY is required — the backend refuses to start without it, because
+# it previously fell back to a secret hardcoded in the source.
+if ! grep -q "^JWT_SECRET_KEY=." "$ENV_FILE" 2>/dev/null; then
+  warn "JWT_SECRET_KEY missing from .env — generating one now."
+  printf 'JWT_SECRET_KEY=%s\n' "$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || openssl rand -hex 32)" >> "$ENV_FILE"
+  warn "Existing login sessions (if any) are now invalid; users must sign in again."
 fi
 
 # Warn if placeholder values are still present

@@ -7,6 +7,7 @@ import logging
 from src.extraction.schema import GeneratedSection
 from src.agent.groq_client import RateLimitAwareGroqClient
 from src.api.server import get_db
+from src.api.auth_router import get_current_user, require_company_access
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +32,16 @@ class InlineAIRequest(BaseModel):
     context_text: str
 
 @router.post("/rewrite")
-def rewrite_text(req: RewriteRequest, db: Session = Depends(get_db)):
+def rewrite_text(
+    req: RewriteRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """
     Rewrites a selected passage based on the predefined action (rewrite, expand, simplify, etc).
     """
+    require_company_access(current_user, req.company_id)
+
     action_prompts = {
         "rewrite": "Please rewrite the following text for clarity and professional tone.",
         "expand": "Please expand the following text with more detail and context, keeping a professional tone.",
@@ -66,10 +73,16 @@ def rewrite_text(req: RewriteRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/prompt")
-def prompt_whole_doc(req: PromptRequest, db: Session = Depends(get_db)):
+def prompt_whole_doc(
+    req: PromptRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """
     Applies a custom user instruction to the entire section text and updates the database.
     """
+    require_company_access(current_user, req.company_id)
+
     system_prompt = (
         "You are an expert corporate lawyer drafting a SEBI DRHP document. "
         "You will be given the full text of a section and an instruction on how to modify it. "
@@ -106,10 +119,16 @@ def prompt_whole_doc(req: PromptRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/inline-ai")
-def inline_ai(req: InlineAIRequest, db: Session = Depends(get_db)):
+def inline_ai(
+    req: InlineAIRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """
     Executes an inline AI command at the cursor position based on context.
     """
+    require_company_access(current_user, req.company_id)
+
     system_prompt = (
         "You are an expert corporate lawyer drafting a SEBI DRHP document. "
         "You will be given some context text around the cursor and a specific instruction to apply at that position. "
