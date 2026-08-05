@@ -143,6 +143,7 @@ export default function CopilotPanel({
   activeEditor,
 }) {
   const [tab, setTab] = useState('suggestions');
+  const [applyError, setApplyError] = useState(null);
   const [chatInput, setChatInput] = useState('');
 
   const suggestions = useMemo(
@@ -152,6 +153,7 @@ export default function CopilotPanel({
 
   const handleApplySuggestion = async (item) => {
     if (!activeSectionName) return;
+    setApplyError(null);
     try {
       const prompt = `Apply this suggestion: ${item.title} - ${item.body}`;
       const response = await canvasApi.chatEditSection(companyId, activeSectionName, prompt);
@@ -162,7 +164,9 @@ export default function CopilotPanel({
       // Optional: switch to chat tab to show confirmation, or just rely on canvas update
       setTab('chat');
     } catch (e) {
-      console.error(e);
+      // Do not fail silently — the user clicked Apply and nothing would happen.
+      console.error('Apply suggestion failed:', e);
+      setApplyError(e?.message ?? 'Could not apply that suggestion.');
     }
   };
 
@@ -245,6 +249,11 @@ export default function CopilotPanel({
 
         {tab === 'suggestions' && (
           <div className="cp-suggestions-list" key={activeSectionName}>
+            {applyError && (
+              <div className="cp-error" role="alert">
+                <span aria-hidden="true">⚠</span> {applyError}
+              </div>
+            )}
             {suggestions.map((item) => (
               <SuggestionCard key={item.id} item={item} onApply={handleApplySuggestion} />
             ))}

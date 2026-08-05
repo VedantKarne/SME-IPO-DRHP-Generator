@@ -31,6 +31,8 @@ const useVersionStore = create((set, get) => ({
    */
   loadVersions: async (companyId, sectionName) => {
     if (!companyId || !sectionName) return;
+    // Throws ApiError on failure — callers render an error state rather than
+    // showing an empty list, which would read as "no versions yet".
     const data = await canvasApi.getVersions(companyId, sectionName);
     set((state) => ({
       versions: {
@@ -48,7 +50,8 @@ const useVersionStore = create((set, get) => ({
    * @param {string} sectionName
    * @param {object} entry - VersionEntry object
    */
-  addVersion: (companyId, sectionName, entry) => {
+  addVersion: async (companyId, sectionName, entry) => {
+    // Optimistic insert so the UI stays responsive.
     set((state) => {
       const existing = state.versions[sectionName] || [];
       const updated = [entry, ...existing].slice(0, MAX_VERSIONS_PER_SECTION);
@@ -59,10 +62,24 @@ const useVersionStore = create((set, get) => ({
         },
       };
     });
-    
-    // Save to backend asynchronously
-    if (companyId) {
-      canvasApi.saveVersion(companyId, sectionName, entry);
+
+    if (!companyId) return;
+
+    try {
+      await canvasApi.saveVersion(companyId, sectionName, entry);
+    } catch (e) {
+      // Roll the optimistic entry back out. Leaving it would show a version
+      // in the history panel that was never persisted — it would vanish on
+      // the next reload, and the user would believe it had been saved.
+      set((state) => ({
+        versions: {
+          ...state.versions,
+          [sectionName]: (state.versions[sectionName] || []).filter(
+            (v) => v.id !== entry.id
+          ),
+        },
+      }));
+      throw e;
     }
   },
 

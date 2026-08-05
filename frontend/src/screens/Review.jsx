@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { authedFetch } from '../utils/auth';
+
+const API_BASE = 'http://127.0.0.1:8000';
 
 export default function Review({ sections, setSections, companyId }) {
   const [actionStatus, setActionStatus] = useState({});
   const [activeInput, setActiveInput] = useState({ id: null, type: null });
   const [inputValue, setInputValue] = useState('');
   const [savedNotes, setSavedNotes] = useState({});
+  const [certifyError, setCertifyError] = useState(null);
 
   const pending = sections.filter(s => !s.locked && s.draft_text && !s.returned);
   const returned = sections.filter(s => !s.locked && s.returned);
@@ -43,6 +47,14 @@ export default function Review({ sections, setSections, companyId }) {
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: '0.875rem' }}>
         Review and certify sections as the registered intermediary. Locked sections are binding.
       </p>
+
+      {/* Certification failure — must be visible; a section that was not
+          certified should never appear certified. */}
+      {certifyError && (
+        <div className="canvas-error" role="alert" style={{ marginBottom: 16 }}>
+          <span aria-hidden="true">⚠</span> {certifyError}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         <div className="card card-sm" style={{ borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }}>
@@ -94,9 +106,12 @@ export default function Review({ sections, setSections, companyId }) {
                 ↩ Request Changes
               </button>
               <button className="btn btn-success btn-sm" onClick={async () => {
-                const res = await fetch(`http://127.0.0.1:8000/api/sections/${s.id}/approve`, { method: 'POST' });
+                // Approval is auth-guarded: it is the regulatory sign-off action.
+                const res = await authedFetch(`${API_BASE}/api/sections/${s.id}/approve`, { method: 'POST' });
                 if (res.ok) {
                     setSections(prev => prev.map(sec => sec.id === s.id ? { ...sec, locked: true } : sec));
+                } else {
+                    setCertifyError(`Could not certify "${s.name}" (HTTP ${res.status}).`);
                 }
               }}>✓ Certify</button>
             </div>

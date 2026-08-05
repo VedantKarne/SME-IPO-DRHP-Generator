@@ -54,11 +54,19 @@ export default function CanvasLayout({ companyId, companyName }) {
   // Toast system
   const { toasts, showToast, dismissToast } = useToast();
 
-  // Autosave callback
-  const handleAutosave = useCallback((sectionName) => {
+  // Autosave callback. Receives an error when the save did NOT succeed, so we
+  // never show "Autosaved" for work that was not actually persisted.
+  const handleAutosave = useCallback((sectionName, error) => {
     const shortName = sectionName.length > 28
       ? sectionName.slice(0, 28) + '…'
       : sectionName;
+
+    if (error) {
+      setLastSaveLabel('Not saved');
+      showToast(`Could not save "${shortName}" — ${error.message}`, 'error', 5000);
+      return;
+    }
+
     setLastSaveLabel('Saved just now');
     showToast(`Autosaved — ${shortName}`, 'success', 2000);
   }, [showToast]);
@@ -121,6 +129,7 @@ export default function CanvasLayout({ companyId, companyName }) {
           editorRefs={editorRefs}
           containerRef={containerRef}
           onAutosave={handleAutosave}
+          showToast={showToast}
         />
       </div>
 

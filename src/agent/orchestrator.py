@@ -23,6 +23,10 @@ class AgentState(TypedDict):
     
     # Validation
     consistency_errors: List[Dict[str, Any]]
+    # True when the checker itself failed, so consistency_errors == [] means
+    # "unknown", not "clean". Distinguishing these matters on a filing document.
+    consistency_check_failed: bool
+    consistency_check_error: str
     
     # Drafting
     draft_text: str
@@ -101,24 +105,33 @@ def context_aggregator_node(state: AgentState) -> dict:
 
 def consistency_validator_node(state: AgentState) -> dict:
     logger.info("Running consistency validations...")
-    errors = []
 
+    from src.extraction.db_session import SessionLocal
+    from src.agent.consistency_checker import run_all_checks
+
+    db = SessionLocal()
     try:
-        from src.extraction.db_session import SessionLocal
-        from src.agent.consistency_checker import run_all_checks
-
-        db = SessionLocal()
-        try:
-            errors = run_all_checks(
-                company_name=state["company_name"],
-                db=db,
-            )
-        finally:
-            db.close()
+        errors = run_all_checks(
+            company_name=state["company_name"],
+            db=db,
+        )
     except Exception as e:
-        logger.warning(f"Consistency validator failed: {e}")
+        # Do NOT return [] here. An empty error list is the same value the
+        # checker returns when a document is fully consistent, so swallowing
+        # the exception reported a crashed validator as a clean bill of health
+        # — on a regulatory filing. Surface it as an explicit failure marker
+        # so downstream consumers and the UI can tell "no issues found" apart
+        # from "we could not check".
+        logger.exception("Consistency validator failed")
+        return {
+            "consistency_errors": [],
+            "consistency_check_failed": True,
+            "consistency_check_error": str(e),
+        }
+    finally:
+        db.close()
 
-    return {"consistency_errors": errors}
+    return {"consistency_errors": errors, "consistency_check_failed": False}
 
 def draft_generation_node(state: AgentState) -> dict:
     logger.info("Drafting section using Groq Llama 3.3 70B...")

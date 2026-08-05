@@ -2840,3 +2840,68 @@ body.authoring-mode .shell-main {
   gap: 12px;
 }
 
+
+/* ---------------------------------------------------------------------------
+   Error states
+   ---------------------------------------------------------------------------
+   Added with the removal of the Canvas mock-response layer. Previously a failed
+   backend call was replaced with canned content, so there was nothing to show;
+   now every failure surfaces here instead of being papered over.
+   --------------------------------------------------------------------------- */
+
+.canvas-error,
+.doc-section__error,
+.evidence-panel__error,
+.cp-error,
+.ai-toolbar__error,
+.whole-doc-prompt__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  border-radius: 6px;
+  background: var(--error-dim);
+  border: 1px solid var(--error);
+  color: var(--text-primary);
+}
+
+.doc-section__error-retry,
+.evidence-panel__error button {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+  border: 1px solid var(--error);
+  background: transparent;
+  color: var(--error);
+  cursor: pointer;
+}
+
+.doc-section__error-retry:hover:not(:disabled),
+.evidence-panel__error button:hover {
+  background: var(--error);
+  color: #fff;
+}
+
+.doc-section__error-retry:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.evidence-panel__error {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.evidence-panel__error button {
+  margin-left: 0;
+}
+
+.ai-toolbar__error,
+.whole-doc-prompt__error {
+  flex-basis: 100%;
+}

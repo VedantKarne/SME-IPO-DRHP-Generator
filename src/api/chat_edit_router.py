@@ -6,6 +6,7 @@ import uuid
 from src.extraction.schema import GeneratedSection, ChatMessage, Company
 from src.agent.groq_client import RateLimitAwareGroqClient
 from src.api.server import get_db
+from src.api.auth_router import get_current_user, require_company_access
 
 router = APIRouter(prefix="/api/canvas", tags=["Chat Edit"])
 
@@ -19,7 +20,11 @@ class ChatEditResponse(BaseModel):
     new_draft_text: str
 
 @router.post("/chat-edit", response_model=ChatEditResponse)
-def chat_edit_section(request: ChatEditRequest, db: Session = Depends(get_db)):
+def chat_edit_section(
+    request: ChatEditRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     """
     1. Loads current draft_text using company_id and section_name.
     2. Checks if section is locked.
@@ -27,6 +32,8 @@ def chat_edit_section(request: ChatEditRequest, db: Session = Depends(get_db)):
     4. Updates draft_text and appends to chat_message.
     5. Returns new text.
     """
+    require_company_access(current_user, request.company_id)
+
     try:
         comp_uuid = uuid.UUID(request.company_id)
     except ValueError:

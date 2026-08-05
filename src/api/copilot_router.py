@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from src.api.auth_router import get_current_user, require_company_access
 from pydantic import BaseModel
 from src.agent.tools import rag_search
 from src.agent.groq_client import RateLimitAwareGroqClient
@@ -35,11 +36,16 @@ NEVER:
 """
 
 @router.post("/ask", response_model=CopilotResponse)
-def ask_copilot(request: CopilotRequest):
+def ask_copilot(
+    request: CopilotRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     General purpose IPO Copilot — answers regulatory questions,
     explains clauses, and helps improve DRHP sections.
     """
+    require_company_access(current_user, request.company_id)
+
 
     # 1. Retrieve regulatory context to ground citations
     context = rag_search(

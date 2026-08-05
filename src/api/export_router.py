@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from src.api.auth_router import get_current_user, require_company_access
 from fastapi.responses import Response
 from pydantic import BaseModel
 import logging
@@ -15,11 +16,26 @@ class ExportFullRequest(BaseModel):
     company_id: str
 
 @router.post("/section/{fmt}")
-def export_section(fmt: str, req: ExportSectionRequest):
+def export_section(
+    fmt: str,
+    req: ExportSectionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, req.company_id)
+
     if fmt == "json":
-        # Autosave endpoint - just return success
-        return {"status": "success"}
-        
+        # This was an "autosave" endpoint that returned success without writing
+        # anything, so callers believed content had been persisted when it had
+        # not. Autosave now goes through the section-versions endpoint instead.
+        raise HTTPException(
+            status_code=410,
+            detail=(
+                "This endpoint never persisted anything. "
+                "Use POST /api/sections/{company_id}/{section_name}/versions to save."
+            ),
+        )
+
+
     if fmt == "docx":
         try:
             from docx import Document
@@ -54,7 +70,21 @@ def export_section(fmt: str, req: ExportSectionRequest):
     raise HTTPException(status_code=400, detail="Unsupported format")
 
 @router.post("/full/{fmt}")
-def export_full(fmt: str, req: ExportFullRequest):
-    # For now, return a basic stub. A full export requires joining all sections.
-    text = f"Full Export for {req.company_id} in {fmt} format."
-    return Response(content=text.encode("utf-8"), media_type="text/plain")
+def export_full(
+    fmt: str,
+    req: ExportFullRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    require_company_access(current_user, req.company_id)
+
+    # NOTE: still a stub. src/agent/document_assembler.py already implements
+    # real DOCX/PDF assembly with SEBI TOC ordering but is wired to nothing;
+    # connecting it is the next piece of work. Until then this must not
+    # pretend to have produced a document.
+    raise HTTPException(
+        status_code=501,
+        detail=(
+            "Full DRHP export is not implemented yet. "
+            "Export sections individually in the meantime."
+        ),
+    )

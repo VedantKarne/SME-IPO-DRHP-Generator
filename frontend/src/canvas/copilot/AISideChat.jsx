@@ -131,6 +131,20 @@ export default function AISideChat({ companyId, sectionName }) {
           });
           window.dispatchEvent(event);
         }
+      } catch (e) {
+        // Previously there was no catch at all: a failed request left the
+        // thread silently missing a reply. Reply with the actual error so the
+        // user knows the question was not answered.
+        console.error('AI chat failed:', e);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `err-${Date.now()}`,
+            role: 'ai',
+            isError: true,
+            text: `I couldn't complete that request — ${e?.message ?? 'the request failed'}`,
+          },
+        ]);
       } finally {
         setLoading(false);
       }

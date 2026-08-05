@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './screens/Landing';
 import Dashboard from './screens/Dashboard';
-import Workspace from './screens/Workspace';
 import Eligibility from './screens/Eligibility';
 import Review from './screens/Review';
 import Documents from './screens/Documents';

@@ -63,6 +63,7 @@ function GroupDivider() {
 export default function AIToolbar({ editor, companyId = "", sectionName = "" }) {
   const imageInputRef = useRef(null);
   const [loadingAction, setLoadingAction] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   const addVersion = useVersionStore((s) => s.addVersion);
 
@@ -80,13 +81,14 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
               " "
             );
         const result = await canvasApi.rewrite(companyId, sectionName, selectedText, action);
-        const proposed = result?.proposed_text ?? selectedText;
+        const proposed = result?.proposed_text;
+        if (!proposed) throw new Error('the AI returned an empty rewrite');
         if (!editor.state.selection.empty) {
           editor.chain().focus().deleteSelection().insertContent(proposed).run();
         } else {
           editor.commands.setContent(markdownToTipTap(proposed));
         }
-        addVersion(companyId, sectionName, {
+        await addVersion(companyId, sectionName, {
           id: crypto.randomUUID(),
           sectionName,
           label: `AI Toolbar — ${label}`,
@@ -95,6 +97,12 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
           content: editor.getJSON(),
           authorLabel: "AI",
         });
+        setActionError(null);
+      } catch (e) {
+        // There was no catch here at all, so a failure left the toolbar
+        // spinner clearing with no other visible effect.
+        console.error(`AI toolbar action "${action}" failed:`, e);
+        setActionError(`${label} failed — ${e?.message ?? 'the request failed'}`);
       } finally {
         setLoadingAction(null);
       }
@@ -138,6 +146,13 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
 
   return (
     <div className="ai-toolbar" role="toolbar" aria-label="AI and formatting toolbar">
+      {/* Failure notice — the draft is left untouched when this appears */}
+      {actionError && (
+        <div className="ai-toolbar__error" role="alert">
+          <span aria-hidden="true">⚠</span> {actionError}
+        </div>
+      )}
+
       {/* ── AI Actions (P4) ────────────────────────────────────────── */}
       <AIActionButton
         onClick={() => handleAIAction("rewrite", "Rewrite")}

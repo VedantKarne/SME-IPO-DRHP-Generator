@@ -163,11 +163,10 @@ export default function Documents() {
       formData.append('file', file);
       formData.append('doc_type', String(idx));
 
-      const res = await fetch(`${API_BASE}/api/documents/upload/${companyId}`, {
+      // authedFetch now omits Content-Type for FormData, so the browser can
+      // set the multipart boundary. This used to need a raw fetch.
+      const res = await authedFetch(`${API_BASE}/api/documents/upload/${companyId}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-        },
         body: formData,
       });
 

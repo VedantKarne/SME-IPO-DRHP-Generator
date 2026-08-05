@@ -246,8 +246,15 @@ def _process_document_background(
                 )
                 logger.info(f"Indexed {len(chunks)} chunks into Vector Store for '{filename}'")
             except Exception as embed_err:
-                # Embedding failure is non-fatal — text was still extracted
-                logger.warning(f"Embedding failed for '{filename}': {embed_err}. Continuing without vectors.")
+                # Embedding is what makes an uploaded document usable: without
+                # vectors the retrieval layer cannot see it, so every draft
+                # generated afterwards silently omits its content. Marking the
+                # upload "done" in that state told the user their document had
+                # been processed when it had not. Fail loudly instead.
+                logger.exception(f"Embedding failed for '{filename}'")
+                raise RuntimeError(
+                    f"Document text was extracted but could not be indexed: {embed_err}"
+                ) from embed_err
 
         # 4. Auto-populate financials if this looks like a financial document
         if record and record.doc_type in ("financial_statement", "0"):
