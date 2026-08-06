@@ -5,7 +5,7 @@ import uuid
 import logging
 
 from src.extraction.schema import GeneratedSection
-from src.agent.groq_client import RateLimitAwareGroqClient
+from src.agent.groq_client import get_groq_client, LLMUnavailable
 from src.api.server import get_db
 from src.api.auth_router import get_current_user, require_company_access
 
@@ -59,7 +59,7 @@ def rewrite_text(
         "CRITICAL: Output ONLY the revised text. Do not include any conversational filler like 'Here is the revised text' or quotes around the output."
     )
     
-    client = RateLimitAwareGroqClient()
+    client = get_groq_client()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": req.selected_text}
@@ -68,6 +68,9 @@ def rewrite_text(
     try:
         new_text = client.generate(messages, max_tokens=1500)
         return {"proposed_text": new_text.strip()}
+    except LLMUnavailable as e:
+        # Breaker open or provider down: retryable, not a server bug.
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error(f"Groq rewrite failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -92,7 +95,7 @@ def prompt_whole_doc(
     
     user_prompt = f"INSTRUCTION:\n{req.prompt}\n\nCURRENT TEXT:\n{req.full_text}"
     
-    client = RateLimitAwareGroqClient()
+    client = get_groq_client()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
@@ -114,6 +117,9 @@ def prompt_whole_doc(
             logger.warning(f"Could not save prompt result to DB: {db_e}")
             
         return {"proposed_text": new_text.strip()}
+    except LLMUnavailable as e:
+        # Breaker open or provider down: retryable, not a server bug.
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error(f"Groq prompt failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -138,7 +144,7 @@ def inline_ai(
     
     user_prompt = f"INSTRUCTION: {req.instruction}\n\nCONTEXT:\n{req.context_text}"
     
-    client = RateLimitAwareGroqClient()
+    client = get_groq_client()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
@@ -147,6 +153,9 @@ def inline_ai(
     try:
         new_text = client.generate(messages, max_tokens=1000)
         return {"proposed_text": new_text.strip()}
+    except LLMUnavailable as e:
+        # Breaker open or provider down: retryable, not a server bug.
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error(f"Groq inline-ai failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

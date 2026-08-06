@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 import logging
 from typing import List, Dict, Any, Optional
@@ -11,6 +12,58 @@ from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_excep
 
 logger = logging.getLogger(__name__)
 
+# Circuit breaker. Exponential backoff already handles a transient rate limit,
+# but when the provider is genuinely down every request still pays five retries
+# with up to 60s waits before failing — so one outage stalls every user. After
+# CB_FAILURE_THRESHOLD consecutive failures the breaker opens and calls fail
+# immediately for CB_RESET_SECONDS, then a single probe decides whether to close.
+CB_FAILURE_THRESHOLD = 4
+CB_RESET_SECONDS = 60
+
+
+class LLMUnavailable(RuntimeError):
+    """Raised when the LLM is unreachable or the breaker is open."""
+
+
+class _CircuitBreaker:
+    def __init__(self, threshold: int = CB_FAILURE_THRESHOLD, reset_after: float = CB_RESET_SECONDS):
+        self.threshold = threshold
+        self.reset_after = reset_after
+        self._failures = 0
+        self._opened_at = 0.0
+        self._lock = threading.Lock()
+
+    @property
+    def state(self) -> str:
+        with self._lock:
+            if self._failures < self.threshold:
+                return "closed"
+            return "half_open" if (time.time() - self._opened_at) >= self.reset_after else "open"
+
+    def before_call(self) -> None:
+        if self.state == "open":
+            remaining = self.reset_after - (time.time() - self._opened_at)
+            raise LLMUnavailable(
+                f"LLM circuit breaker is open after {self._failures} consecutive "
+                f"failures; retrying in {remaining:.0f}s."
+            )
+
+    def record_success(self) -> None:
+        with self._lock:
+            self._failures = 0
+            self._opened_at = 0.0
+
+    def record_failure(self) -> None:
+        with self._lock:
+            self._failures += 1
+            if self._failures == self.threshold:
+                self._opened_at = time.time()
+                logger.error(
+                    f"LLM circuit breaker OPEN after {self._failures} consecutive failures; "
+                    f"failing fast for {self.reset_after}s."
+                )
+
+
 class RateLimitAwareGroqClient:
     def __init__(self, model: str = "llama-3.3-70b-versatile"):
         api_key = os.getenv("GROQ_API_KEY")
@@ -18,6 +71,7 @@ class RateLimitAwareGroqClient:
             logger.warning("GROQ_API_KEY not set. Drafting may fail.")
         self.client = Groq(api_key=api_key)
         self.model = model
+        self.breaker = _CircuitBreaker()
 
     @retry(
         stop=stop_after_attempt(5),
@@ -36,14 +90,26 @@ class RateLimitAwareGroqClient:
 
     def generate(self, messages: List[Dict[str, str]], max_tokens: int = 4000) -> str:
         """
-        Drafts a DRHP section using Groq Llama 3.3 70B with automatic 
-        exponential backoff handling for RateLimitErrors.
+        Draft with exponential backoff on rate limits, behind a circuit breaker.
+
+        Raises LLMUnavailable when the breaker is open or the call fails, rather
+        than returning a placeholder string — a caller must be able to tell a
+        failed generation from a real one.
         """
+        self.breaker.before_call()
+
         logger.info(f"Generating draft with {self.model} (Max Tokens: {max_tokens})")
         start_time = time.time()
-        result = self._groq_generate(messages, max_tokens)
+        try:
+            result = self._groq_generate(messages, max_tokens)
+        except Exception as e:
+            self.breaker.record_failure()
+            raise LLMUnavailable(f"LLM request failed: {e}") from e
+
+        self.breaker.record_success()
         elapsed = time.time() - start_time
         logger.info(f"Draft generation completed in {elapsed:.2f} seconds.")
+        self.last_latency_ms = int(elapsed * 1000)
         return result
 
 # Bug 3 Fix: Module-level singleton — instantiated once at import time,
