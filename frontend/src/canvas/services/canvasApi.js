@@ -397,6 +397,41 @@ export async function exportFull(companyId, fmt) {
 }
 
 // ---------------------------------------------------------------------------
+// Human-in-the-loop review
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the pending HITL interrupt payload for a section.
+ *
+ * The backend pauses the LangGraph run at `hitl_review_interrupt` when a draft
+ * scores below threshold. These endpoints have existed since Phase 9 with no
+ * caller anywhere in the frontend, so the pause was never surfaced to anyone.
+ *
+ * @param {string} sectionId  GeneratedSection UUID (not the section name)
+ * @returns {Promise<{status: string, payload?: object}>}
+ *   status is one of: pending_review | completed_or_not_paused | no_interrupts_found
+ * @throws {ApiError}
+ */
+export async function getHitlPending(sectionId) {
+  return request(`/api/hitl/pending/${encodeURIComponent(sectionId)}`);
+}
+
+/**
+ * Resume a paused review with the human's decision.
+ *
+ * @param {string} sectionId
+ * @param {'approve'|'revise'|'reject'} action
+ * @param {string} [feedback]  Required in practice for 'revise'
+ * @throws {ApiError}
+ */
+export async function submitHitlFeedback(sectionId, action, feedback) {
+  return request(
+    `/api/hitl/submit/${encodeURIComponent(sectionId)}`,
+    jsonBody({ action, feedback: feedback || null })
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Version History
 // ---------------------------------------------------------------------------
 

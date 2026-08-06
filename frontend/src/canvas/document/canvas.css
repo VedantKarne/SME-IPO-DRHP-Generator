@@ -2905,3 +2905,85 @@ body.authoring-mode .shell-main {
 .whole-doc-prompt__error {
   flex-basis: 100%;
 }
+
+/* ---------------------------------------------------------------------------
+   HITL review panel — renders only when a run is paused awaiting a decision,
+   so it is styled to interrupt rather than blend in.
+   --------------------------------------------------------------------------- */
+
+.hitl-panel {
+  margin: 12px 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--warning, #f59e0b);
+  background: rgba(245, 158, 11, 0.10);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hitl-panel__header { display: flex; align-items: center; gap: 10px; }
+
+.hitl-panel__badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--warning, #f59e0b);
+  color: #1a1a1a;
+}
+
+.hitl-panel__title { margin: 0; font-size: 0.95rem; color: var(--text-primary); }
+
+.hitl-panel__reason,
+.hitl-panel__score { margin: 0; font-size: 0.85rem; color: var(--text-secondary); }
+
+.hitl-panel__gaps { font-size: 0.82rem; color: var(--text-secondary); }
+.hitl-panel__gaps ul { margin: 6px 0 0; padding-left: 18px; }
+
+.hitl-panel__feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.hitl-panel__feedback textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+
+.hitl-panel__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.hitl-panel__action {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.hitl-panel__action--approve { border-color: var(--success); color: var(--success); }
+.hitl-panel__action--reject  { border-color: var(--error);   color: var(--error);   }
+.hitl-panel__action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.hitl-panel__error { margin: 0; font-size: 0.82rem; color: var(--error); }
+
+.hitl-panel--error {
+  border-color: var(--error);
+  background: var(--error-dim);
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
