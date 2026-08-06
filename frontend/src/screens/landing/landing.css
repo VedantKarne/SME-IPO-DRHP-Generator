@@ -1,0 +1,325 @@
+/* ─────────────────────────────────────────────────────────────
+   Nirmaan AI — Landing Page (v2)
+   Scoped entirely under `.landing-v2` so it never leaks into the
+   existing dark/glassmorphism app (Dashboard, Workspace, etc.).
+   Tokens below are taken verbatim from design-system.md.
+   ───────────────────────────────────────────────────────────── */
+
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@theme {
+  --color-paper: #FAF8F3;
+  --color-paper-raised: #FFFFFF;
+  --color-paper-sunken: #F1EEE6;
+  --color-ink: #1C1B19;
+  --color-ink-soft: #5C5A54;
+  --color-ink-faint: #9C998F;
+  --color-rule: #DEDAD0;
+
+  --color-signal: #8A2E2E;
+  --color-signal-soft: #F4E7E5;
+
+  --color-status-approved: #3D6B4F;
+  --color-status-draft: #946F2E;
+  --color-status-gap: #A13D3D;
+  --color-status-pending: #9C998F;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Source Serif 4', Lora, serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+.landing-v2 {
+  /* Base — paper & ink */
+  --paper: #FAF8F3;
+  --paper-raised: #FFFFFF;
+  --paper-sunken: #F1EEE6;
+  --ink: #1C1B19;
+  --ink-soft: #5C5A54;
+  --ink-faint: #9C998F;
+  --rule: #DEDAD0;
+  --grid-line: rgba(28, 27, 25, 0.05);
+
+  /* Signal — single accent */
+  --signal: #8A2E2E;
+  --signal-soft: #F4E7E5;
+
+  /* Status */
+  --status-approved: #3D6B4F;
+  --status-draft: #946F2E;
+  --status-gap: #A13D3D;
+  --status-pending: #9C998F;
+
+  /* Type scale */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-doc: 17px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 36px;
+
+  /* Spacing (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 40px;
+  --space-8: 56px;
+  --space-9: 80px;
+
+  /* Shape */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  --font-doc: 'Source Serif 4', Lora, serif;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.landing-v2 * { box-sizing: border-box; }
+
+.landing-v2 h1, .landing-v2 h2, .landing-v2 h3 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  line-height: 1.25;
+  /* No color here: inherited from .landing-v2's own `color: var(--ink)`.
+     Sections on a dark surface (e.g. the features section) set their own
+     light text color inline — a hardcoded color here would win by
+     specificity over those utility classes and make the text invisible. */
+}
+
+.landing-v2 a { color: inherit; text-decoration: none; }
+
+.landing-v2 .lv-container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+/* ─── Header ────────────────────────────────────────── */
+.lv-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.lv-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.lv-wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--ink);
+}
+
+.lv-wordmark-mark {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-doc);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.lv-nav {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.lv-nav-link {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  padding: var(--space-1) 0;
+  transition: color 0.15s ease;
+}
+
+.lv-nav-link:hover { color: var(--signal); }
+
+/* ─── Section / feature-card (used by SecuritySection) ─ */
+.lv-section {
+  padding: var(--space-8) var(--space-6);
+  border-top: 1px solid var(--rule);
+}
+
+.lv-section-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.lv-section-heading {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-2);
+}
+
+.lv-section-sub {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  margin-bottom: var(--space-7);
+  max-width: 60ch;
+}
+
+.lv-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.lv-feature-card {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.lv-feature-icon {
+  color: var(--signal);
+  margin-bottom: var(--space-4);
+}
+
+.lv-feature-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.lv-feature-desc {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+/* ─── Footer ─────────────────────────────────────────── */
+.lv-footer {
+  border-top: 1px solid var(--rule);
+  padding: var(--space-6);
+}
+
+.lv-footer-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .lv-features-grid { grid-template-columns: repeat(2, 1fr); }
+  .lv-nav { gap: var(--space-4); }
+}
+
+/* ─── Grid texture (applied per-section since each section paints its own
+   opaque background color; the base .landing-v2 grid alone only shows
+   through sections that don't set their own background) ────────────── */
+.lv-grid-light {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.lv-grid-dark {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Cascade-layer fix ──────────────────────────────────────────────
+   index.css (global, unscoped, used by the whole app) resets
+   `*, *::before, *::after { margin: 0; padding: 0 }`. That rule is NOT
+   inside a CSS @layer. Per the Cascade Layers spec, unlayered rules
+   always beat layered rules regardless of selector specificity —
+   and Tailwind wraps every utility in `@layer utilities`. The result:
+   every Tailwind padding/margin utility class on this page was being
+   silently zeroed out (confirmed via computed styles — e.g. `.p-6`
+   generates `padding: calc(var(--spacing) * 6)` but computed padding
+   was 0px). That's the real cause behind the reported misalignment.
+   Can't edit index.css — the rest of the app depends on it as-is — so
+   these are unlayered, scoped restatements (same specificity trick,
+   just for the classes this page actually uses) of the exact values
+   Tailwind already generates for them. Using [class~="x"] attribute
+   matching avoids needing to escape ":" / "." in the class names. */
+.landing-v2 [class~="p-6"]     { padding: calc(var(--spacing) * 6); }
+.landing-v2 [class~="px-3"]    { padding-inline: calc(var(--spacing) * 3); }
+.landing-v2 [class~="px-5"]    { padding-inline: calc(var(--spacing) * 5); }
+.landing-v2 [class~="px-6"]    { padding-inline: calc(var(--spacing) * 6); }
+.landing-v2 [class~="px-8"]    { padding-inline: calc(var(--spacing) * 8); }
+.landing-v2 [class~="py-1"]    { padding-block: var(--spacing); }
+.landing-v2 [class~="py-3"]    { padding-block: calc(var(--spacing) * 3); }
+.landing-v2 [class~="py-14"]   { padding-block: calc(var(--spacing) * 14); }
+.landing-v2 [class~="py-16"]   { padding-block: calc(var(--spacing) * 16); }
+.landing-v2 [class~="pt-4"]    { padding-top: calc(var(--spacing) * 4); }
+.landing-v2 [class~="pb-3"]    { padding-bottom: calc(var(--spacing) * 3); }
+.landing-v2 [class~="pb-4"]    { padding-bottom: calc(var(--spacing) * 4); }
+.landing-v2 [class~="pb-20"]   { padding-bottom: calc(var(--spacing) * 20); }
+.landing-v2 [class~="mx-auto"] { margin-inline: auto; }
+.landing-v2 [class~="mt-4"]    { margin-top: calc(var(--spacing) * 4); }
+.landing-v2 [class~="mt-8"]    { margin-top: calc(var(--spacing) * 8); }
+.landing-v2 [class~="mb-1.5"]  { margin-bottom: calc(var(--spacing) * 1.5); }
+.landing-v2 [class~="mb-3"]    { margin-bottom: calc(var(--spacing) * 3); }
+.landing-v2 [class~="mb-4"]    { margin-bottom: calc(var(--spacing) * 4); }
+.landing-v2 [class~="mb-6"]    { margin-bottom: calc(var(--spacing) * 6); }
+.landing-v2 [class~="mb-10"]   { margin-bottom: calc(var(--spacing) * 10); }
+.landing-v2 [class~="mb-14"]   { margin-bottom: calc(var(--spacing) * 14); }
+
+@media (width >= 40rem) {
+  .landing-v2 [class~="sm:px-8"]  { padding-inline: calc(var(--spacing) * 8); }
+  .landing-v2 [class~="sm:py-24"] { padding-block: calc(var(--spacing) * 24); }
+}
+@media (width >= 48rem) {
+  .landing-v2 [class~="md:px-14"]   { padding-inline: calc(var(--spacing) * 14); }
+  .landing-v2 [class~="md:py-20"]   { padding-block: calc(var(--spacing) * 20); }
+  .landing-v2 [class~="md:ml-auto"] { margin-left: auto; }
+  .landing-v2 [class~="md:mr-auto"] { margin-right: auto; }
+}
+
+@media (max-width: 600px) {
+  .lv-header-inner { padding: var(--space-3) var(--space-4); }
+  .lv-nav { display: none; }
+  .lv-section { padding: var(--space-6) var(--space-4); }
+  .lv-features-grid { grid-template-columns: 1fr; }
+  .lv-footer-inner { flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+}

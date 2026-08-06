@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Landing from './screens/Landing';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import LandingPage from './screens/landing/LandingPage';
 import Dashboard from './screens/Dashboard';
 import Eligibility from './screens/Eligibility';
 import Review from './screens/Review';
 import Documents from './screens/Documents';
 import KnowledgeBase from './screens/KnowledgeBase';
 import Auth from './screens/Auth';
+import Onboarding from './screens/Onboarding';
 import AppShell from './components/AppShell';
 import GlobalSidebar from './components/GlobalSidebar';
 import CanvasRoot from './canvas/CanvasRoot';
+import ProtectedRoute from './routes/ProtectedRoute';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
 
 const API = 'http://127.0.0.1:8000';
 
 export default function App() {
-  const [showAuth, setShowAuth] = useState(true);
-  const [showLanding, setShowLanding] = useState(false);
+  const navigate = useNavigate();
   const [companyId, setCompanyId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [sections, setSections] = useState([]);
@@ -26,13 +27,13 @@ export default function App() {
   const [consistency, setConsistency] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
 
-  useEffect(() => { 
-    bootstrap(); 
-    
+  useEffect(() => {
+    bootstrap();
+
     // Listen for tab sync events
     onSessionUpdate((data) => {
       if (data && data.type === 'LOGOUT') {
-        setShowAuth(true);
+        navigate('/auth');
       }
       if (data && data.type === 'SECTION_UPDATED') {
         bootstrap(); // Re-fetch session
@@ -44,15 +45,13 @@ export default function App() {
     try {
       const token = getToken();
       if (!token || isTokenExpired(token)) {
-        setShowAuth(true);
         return;
       }
-      
+
       const { company_id, company_name } = decodeToken(token);
       setCompanyId(company_id);
       setCompanyName(company_name);
-      setShowAuth(false);
-      
+
       const r = await authedFetch(`${API}/api/session/restore`);
       if (r.ok) {
         const data = await r.json();
@@ -65,47 +64,47 @@ export default function App() {
   };
 
   const handleAuthSuccess = (isNewRegistration) => {
-    if (isNewRegistration) {
-      setShowAuth(false);
-      setShowLanding(true); // Show onboarding chat for new users
-    } else {
-      // Returning user: load dashboard directly
-      bootstrap();
-    }
+    bootstrap();
+    navigate(isNewRegistration ? '/onboarding' : '/dashboard');
   };
 
-  const handleLandingComplete = () => {
-    setShowLanding(false);
+  const handleOnboardingComplete = () => {
     bootstrap();
+    navigate('/dashboard');
   };
 
   const approvedCount = sections.filter(s => s.locked).length;
 
-  if (showAuth) {
-    return <Auth onAuthSuccess={handleAuthSuccess} />;
-  }
-
-  if (showLanding) {
-    return <Landing onComplete={handleLandingComplete} />;
-  }
-
   return (
-    <BrowserRouter>
-      <GlobalSidebar companyName={companyName} approvedCount={approvedCount} />
-      <Routes>
-        <Route
-          path="/workspace"
-          element={
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/auth" element={<Auth onAuthSuccess={handleAuthSuccess} />} />
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <Onboarding onComplete={handleOnboardingComplete} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/workspace"
+        element={
+          <ProtectedRoute>
+            <GlobalSidebar companyName={companyName} approvedCount={approvedCount} />
             <CanvasRoot
               companyId={companyId}
               companyName={companyName}
               sections={sections}
             />
-          }
-        />
-        <Route
-          path="*"
-          element={
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <GlobalSidebar companyName={companyName} approvedCount={approvedCount} />
             <AppShell
               companyId={companyId}
               companyName={companyName}
@@ -139,9 +138,9 @@ export default function App() {
                 <Route path="/knowledge-base" element={<KnowledgeBase />} />
               </Routes>
             </AppShell>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }

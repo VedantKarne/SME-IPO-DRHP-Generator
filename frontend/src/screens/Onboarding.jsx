@@ -11,7 +11,7 @@ const INTERVIEW_SCRIPT = [
   { ai: "Your company looks like a strong SME IPO candidate! 🎉\n\nLet me set up your personalized workspace..." },
 ];
 
-export default function Landing({ onComplete }) {
+export default function Onboarding({ onComplete }) {
   const [step, setStep] = useState(0);
   const [messages, setMessages] = useState([]);
   const [inputVal, setInputVal] = useState('');
@@ -38,9 +38,9 @@ export default function Landing({ onComplete }) {
 
     if (entry.action === 'eligibility_check') {
       setIsChecking(true);
-      
+
       const [name, industry, years, revenue, litigations] = currentAnswers;
-      
+
       // Get company_id from token
       const token = getToken();
       if (!token) return;
@@ -49,12 +49,12 @@ export default function Landing({ onComplete }) {
       // Update the DB with real answers so the workspace reflects the user's input
       authedFetch(`http://127.0.0.1:8000/api/companies/${company_id}/setup`, {
         method: 'POST',
-        body: JSON.stringify({ 
-          name: name || 'SME Demo Company', 
-          industry: industry || '', 
-          years: years || '', 
-          revenue: revenue || '', 
-          litigations: litigations || '' 
+        body: JSON.stringify({
+          name: name || 'SME Demo Company',
+          industry: industry || '',
+          years: years || '',
+          revenue: revenue || '',
+          litigations: litigations || ''
         })
       }).catch(console.error);
 
@@ -75,7 +75,7 @@ export default function Landing({ onComplete }) {
     setTimeout(() => {
       setIsTyping(false);
       setMessages(prev => [...prev, { type: 'ai', text: entry.ai }]);
-      
+
       if (scriptIndex === INTERVIEW_SCRIPT.length - 1) {
         setTimeout(() => {
           setDone(true);
@@ -92,7 +92,7 @@ export default function Landing({ onComplete }) {
     const userMsg = inputVal.trim();
     setInputVal('');
     setMessages(prev => [...prev, { type: 'user', text: userMsg }]);
-    
+
     const newAnswers = [...userAnswers, userMsg];
     setUserAnswers(newAnswers);
 
