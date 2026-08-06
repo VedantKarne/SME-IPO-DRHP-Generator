@@ -31,7 +31,10 @@ class AgentState(TypedDict):
     # not the same as an empty context because retrieval was unavailable.
     regulatory_retrieval_failed: bool
     precedent_retrieval_failed: bool
-    retrieval_error: str
+    # Separate keys per corpus: these two nodes run in parallel, and LangGraph
+    # rejects two concurrent writes to the same key in a single step.
+    regulatory_retrieval_error: str
+    precedent_retrieval_error: str
     
     # Drafting
     draft_text: str
@@ -79,7 +82,7 @@ def regulatory_retrieval_node(state: AgentState) -> dict:
     return {
         "regulatory_context": context,
         "regulatory_retrieval_failed": failed,
-        "retrieval_error": error,
+        "regulatory_retrieval_error": error,
     }
 
 def precedent_retrieval_node(state: AgentState) -> dict:
@@ -94,7 +97,7 @@ def precedent_retrieval_node(state: AgentState) -> dict:
     return {
         "precedent_context": context,
         "precedent_retrieval_failed": failed,
-        "retrieval_error": error,
+        "precedent_retrieval_error": error,
     }
 
 def data_fetch_node(state: AgentState) -> dict:
