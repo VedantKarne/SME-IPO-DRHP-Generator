@@ -105,6 +105,25 @@ def rag_search(
 
     return "\n\n---\n\n".join(formatted_results)
 
+def _num(value) -> str:
+    """
+    Render a Numeric column readably.
+
+    SQLAlchemy Numeric returns Decimal, so these rendered as
+    "Rev=1500.0000000000" — ten decimal places of noise in every figure the
+    model has to read.
+    """
+    if value is None:
+        return "not provided"
+    try:
+        as_float = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if as_float == int(as_float):
+        return f"{int(as_float):,}"
+    return f"{as_float:,.2f}"
+
+
 def get_company_data(company_name: str) -> str:
     """
     Fetches structured company facts, financials, director details, and offer
@@ -129,7 +148,18 @@ def get_company_data(company_name: str) -> str:
         if financials:
             output.append("\nFINANCIALS (Lakhs):")
             for f in financials:
-                output.append(f"FY{f.fiscal_year}: Rev={f.revenue_lakhs}, EBITDA={f.ebitda_lakhs}, PAT={f.pat_lakhs}, NetWorth={f.net_worth_lakhs}, PaidUpCapital={f.paid_up_capital_lakhs}")
+                output.append(
+                    f"FY{f.fiscal_year}: Revenue={_num(f.revenue_lakhs)}, "
+                    f"EBITDA={_num(f.ebitda_lakhs)}, "
+                    f"ProfitAfterTax={_num(f.pat_lakhs)}, "
+                    f"NetWorth={_num(f.net_worth_lakhs)}, "
+                    f"PaidUpCapital={_num(f.paid_up_capital_lakhs)}"
+                )
+            output.append(
+                "NOTE: these labels are authoritative. NetWorth is total net worth, "
+                "NOT reserves — do not add PaidUpCapital to it. Reserves and surplus "
+                "were not provided; if a section needs them, flag a GAP."
+            )
                 
         if directors:
             output.append("\nDIRECTORS & KMP:")
@@ -141,9 +171,9 @@ def get_company_data(company_name: str) -> str:
 
         if offer:
             output.append("\nOFFER DETAILS:")
-            output.append(f"Total Shares Offered: {offer.total_shares_offered}")
-            output.append(f"Price Per Share (Rs): {offer.price_per_share}")
-            output.append(f"Total Issue Size (Lakhs): {offer.total_issue_size_lakhs}")
+            output.append(f"Total Shares Offered: {_num(offer.total_shares_offered)}")
+            output.append(f"Price Per Share (Rs): {_num(offer.price_per_share)}")
+            output.append(f"Total Issue Size (Lakhs): {_num(offer.total_issue_size_lakhs)}")
             if offer.objects_of_offer:
                 output.append(f"Objects of Offer: {offer.objects_of_offer}")
         else:

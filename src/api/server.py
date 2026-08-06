@@ -636,8 +636,8 @@ class SetupRequest(BaseModel):
     name: str
     industry: str
     years: str
-    revenue: str
-    litigations: str
+    revenue: str = ""
+    litigations: str = ""
 
 @app.post("/api/companies/{company_id}/setup")
 def setup_company(company_id: str, request: SetupRequest, current_user: dict = Depends(get_current_user)):
@@ -647,25 +647,46 @@ def setup_company(company_id: str, request: SetupRequest, current_user: dict = D
     """
     db = SessionLocal()
     try:
+        require_company_access(current_user, company_id)
         comp_uuid = uuid.UUID(company_id)
         company = db.query(Company).filter(Company.id == comp_uuid).first()
         if not company:
-            return {"status": "error", "detail": "Company not found"}
+            raise HTTPException(status_code=404, detail="Company not found")
 
         company.name = request.name
-        
-        # Parse litigation answer roughly
-        ans = request.litigations.lower()
-        has_lit = any(word in ans for word in ["yes", "yeah", "have", "pending", "yup", "true", "one", "two"])
-        if "no" in ans or "not" in ans:
-            has_lit = False
 
-        # Update KMP litigation flag so the Eligibility Engine reacts dynamically
-        director = db.query(DirectorKMP).filter(DirectorKMP.company_id == company.id).first()
-        if director:
-            director.pending_litigation = has_lit
-            director.litigation_details = "Pending civil case" if has_lit else ""
-            
+        # Retain the free-text answers instead of discarding them. `industry`
+        # and `years` were accepted and silently dropped — the user typed them
+        # and nothing kept them. dynamic_checklist is the company-scoped JSON
+        # column; a dedicated column would be better if these become load-bearing.
+        checklist = dict(company.dynamic_checklist or {})
+        checklist["onboarding_answers"] = {
+            "industry": request.industry,
+            "years_operating": request.years,
+            "revenue_freetext": request.revenue,
+            "litigation_freetext": request.litigations,
+        }
+        company.dynamic_checklist = checklist
+
+        # Litigation is now captured per-director through the structured
+        # onboarding step (POST /api/wizard/directors). This keyword sniff runs
+        # only as a fallback for the older free-text flow, and only when no
+        # director record exists — it must not overwrite what a user explicitly
+        # entered against a named director.
+        directors = db.query(DirectorKMP).filter(DirectorKMP.company_id == company.id).all()
+        if request.litigations and not directors:
+            ans = request.litigations.lower()
+            has_lit = any(w in ans for w in ["yes", "yeah", "have", "pending", "yup", "true"])
+            if "no" in ans or "not" in ans:
+                has_lit = False
+            if has_lit:
+                db.add(DirectorKMP(
+                    company_id=company.id,
+                    name="(unnamed — from onboarding)",
+                    pending_litigation=True,
+                    litigation_details=request.litigations[:500],
+                ))
+
         db.commit()
         return {"status": "success"}
     finally:

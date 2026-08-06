@@ -224,7 +224,11 @@ COMPANY FACTS:
         {"role": "user", "content": user_prompt}
     ]
     
-    draft = client.generate(messages, max_tokens=2500)
+    # 2500 tokens truncated drafts mid-sentence once citations became verbatim
+    # source headers (a single regulatory citation can run to ~90 characters, and
+    # a well-cited section carries dozens). A truncated draft is worse than a
+    # short one: it ends mid-clause and the gap detector scores the fragment.
+    draft = client.generate(messages, max_tokens=6000)
     current_revisions = state.get("revisions", 0)
     
     return {"draft_text": draft, "revisions": current_revisions + 1}

@@ -75,32 +75,56 @@ def add_financials(
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
         
+    # Upsert by fiscal year rather than blind append. A company has exactly one
+    # set of figures per year; appending meant re-running onboarding, or
+    # correcting a typo, produced duplicate years — and the eligibility engine
+    # reads financials[:3], so duplicates silently changed its verdict.
+    created = updated = 0
     for fin in financials:
-        db_fin = FinancialStatement(
-            company_id=company_id,
-            fiscal_year=fin.fiscal_year,
-            revenue_lakhs=fin.revenue_lakhs,
-            ebitda_lakhs=fin.ebitda_lakhs,
-            pat_lakhs=fin.pat_lakhs,
-            net_worth_lakhs=fin.net_worth_lakhs,
-            paid_up_capital_lakhs=fin.paid_up_capital_lakhs
-        )
-        db.add(db_fin)
+        existing = db.query(FinancialStatement).filter(
+            FinancialStatement.company_id == company_id,
+            FinancialStatement.fiscal_year == fin.fiscal_year,
+        ).first()
+        if existing:
+            existing.revenue_lakhs = fin.revenue_lakhs
+            existing.ebitda_lakhs = fin.ebitda_lakhs
+            existing.pat_lakhs = fin.pat_lakhs
+            existing.net_worth_lakhs = fin.net_worth_lakhs
+            existing.paid_up_capital_lakhs = fin.paid_up_capital_lakhs
+            updated += 1
+        else:
+            db.add(FinancialStatement(
+                company_id=company_id,
+                fiscal_year=fin.fiscal_year,
+                revenue_lakhs=fin.revenue_lakhs,
+                ebitda_lakhs=fin.ebitda_lakhs,
+                pat_lakhs=fin.pat_lakhs,
+                net_worth_lakhs=fin.net_worth_lakhs,
+                paid_up_capital_lakhs=fin.paid_up_capital_lakhs
+            ))
+            created += 1
     db.commit()
-    return {"message": f"Added {len(financials)} financial statements"}
+    return {"message": f"Saved {created + updated} financial statements",
+            "created": created, "updated": updated}
 
 @router.post("/directors/{company_id}")
 def add_directors(
     company_id: uuid.UUID,
     directors: List[DirectorCreate],
+    replace: bool = False,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Add directors/KMP. Pass replace=true to overwrite the existing board
+    (what onboarding does) rather than appending to it."""
     require_company_access(current_user, company_id)
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
         
+    if replace:
+        db.query(DirectorKMP).filter(DirectorKMP.company_id == company_id).delete()
+
     for dir in directors:
         db_dir = DirectorKMP(
             company_id=company_id,
@@ -113,22 +137,28 @@ def add_directors(
         )
         db.add(db_dir)
     db.commit()
-    return {"message": f"Added {len(directors)} directors/KMPs"}
+    return {"message": f"Saved {len(directors)} directors/KMPs", "replaced": replace}
 
 @router.post("/offer/{company_id}")
 def add_offer_details(
     company_id: uuid.UUID,
     offer: OfferCreate,
+    replace: bool = False,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
+    """Record offer details. Pass replace=true to supersede a previous entry
+    instead of stacking another row for the same issue."""
     require_company_access(current_user, company_id)
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     
     total_issue_size = (offer.total_shares_offered * offer.price_per_share) / 100000.0 # Convert to lakhs
-    
+
+    if replace:
+        db.query(OfferDetails).filter(OfferDetails.company_id == company_id).delete()
+
     db_offer = OfferDetails(
         company_id=company_id,
         total_shares_offered=offer.total_shares_offered,
