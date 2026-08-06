@@ -61,21 +61,51 @@ def get_db():
 # PRIORITY 1 — GET /api/sections/{company_id}
 # Now includes flagged_gaps in the response
 # ─────────────────────────────────────────────
+# Which uploaded document types a section depends on, keyed by doc_type id.
+#
+# Three keys used to be unreachable because they are not members of
+# SECTIONS_25, and the lookup iterates SECTIONS_25 — so their rules never fired.
+# "Financial Information" and "Government and Other Approvals" duplicated rules
+# already covered by "Financial Statements (3 Years)" and "Other Regulatory &
+# Statutory Disclosures" respectively, and are dropped.
+#
+# "Outstanding Litigations and Material Developments" was the interesting one:
+# the app's 25-section list has no litigation chapter at all, even though 14 of
+# the 20 precedent filings carry one (see src/config/sections.py). Until that
+# chapter exists, a litigation upload (doc_type 7) is routed to Risk Factors,
+# which is where such disclosure would otherwise surface.
 SECTION_DOC_MAP = {
     "Financial Statements (3 Years)": ["0"],
-    "Financial Information": ["0"],
     "Management Discussion & Analysis": ["0"],
     "Capital Structure": ["0", "9"],
     "General Information": ["1", "8"],
     "Cover Page & General Information": ["1", "8"],
     "History and Corporate Structure": ["1", "9"],
     "Objects of the Offer": ["1"],
-    "Government and Other Approvals": ["2", "3", "5", "8"],
     "Other Regulatory & Statutory Disclosures": ["2", "3", "5", "8"],
     "Our Business": ["2", "3", "4", "5", "6"],
     "Risk Factors": ["2", "3", "4", "6", "7"],
-    "Outstanding Litigations and Material Developments": ["7"]
 }
+
+
+def required_doc_types(section_name: str) -> list:
+    """
+    Document types a section depends on, tolerant of section-name variants.
+
+    Falls back to canonical resolution so a rule written against one spelling
+    ("Outstanding Litigations..." vs "Outstanding Litigation...") still applies.
+    """
+    if section_name in SECTION_DOC_MAP:
+        return SECTION_DOC_MAP[section_name]
+
+    from src.config.sections import resolve
+    target = resolve(section_name)
+    if target is None:
+        return []
+    for key, doc_types in SECTION_DOC_MAP.items():
+        if resolve(key) is target:
+            return doc_types
+    return []
 
 DOC_TYPE_LABELS = {
     "0": "Audited Financial Statements",
@@ -130,14 +160,14 @@ def get_company_sections(company_id: str, current_user: dict = Depends(get_curre
             flagged_gaps = s.flagged_gaps if s else []
             has_gaps = bool(flagged_gaps)
 
-            required_doc_types = SECTION_DOC_MAP.get(s_name, [])
+            required_doc_types_for_section = required_doc_types(s_name)
             missing_docs = []
             unsynced_docs = []
 
             all_required_present = True
             stale = False
 
-            for dtype in required_doc_types:
+            for dtype in required_doc_types_for_section:
                 if dtype not in doc_latest_uploads:
                     missing_docs.append(DOC_TYPE_LABELS.get(dtype, dtype))
                     all_required_present = False
@@ -169,7 +199,7 @@ def get_company_sections(company_id: str, current_user: dict = Depends(get_curre
                 # Promoter-approved sections are always GREEN regardless of gaps
                 sync_status = "green"
 
-            elif not required_doc_types:
+            elif not required_doc_types_for_section:
                 # Doc-independent sections (rely on promoter onboarding data only).
                 if not has_draft:
                     sync_status = "red"       # Nothing generated yet
