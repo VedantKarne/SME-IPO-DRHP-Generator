@@ -146,6 +146,23 @@ def export_full(
     with open(path, "rb") as fh:
         payload = fh.read()
 
+    # Record the export. An assembled DRHP leaving the system with no trace of
+    # who produced it, when, or how many sections it contained is not acceptable
+    # for a filing document.
+    try:
+        import uuid as _uuid
+        from src.extraction.schema import AuditLog
+        db.add(AuditLog(
+            event_type="drhp_exported",
+            company_id=_uuid.UUID(str(req.company_id)),
+            query=f"format={fmt} include_drafts={req.include_drafts}",
+            source_file=os.path.basename(path),
+            model_used="none",
+        ))
+        db.commit()
+    except Exception as audit_exc:
+        logger.warning(f"Audit log write failed for export: {audit_exc}")
+
     company = (result.get("company_name") or req.company_id).replace(" ", "_")
     media = ("application/pdf" if fmt == "pdf"
              else "application/vnd.openxmlformats-officedocument.wordprocessingml.document")

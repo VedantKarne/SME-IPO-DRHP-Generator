@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails
+from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails, AuditLog
 from src.api import wizard
 
 import os
@@ -289,6 +289,8 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
         }
 
 
+        import time as _time
+        _run_started = _time.time()
         try:
             graph.invoke(initial_state, config=config)
         except Exception as agent_exc:
@@ -355,6 +357,32 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
             db.commit()
             db.refresh(new_section)
             section_id = str(new_section.id)
+
+        # Audit trail. The audit_log table has always defined query,
+        # retrieved_clause_ids, confidence and latency_ms, but nothing populated
+        # them — document upload was the single write site in the codebase, so
+        # nothing recorded how a draft was produced or what it was grounded in.
+        try:
+            reg_ctx = result.get("regulatory_context", "") or ""
+            prec_ctx = result.get("precedent_context", "") or ""
+            # Citation headers as emitted by rag_search, e.g.
+            # "[icdr_....pdf | Chapter IX | Reg 238 | Lock-in ...]"
+            cited = re.findall(r"\[([^\]\n]{5,200})\]", reg_ctx + "\n" + prec_ctx)
+            db.add(AuditLog(
+                event_type="section_generated",
+                company_id=comp_uuid,
+                section_name=request.section_name,
+                query=f"generate:{request.section_name}",
+                retrieved_clause_ids=cited[:25],
+                confidence=float(completeness_score or 0.0),
+                model_used="llama-3.3-70b-versatile",
+                latency_ms=int((_time.time() - _run_started) * 1000),
+            ))
+            db.commit()
+        except Exception as audit_exc:
+            # Never fail a generation because the audit write failed, but do not
+            # hide it either.
+            logger.warning(f"Audit log write failed for {request.section_name}: {audit_exc}")
 
         return {
             "status": "success",
