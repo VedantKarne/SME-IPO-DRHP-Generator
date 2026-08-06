@@ -31,7 +31,12 @@ def restore_session(current_user: dict = Depends(get_current_user), db: Session 
         raise HTTPException(status_code=404, detail="Company not found")
         
     sections = db.query(GeneratedSection).filter(GeneratedSection.company_id == company_id).all()
-    readiness = db.query(ReadinessScore).filter(ReadinessScore.company_id == company_id).order_by(ReadinessScore.created_at.desc()).first()
+    # The readiness_score table is defined and migrated but nothing in the
+    # codebase ever writes to it, so this query always returned None and the
+    # dashboard showed zeros — while /api/readiness reported real numbers for
+    # the same company. Use the one live computation instead.
+    from src.api.server import compute_readiness
+    readiness = compute_readiness(company_id, db)
     docs = db.query(UploadedDocument).filter(UploadedDocument.company_id == company_id).all()
     
     # Use actual EligibilityEngine instead of mock
@@ -67,10 +72,13 @@ def restore_session(current_user: dict = Depends(get_current_user), db: Session 
         "eligibility": eligibility,
         "consistency": consistency,
         "readiness": {
-            "score": readiness.overall_score if readiness else 0,
-            "financial_readiness": readiness.financials_score if readiness else 0,
-            "legal_readiness": readiness.legal_score if readiness else 0,
-            "compliance_readiness": readiness.compliance_score if readiness else 0,
+            "score": readiness["overall_score"],
+            "financial_readiness": readiness["financial_score"],
+            "legal_readiness": readiness["legal_score"],
+            "compliance_readiness": readiness["management_score"],
+            # Pass the full payload through too, so consumers do not have to
+            # re-query /api/readiness for the counts.
+            **readiness,
         },
         "uploaded_documents": [
             {

@@ -429,64 +429,73 @@ def run_consistency_checks(company_id: str, current_user: dict = Depends(get_cur
 # PRIORITY 3 — GET /api/readiness/{company_id}
 # IPO Readiness Dashboard sub-scores
 # ─────────────────────────────────────────────
+def compute_readiness(company_id, db) -> dict:
+    """
+    Single source of truth for readiness, computed live from generated_section.
+
+    The `readiness_score` table is defined and migrated but nothing in the
+    codebase ever writes to it, so /api/session/restore — which read from that
+    table — always reported zeros while /api/readiness reported real numbers for
+    the same company. Both now call this.
+    """
+    comp_uuid = company_id if isinstance(company_id, uuid.UUID) else uuid.UUID(str(company_id))
+    sections = db.query(GeneratedSection).filter(
+        GeneratedSection.company_id == comp_uuid
+    ).all()
+
+    total = len(SECTIONS_25)
+    done = len([s for s in sections if s.is_locked])
+    draft_count = len([s for s in sections if s.status == "draft" and not s.is_locked])
+    gap_count = sum(len(s.flagged_gaps or []) for s in sections)
+
+    avg_score = (
+        sum(s.completeness_score or 0 for s in sections) / len(sections)
+        if sections else 0.0
+    )
+
+    financial_sections = ["Financial Statements (3 Years)", "Management Discussion & Analysis", "Capital Structure", "Basis of Issue Price"]
+    legal_sections = ["Risk Factors", "Key Industry Regulations", "Corporate Governance", "Other Regulatory & Statutory Disclosures"]
+    mgmt_sections = ["Management & Board of Directors", "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group"]
+
+    def avg_cat_score(names):
+        matched = [s for s in sections if s.section_name in names]
+        if not matched:
+            return 0.0
+        return round(sum(s.completeness_score or 0 for s in matched) / len(matched) * 100)
+
+    return {
+        "total_sections": total,
+        "sections_approved": done,
+        "sections_in_draft": draft_count,
+        "sections_pending": total - done - draft_count,
+        "total_open_gaps": gap_count,
+        "overall_score": round(avg_score * 100),
+        "financial_score": avg_cat_score(financial_sections),
+        "legal_score": avg_cat_score(legal_sections),
+        "management_score": avg_cat_score(mgmt_sections),
+    }
+
+
 @app.get("/api/readiness/{company_id}")
 def get_readiness(company_id: str, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        comp_uuid = uuid.UUID(company_id)
-        sections = db.query(GeneratedSection).filter(
-            GeneratedSection.company_id == comp_uuid
-        ).all()
-
-        total = 25  # Target: 25 DRHP sections
-        done = len([s for s in sections if s.is_locked])
-        draft_count = len([s for s in sections if s.status == "draft" and not s.is_locked])
-        gap_count = sum(len(s.flagged_gaps or []) for s in sections)
-
-        avg_score = (
-            sum(s.completeness_score or 0 for s in sections) / len(sections)
-            if sections else 0.0
-        )
-
-        # Calculate sub-scores by section category
-        financial_sections = ["Financial Statements (3 Years)", "Management Discussion & Analysis", "Capital Structure", "Basis of Issue Price"]
-        legal_sections = ["Risk Factors", "Key Industry Regulations", "Corporate Governance", "Other Regulatory & Statutory Disclosures"]
-        mgmt_sections = ["Management & Board of Directors", "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group"]
-
-        def avg_cat_score(names):
-            matched = [s for s in sections if s.section_name in names]
-            if not matched:
-                return 0.0
-            return round(sum(s.completeness_score or 0 for s in matched) / len(matched) * 100)
-
-        return {
-            "total_sections": total,
-            "sections_approved": done,
-            "sections_in_draft": draft_count,
-            "sections_pending": total - done - draft_count,
-            "total_open_gaps": gap_count,
-            "overall_score": round(avg_score * 100),
-            "financial_score": avg_cat_score(financial_sections),
-            "legal_score": avg_cat_score(legal_sections),
-            "management_score": avg_cat_score(mgmt_sections),
-        }
+        require_company_access(current_user, company_id)
+        return compute_readiness(company_id, db)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
 
-# ─────────────────────────────────────────────
-# VERSION HISTORY endpoints
-# ─────────────────────────────────────────────
-
-from src.extraction.schema import SectionVersion
-
 class VersionCreateRequest(BaseModel):
     label: str
     source: str
     content: dict
     author_label: str
+
 
 @app.get("/api/sections/{company_id}/{section_name}/versions")
 def get_versions(

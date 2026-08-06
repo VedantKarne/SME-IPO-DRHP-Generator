@@ -6,10 +6,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import * as canvasApi from "../services/canvasApi.js";
 
+// `scope` matters: the old "Export DRHP Draft" option called the per-section
+// endpoint, so it downloaded one section while its label promised the document.
 const EXPORT_OPTIONS = [
-  { id: "pdf",        label: "Export PDF",        icon: "📄", fmt: "pdf"  },
-  { id: "docx",       label: "Export DOCX",       icon: "📝", fmt: "docx" },
-  { id: "drhp_draft", label: "Export DRHP Draft", icon: "📋", fmt: "pdf"  },
+  { id: "section_pdf",  label: "This section as PDF",   icon: "📄", fmt: "pdf",  scope: "section" },
+  { id: "section_docx", label: "This section as DOCX",  icon: "📝", fmt: "docx", scope: "section" },
+  { id: "full_docx",    label: "Full DRHP as DOCX",     icon: "📚", fmt: "docx", scope: "full" },
+  { id: "full_pdf",     label: "Full DRHP as PDF",      icon: "📕", fmt: "pdf",  scope: "full" },
 ];
 
 export default function ExportDropdown({ editor, companyId, sectionName }) {
@@ -33,10 +36,16 @@ export default function ExportDropdown({ editor, companyId, sectionName }) {
       setOpen(false);
       setBusy(opt.id);
       try {
-        const content = editor ? editor.getHTML() : "";
-        const blob = await canvasApi.exportSection(companyId, sectionName, content, opt.fmt);
-        const ext  = opt.fmt === "docx" ? "docx" : "pdf";
-        const name = `${(sectionName || "section").replace(/[^a-z0-9]/gi, "_")}.${ext}`;
+        let blob;
+        let name;
+        if (opt.scope === "full") {
+          blob = await canvasApi.exportFull(companyId, opt.fmt);
+          name = `DRHP_full.${opt.fmt}`;
+        } else {
+          const content = editor ? editor.getHTML() : "";
+          blob = await canvasApi.exportSection(companyId, sectionName, content, opt.fmt);
+          name = `${(sectionName || "section").replace(/[^a-z0-9]/gi, "_")}.${opt.fmt}`;
+        }
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement("a");
         a.href     = url;
