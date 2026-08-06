@@ -57,7 +57,9 @@ class RegulatoryChunker:
         # cross-reference, not a boundary.
         self.chapter_pattern = re.compile(r"^\s*CHAPTER\s+([MDCLXVI]+)\s*[-–—:]?\s*(.*)$")
         self.schedule_pattern = re.compile(r"^\s*SCHEDULE\s+([MDCLXVI]+)\s*[-–—:]?\s*(.*)$")
-        self.regulation_pattern = re.compile(r"^\s*(\d{1,3})\.\s+(.*)$")
+        # The heading title is optional: filings vary between "229. Conditions
+        # for listing" on one line and a bare "229." with the title on the next.
+        self.regulation_pattern = re.compile(r"^\s*(\d{1,3})\.(?:\s+(.*))?$")
         self.roman_pattern = re.compile(r"^[MDCLXVI]+$")
         # Amendment footnote markers, e.g. "258[ Underwriting" or "109".
         self.footnote_pattern = re.compile(r"^\d+\s*\[?\s*")
@@ -91,7 +93,8 @@ class RegulatoryChunker:
                     unit["text"] = body
                     units.append(unit)
 
-        for raw_line in text.split("\n"):
+        raw_lines = text.split("\n")
+        for line_no, raw_line in enumerate(raw_lines):
             stripped = raw_line.strip()
 
             match = self.chapter_pattern.match(raw_line)
@@ -125,11 +128,25 @@ class RegulatoryChunker:
                     flush()
                     buf = []
                     highest_reg = int(match.group(1))
+                    inline = (match.group(2) or "").strip()
+                    # "229. Conditions for listing" carries its title inline;
+                    # "229. (1) An issuer shall be eligible..." carries body text.
+                    # Only treat the inline remainder as a title when it reads
+                    # like one, otherwise keep the preceding short heading line.
+                    title = inline if self._is_title(inline) else ""
+                    if not title:
+                        # A bare "229." puts its heading on the following line;
+                        # elsewhere the heading precedes the number. Try the
+                        # next line first, then fall back to the preceding one.
+                        title = self._lookahead_title(raw_lines, line_no)
+                    if not title and self._is_title(heading_candidate):
+                        title = heading_candidate
+
                     cur = {
                         "chapter": chapter,
                         "chapter_title": chapter_title,
                         "regulation_number": str(highest_reg),
-                        "regulation_title": self._clean_title(heading_candidate),
+                        "regulation_title": self._clean_title(title),
                     }
                     buf.append(stripped)
                     heading_candidate = ""
@@ -149,6 +166,33 @@ class RegulatoryChunker:
 
         flush()
         return units
+
+    # List markers such as "a)", "(iv)", "2." are not headings.
+    _LIST_MARKER = re.compile(r"^\(?[a-zA-Z0-9ivxIVX]{1,4}[\)\.]\s*$")
+
+    @classmethod
+    def _is_title(cls, candidate: str) -> bool:
+        """A heading, as opposed to body text or a numbered sub-clause."""
+        candidate = (candidate or "").strip()
+        if not candidate or len(candidate) >= 90:
+            return False
+        if candidate.startswith("(") or cls._LIST_MARKER.match(candidate):
+            return False
+        if candidate.endswith((".", ";", ":", ",")):
+            return False
+        # A heading has words, not just a stray token.
+        return len(candidate) >= 4 and any(ch.isalpha() for ch in candidate)
+
+    def _lookahead_title(self, lines: List[str], index: int, window: int = 2) -> str:
+        """Return the first title-looking line shortly after `index`."""
+        for offset in range(1, window + 1):
+            if index + offset >= len(lines):
+                break
+            candidate = lines[index + offset].strip()
+            if not candidate:
+                continue
+            return candidate if self._is_title(candidate) else ""
+        return ""
 
     def _clean_title(self, title: str) -> str:
         """Strip amendment footnote markers that lead section headings."""

@@ -18,7 +18,13 @@ from src.extraction.schema import Company, FinancialStatement, DirectorKMP, Gene
 
 logger = logging.getLogger(__name__)
 
+class RetrievalUnavailable(RuntimeError):
+    """Raised when the retrieval stack could not be constructed or a query failed."""
+
+
 # Initialize retrieval stack (Singleton pattern for agent scope)
+_retriever = None
+_retriever_error = ""
 try:
     _embedder = BGEM3Embedder(use_fp16=True)
     _vector_store = VectorStore()
@@ -26,8 +32,9 @@ try:
     _reranker = FlashRankReranker()
     _retriever = HybridRetriever(_embedder, _vector_store, _parent_store, _reranker)
 except Exception as e:
-    logger.error(f"Failed to initialize retrieval stack: {e}")
-    _retriever = None
+    logger.exception("Failed to initialize retrieval stack")
+    _retriever_error = str(e)
+
 
 def rag_search(
     query: str,
@@ -37,34 +44,65 @@ def rag_search(
 ) -> str:
     """
     Hybrid retrieval from SEBI ICDR regulatory clauses AND/OR real DRHP precedent filings.
+
+    Raises RetrievalUnavailable when retrieval cannot run. It previously returned
+    the string "ERROR: Retrieval stack not initialized." — which the orchestrator
+    injected into the drafting prompt as though it were regulatory context, so
+    the model drafted around an error message and the failure never surfaced.
     """
-    if not _retriever:
-        return "ERROR: Retrieval stack not initialized."
-        
-    results = _retriever.hybrid_retrieve(
-        query=query,
-        corpus=corpus,
-        k=k,
-        mode=query_type
-    )
-    
+    if _retriever is None:
+        raise RetrievalUnavailable(
+            f"Retrieval stack failed to initialize: {_retriever_error or 'unknown error'}"
+        )
+
+    try:
+        results = _retriever.hybrid_retrieve(
+            query=query,
+            corpus=corpus,
+            k=k,
+            mode=query_type
+        )
+    except Exception as e:
+        raise RetrievalUnavailable(f"Retrieval query failed: {e}") from e
+
+
     formatted_results = []
     for r in results:
         meta = r.get("metadata", {})
-        if "regulation" in meta or "chapter" in meta:
-            # Regulatory formatting
-            reg = meta.get("regulation") or meta.get("regulation_number", "N/A")
-            source = meta.get("source_doc", "SEBI_ICDR_Regulations")
-            formatted_results.append(f"[{source} | Chapter {meta.get('chapter', 'N/A')} | Reg {reg}]\n{r['text']}")
+
+        # Branch on the explicit doc_type the indexers write, rather than probing
+        # for the presence of a metadata key.
+        if meta.get("doc_type") == "regulation" or "chapter" in meta:
+            source = meta.get("source_doc") or "SEBI ICDR Regulations"
+            chapter = meta.get("chapter") or ""
+            reg = meta.get("regulation_number") or ""
+            title = meta.get("section") or meta.get("chapter_title") or ""
+
+            # Build the citation from the parts that actually exist. Emitting
+            # "Chapter N/A | Reg N/A" told the reader a lookup had succeeded when
+            # the metadata was in fact missing.
+            bits = [source]
+            if chapter:
+                bits.append(f"Chapter {chapter}" if not chapter.startswith("SCHEDULE") else chapter)
+            if reg:
+                bits.append(f"Reg {reg}")
+            if title:
+                bits.append(title)
+            formatted_results.append(f"[{' | '.join(bits)}]\n{r['text']}")
         else:
-            # Precedent formatting
-            parts = [str(meta.get('company', '')), str(meta.get('exchange', '')), str(meta.get('year', ''))]
-            real_company = " ".join(p for p in parts if p and p.lower() != 'drhp').title().strip()
-            if not real_company:
-                real_company = meta.get('source_doc', 'Unknown')
-            section = meta.get('section', 'N/A')
-            formatted_results.append(f"[{real_company} DRHP | Section {section}]\n{r['text']}")
-            
+            company = str(meta.get("company") or "").strip()
+            year = str(meta.get("year") or "").strip()
+            section = str(meta.get("section") or "").strip()
+            if not company:
+                company = str(meta.get("source_doc") or "Unknown filing")
+
+            bits = [f"{company} DRHP" if not company.lower().endswith("drhp") else company]
+            if year:
+                bits.append(year)
+            if section:
+                bits.append(section)
+            formatted_results.append(f"[{' | '.join(bits)}]\n{r['text']}")
+
     return "\n\n---\n\n".join(formatted_results)
 
 def get_company_data(company_name: str) -> str:

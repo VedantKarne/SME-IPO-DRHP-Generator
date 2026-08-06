@@ -22,15 +22,26 @@ def enrich_chunk_text(text: str, metadata: Dict[str, Any]) -> str:
     if "year" in metadata and metadata["year"]:
         breadcrumb_parts.append(f"Year: {metadata['year']}")
         
+    # Precedent grouping, e.g. "SECTION V" — gives the model the filing's own
+    # structural context alongside the chapter name.
+    if metadata.get("section_group"):
+        breadcrumb_parts.append(str(metadata["section_group"]))
+
     if "section" in metadata and metadata["section"]:
         breadcrumb_parts.append(f"Section: {metadata['section']}")
-        
+
     # Regulatory specific
     if "chapter" in metadata and metadata["chapter"]:
-        breadcrumb_parts.append(f"Chapter {metadata['chapter']}")
-        
-    if "regulation" in metadata and metadata["regulation"]:
-        breadcrumb_parts.append(f"Regulation {metadata['regulation']}")
+        chapter = str(metadata["chapter"])
+        # Schedules already carry their own label ("SCHEDULE VIII").
+        breadcrumb_parts.append(chapter if chapter.upper().startswith("SCHEDULE") else f"Chapter {chapter}")
+
+    # Accept either key: the chunkers emit `regulation_number`, while older
+    # callers used `regulation`. Reading only `regulation` meant this breadcrumb
+    # never fired for the regulatory corpus.
+    regulation = metadata.get("regulation_number") or metadata.get("regulation")
+    if regulation:
+        breadcrumb_parts.append(f"Regulation {regulation}")
 
     # General heading path from Docling
     if "heading_path" in metadata and isinstance(metadata["heading_path"], list) and metadata["heading_path"]:

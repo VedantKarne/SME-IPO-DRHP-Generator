@@ -46,20 +46,27 @@ def embed_precedent_chunks_accelerated(prec_chunks, vector_store, embedder, batc
     
     prec_dicts = []
     for c in prec_chunks:
-        base_id = getattr(c, 'chunk_id', str(id(c)))
-        source = getattr(c, 'source_doc', 'unknown')
-        unique_id = f"{source}_{base_id}"
-        
+        # chunk_id already embeds the source document, so prefixing source again
+        # produced an ID that no longer matched the child_id written to
+        # ParentDocStore — expand_to_parent() then never resolved and parent
+        # expansion silently no-opped for the precedent corpus.
+        unique_id = getattr(c, 'chunk_id', str(id(c)))
+        meta = getattr(c, 'metadata', {}) or {}
+
         prec_dicts.append({
             "id": unique_id,
-            "text": c.text,
+            # Embed the enriched text (context breadcrumb + body). It was being
+            # computed and persisted but never actually embedded.
+            "text": getattr(c, 'enriched_text', '') or c.text,
             "metadata": {
                 "doc_type": "precedent",
                 "parent_id": getattr(c, 'parent_id', ''),
-                "company": c.metadata.get("company", "Unknown") if hasattr(c, 'metadata') else "Unknown",
-                "exchange": c.metadata.get("exchange", "SME") if hasattr(c, 'metadata') else "SME",
-                "year": c.metadata.get("year", "2026") if hasattr(c, 'metadata') else "2026",
-                "section": c.metadata.get("section", "") if hasattr(c, 'metadata') else ""
+                "source_doc": getattr(c, 'source_doc', ''),
+                "company": meta.get("company", ""),
+                "exchange": meta.get("exchange", ""),
+                "year": meta.get("year", ""),
+                "industry": meta.get("industry", ""),
+                "section": meta.get("section", ""),
             }
         })
     

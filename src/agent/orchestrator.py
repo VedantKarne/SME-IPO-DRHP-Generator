@@ -4,7 +4,7 @@ import operator
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt, Command
 
-from src.agent.tools import rag_search, get_company_data, get_client_document_context
+from src.agent.tools import rag_search, RetrievalUnavailable, get_company_data, get_client_document_context
 from src.agent.prompts import DRAFT_SECTION_SYSTEM_PROMPT
 from src.agent.groq_client import get_groq_client  # Bug 3 Fix: use singleton getter
 
@@ -27,6 +27,11 @@ class AgentState(TypedDict):
     # "unknown", not "clean". Distinguishing these matters on a filing document.
     consistency_check_failed: bool
     consistency_check_error: str
+    # Same distinction for retrieval: an empty context because nothing matched is
+    # not the same as an empty context because retrieval was unavailable.
+    regulatory_retrieval_failed: bool
+    precedent_retrieval_failed: bool
+    retrieval_error: str
     
     # Drafting
     draft_text: str
@@ -42,25 +47,55 @@ class AgentState(TypedDict):
     gaps: List[Dict[str, Any]]
 
 # Nodes
+def _retrieve(label: str, **kwargs) -> tuple:
+    """
+    Run a retrieval and report whether it actually succeeded.
+
+    Returns (context, failed, error). An empty context with failed=False means
+    "the corpus was searched and matched nothing" — which is a different claim
+    from "retrieval was unavailable", and the two must not be conflated on a
+    document that carries regulatory citations.
+    """
+    try:
+        context = rag_search(**kwargs)
+    except RetrievalUnavailable as e:
+        logger.error(f"{label} retrieval unavailable: {e}")
+        return "", True, str(e)
+
+    if not context.strip():
+        logger.warning(f"{label} retrieval returned no matches — is the corpus indexed?")
+    return context, False, ""
+
+
 def regulatory_retrieval_node(state: AgentState) -> dict:
     logger.info(f"Retrieving regulatory context for {state['current_section']}...")
-    context = rag_search(
+    context, failed, error = _retrieve(
+        "Regulatory",
         query=f"What are the ICDR requirements for {state['current_section']}?",
         corpus="regulatory",
         query_type="compliance",
-        k=3
+        k=3,
     )
-    return {"regulatory_context": context}
+    return {
+        "regulatory_context": context,
+        "regulatory_retrieval_failed": failed,
+        "retrieval_error": error,
+    }
 
 def precedent_retrieval_node(state: AgentState) -> dict:
     logger.info(f"Retrieving precedent context for {state['current_section']}...")
-    context = rag_search(
+    context, failed, error = _retrieve(
+        "Precedent",
         query=f"Show me examples of the {state['current_section']} section.",
         corpus="precedent",
         query_type="precedent",
-        k=3
+        k=3,
     )
-    return {"precedent_context": context}
+    return {
+        "precedent_context": context,
+        "precedent_retrieval_failed": failed,
+        "retrieval_error": error,
+    }
 
 def data_fetch_node(state: AgentState) -> dict:
     logger.info(f"Fetching structured company facts and client document context for {state['company_name']}...")
@@ -139,13 +174,36 @@ def draft_generation_node(state: AgentState) -> dict:
     # Bug 3 Fix: Use the module-level singleton — no new object created on each call.
     client = get_groq_client()
     
+    # Be explicit about *why* a context block is empty. Passing a bare "None"
+    # for an unavailable corpus invites the model to supply regulation numbers
+    # from memory, which then read as retrieved citations in the final document.
+    def _context_block(value: str, failed: bool, label: str) -> str:
+        if failed:
+            return (f"[UNAVAILABLE — {label} retrieval failed. Do NOT cite any "
+                    f"{label.lower()} source; state that the reference could not be verified.]")
+        if not (value or "").strip():
+            return (f"[EMPTY — no matching {label.lower()} material was found. Do NOT "
+                    f"invent citations; draft only from the company facts below.]")
+        return value
+
+    regulatory_block = _context_block(
+        state.get('regulatory_context', ''),
+        state.get('regulatory_retrieval_failed', False),
+        "Regulatory",
+    )
+    precedent_block = _context_block(
+        state.get('precedent_context', ''),
+        state.get('precedent_retrieval_failed', False),
+        "Precedent",
+    )
+
     user_prompt = f"""Draft the '{state['current_section']}' section.
-    
+
 REGULATORY CONTEXT:
-{state.get('regulatory_context', 'None')}
+{regulatory_block}
 
 PRECEDENT EXAMPLES:
-{state.get('precedent_context', 'None')}
+{precedent_block}
 
 COMPANY FACTS:
 {state.get('company_facts', 'None')}
