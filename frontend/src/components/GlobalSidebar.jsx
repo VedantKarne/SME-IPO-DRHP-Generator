@@ -14,10 +14,30 @@ const NAV = [
 
 export default function GlobalSidebar({ companyName, approvedCount }) {
   const [isOpen, setIsOpen] = useState(false);
+  // Real health, polled. The badge below used to be permanently green with no
+  // underlying check, so an unreachable backend or an empty retrieval corpus
+  // still displayed "System Online".
+  const [health, setHealth] = useState(null);
   const location = useLocation();
   const isWorkspace = location.pathname.startsWith('/workspace');
 
   useEffect(() => { setIsOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/health');
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled) setHealth(data ?? { healthy: false, reachable: false });
+      } catch {
+        if (!cancelled) setHealth({ healthy: false, reachable: false });
+      }
+    };
+    check();
+    const timer = setInterval(check, 30000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
 
   const sidebarClass = 'global-sidebar--static';
 
@@ -70,10 +90,33 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         </div>
 
         <div className="sidebar-status">
-          <div className="status-dot" />
+          <div
+            className="status-dot"
+            style={{
+              background: health === null ? 'var(--text-muted)'
+                : health.healthy ? 'var(--success)'
+                : 'var(--warning)',
+            }}
+          />
           <div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600 }}>System Online</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Groq + BGE-M3</div>
+            <div style={{
+              fontSize: '0.75rem', fontWeight: 600,
+              color: health === null ? 'var(--text-muted)'
+                : health.healthy ? 'var(--success)'
+                : 'var(--warning)',
+            }}>
+              {health === null ? 'Checking…'
+                : health.reachable === false ? 'Backend unreachable'
+                : health.healthy ? 'System Online'
+                : 'Degraded'}
+            </div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+              {health === null ? '\u00a0'
+                : health.reachable === false ? 'Start the API server'
+                : !health.llm_configured ? 'GROQ_API_KEY not set'
+                : !health.retrieval_ready ? 'Corpus not indexed — drafts will be ungrounded'
+                : `Corpus: ${(health.corpus?.regulatory_clauses ?? 0).toLocaleString()} reg / ${(health.corpus?.precedent_chunks ?? 0).toLocaleString()} prec`}
+            </div>
           </div>
         </div>
       </aside>

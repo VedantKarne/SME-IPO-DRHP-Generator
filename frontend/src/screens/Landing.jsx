@@ -58,15 +58,25 @@ export default function Landing({ onComplete }) {
         })
       }).catch(console.error);
 
-      // Dynamically fail litigation if user answered yes
-      const litLower = (litigations || '').toLowerCase();
-      const hasLit = ['yes', 'yeah', 'have', 'pending', 'yup', 'true', 'one', 'two'].some(w => litLower.includes(w)) && !['no', 'not'].some(w => litLower.includes(w));
-
-      setTimeout(() => {
+      // Run the real EligibilityEngine rather than displaying a fixed result.
+      // Three of the four checks shown here used to be hardcoded `pass: true`
+      // under an "Eligibility Check Complete" heading, so a founder was told
+      // they met SEBI thresholds that had never been evaluated.
+      (async () => {
+        let report = null;
+        let error = null;
+        try {
+          const res = await authedFetch(`http://127.0.0.1:8000/api/eligibility/${company_id}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          report = await res.json();
+        } catch (e) {
+          console.error('Eligibility check failed:', e);
+          error = e.message || 'could not be completed';
+        }
         setIsChecking(false);
-        setMessages(prev => [...prev, { type: 'eligibility', hasLit }]);
+        setMessages(prev => [...prev, { type: 'eligibility', report, error }]);
         setTimeout(() => showAIMessage(scriptIndex + 1, currentAnswers), 600);
-      }, 2200);
+      })();
       return;
     }
 
@@ -152,22 +162,43 @@ export default function Landing({ onComplete }) {
                 )}
                 {msg.type === 'eligibility' && (
                   <div style={{ padding: '14px 16px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12 }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 600, marginBottom: 10 }}>
-                      ✅ Eligibility Check Complete
-                    </div>
-                    {[
-                      { label: 'EBITDA Track Record', pass: true },
-                      { label: 'Positive Net Worth', pass: true },
-                      { label: 'Post-Issue Capital Limit', pass: true },
-                      { label: 'KMP Litigation', pass: !msg.hasLit, note: '⚠️ Disclosure required' },
-                    ].map((c, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '3px 0' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
-                        <span style={{ color: c.pass ? 'var(--success)' : 'var(--warning)' }}>
-                          {c.pass ? '✓ Pass' : c.note}
-                        </span>
+                    {msg.error ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--warning)', fontWeight: 600 }}>
+                        ⚠️ Eligibility check {msg.error}. It will run again once your
+                        financials and director details are on file.
                       </div>
-                    ))}
+                    ) : !msg.report?.checks?.length ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        Not enough data yet to assess eligibility. Upload audited
+                        financials and add director details to run the SEBI checks.
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{
+                          fontSize: '0.8rem', fontWeight: 600, marginBottom: 10,
+                          color: msg.report.eligible ? 'var(--success)' : 'var(--warning)',
+                        }}>
+                          {msg.report.eligible
+                            ? '✅ Meets the SEBI checks we can evaluate'
+                            : '⚠️ Some SEBI checks are not met yet'}
+                        </div>
+                        {msg.report.checks.map((c, i) => (
+                          <div key={i} title={c.reason} style={{ fontSize: '0.8rem', padding: '3px 0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ color: 'var(--text-secondary)' }}>{c.name}</span>
+                              <span style={{ color: c.passed ? 'var(--success)' : 'var(--warning)' }}>
+                                {c.passed ? '✓ Pass' : '⚠️ Not met'}
+                              </span>
+                            </div>
+                            {!c.passed && c.reason && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                                {c.reason}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 )}
               </div>

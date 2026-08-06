@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails
 from src.api import wizard
 
+import os
 import uuid
 import logging
 
@@ -474,6 +475,31 @@ def compute_readiness(company_id, db) -> dict:
         "legal_score": avg_cat_score(legal_sections),
         "management_score": avg_cat_score(mgmt_sections),
     }
+
+
+@app.get("/api/health")
+def health():
+    """
+    Real service health. The sidebar used to display a permanently green
+    "System Online / Groq + BGE-M3" badge that was never derived from anything,
+    so an empty index or a missing API key still read as healthy.
+    """
+    status = {"api": True, "llm_configured": bool(os.environ.get("GROQ_API_KEY"))}
+
+    try:
+        from src.retrieval.vector_store import VectorStore
+        vs = VectorStore()
+        counts = {name: vs.count(name) for name in
+                  ("regulatory_clauses", "precedent_chunks", "client_documents")}
+        status["corpus"] = counts
+        status["retrieval_ready"] = counts["regulatory_clauses"] > 0
+    except Exception as e:
+        status["corpus"] = {}
+        status["retrieval_ready"] = False
+        status["corpus_error"] = str(e)
+
+    status["healthy"] = status["api"] and status["llm_configured"] and status["retrieval_ready"]
+    return status
 
 
 @app.get("/api/readiness/{company_id}")
