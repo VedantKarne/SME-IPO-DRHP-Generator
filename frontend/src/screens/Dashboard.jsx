@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Wallet, Scale, Users, ClipboardList, FileWarning, FileUp, FileEdit, CheckCircle2, XCircle, AlertTriangle, Search } from 'lucide-react';
 import { authedFetch } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
 
-function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--accent)' }) {
+function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--signal)' }) {
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const [anim, setAnim] = useState(0);
@@ -19,7 +20,7 @@ function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--accent)' }) 
   return (
     <div className="readiness-ring-wrap" style={{ width: size, height: size, margin: '0 auto' }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--paper-sunken)" strokeWidth={stroke} />
         <circle
           cx={size/2} cy={size/2} r={r}
           fill="none"
@@ -28,22 +29,24 @@ function ScoreRing({ score, size = 140, stroke = 10, color = 'var(--accent)' }) 
           strokeDasharray={circ}
           strokeDashoffset={filled}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', filter: `drop-shadow(0 0 8px ${color})` }}
+          style={{ transition: 'stroke-dashoffset 1.2s ease' }}
         />
       </svg>
       <div className="readiness-ring-label">
         <span className="readiness-pct" style={{ fontSize: size * 0.28, lineHeight: 1 }}>{score}%</span>
-        <span className="readiness-pct-label" style={{ fontSize: size * 0.14, color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.08em', marginTop: 2 }}>READY</span>
+        <span className="readiness-pct-label" style={{ fontSize: size * 0.14, color: 'var(--ink-soft)', fontWeight: 600, letterSpacing: '0.08em', marginTop: 2 }}>READY</span>
       </div>
     </div>
   );
 }
 
+// design-system.md: score rings use a single --signal stroke, not a
+// per-category rainbow — the icon still varies per category, the color doesn't.
 const SUBSCORES = [
-  { key: 'financial_score', label: 'Financials', icon: '💰', color: 'var(--success)' },
-  { key: 'legal_score',     label: 'Legal',      icon: '⚖️', color: 'var(--accent)' },
-  { key: 'management_score',label: 'Management', icon: '👤', color: 'var(--purple)' },
-  { key: 'overall_score',   label: 'Compliance', icon: '📋', color: 'var(--warning)' },
+  { key: 'financial_score',  label: 'Financials',  icon: Wallet },
+  { key: 'legal_score',      label: 'Legal',        icon: Scale },
+  { key: 'management_score', label: 'Management',   icon: Users },
+  { key: 'overall_score',    label: 'Compliance',   icon: ClipboardList },
 ];
 
 /**
@@ -60,7 +63,7 @@ function buildNextActions({ sections = [], readiness = {}, eligibility }) {
   const failed = (eligibility?.checks || []).filter((c) => !c.passed);
   failed.forEach((check) => {
     actions.push({
-      icon: '⚖️',
+      icon: Scale,
       title: `Resolve: ${check.name}`,
       desc: check.reason || 'Eligibility condition not met.',
       urgent: true,
@@ -71,7 +74,7 @@ function buildNextActions({ sections = [], readiness = {}, eligibility }) {
   if (blocked.length) {
     const docs = [...new Set(blocked.flatMap((s) => s.missing_docs))].slice(0, 3);
     actions.push({
-      icon: '📄',
+      icon: FileUp,
       title: `Upload ${docs.length > 1 ? 'missing documents' : docs[0]}`,
       desc: `${blocked.length} section${blocked.length > 1 ? 's are' : ' is'} blocked: ${docs.join(', ')}`,
       urgent: true,
@@ -81,7 +84,7 @@ function buildNextActions({ sections = [], readiness = {}, eligibility }) {
   const undrafted = sections.filter((s) => !s.draft_text);
   if (undrafted.length) {
     actions.push({
-      icon: '📝',
+      icon: FileEdit,
       title: `Generate ${undrafted.length} remaining section${undrafted.length > 1 ? 's' : ''}`,
       desc: `Starting with "${undrafted[0].name}" in the Document Workspace`,
       urgent: false,
@@ -91,7 +94,7 @@ function buildNextActions({ sections = [], readiness = {}, eligibility }) {
   const awaiting = sections.filter((s) => s.draft_text && !s.locked);
   if (awaiting.length) {
     actions.push({
-      icon: '✅',
+      icon: CheckCircle2,
       title: 'Get Merchant Banker approval',
       desc: `${awaiting.length} section${awaiting.length > 1 ? 's' : ''} awaiting intermediary certification`,
       urgent: false,
@@ -100,7 +103,7 @@ function buildNextActions({ sections = [], readiness = {}, eligibility }) {
 
   if (readiness.total_open_gaps) {
     actions.push({
-      icon: '⚠️',
+      icon: FileWarning,
       title: `Close ${readiness.total_open_gaps} flagged gap${readiness.total_open_gaps > 1 ? 's' : ''}`,
       desc: 'Open the flagged gaps panel in the Document Workspace',
       urgent: true,
@@ -122,7 +125,7 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
 
   useEffect(() => {
     if (!companyId) return;
-    
+
     // Fetch eligibility if not present
     authedFetch(`${API}/api/eligibility/${companyId}`)
       .then(res => res.ok ? res.json() : null)
@@ -164,7 +167,7 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
     <div className="fade-in">
       {/* Greeting */}
       <div className="dashboard-greeting">
-        {greeting}, {promoterName} 👋
+        {greeting}, {promoterName}
       </div>
       <div className="dashboard-company">{companyName || 'Loading company...'}</div>
 
@@ -173,23 +176,23 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
         <div className="readiness-hero">
           <ScoreRing score={overall} />
           <div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 4 }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 4, color: 'var(--ink)' }}>
               IPO Readiness Score
             </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20, maxWidth: 380 }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: 20, maxWidth: 380 }}>
               Your DRHP preparation is {overall}% complete. {pending > 0 ? `${pending} sections still need to be generated and reviewed.` : 'All sections generated — final review pending.'}
             </p>
             <div className="readiness-stats">
               <div className="stat-card">
-                <div className="stat-value" style={{ color: 'var(--warning)' }}>{estimatedDays}</div>
+                <div className="stat-value" style={{ color: 'var(--status-draft)' }}>{estimatedDays}</div>
                 <div className="stat-label">Est. Days Remaining</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value" style={{ color: 'var(--error)' }}>{openGaps + (eligibility?.checks?.filter(c => !c.passed).length || 0)}</div>
+                <div className="stat-value" style={{ color: 'var(--status-gap)' }}>{openGaps + (eligibility?.checks?.filter(c => !c.passed).length || 0)}</div>
                 <div className="stat-label">Open Issues</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value" style={{ color: 'var(--success)' }}>{approved}</div>
+                <div className="stat-value" style={{ color: 'var(--status-approved)' }}>{approved}</div>
                 <div className="stat-label">Sections Approved</div>
               </div>
             </div>
@@ -203,11 +206,11 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
 
       {/* Sub-score rings */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        {SUBSCORES.map(({ key, label, icon, color }) => (
+        {SUBSCORES.map(({ key, label, icon: Icon }) => (
           <div key={key} className="card card-sm" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>{icon}</div>
-            <ScoreRing score={r[key] || 0} size={100} stroke={8} color={color} />
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginTop: 12 }}>{label}</div>
+            <Icon size={20} strokeWidth={1.5} color="var(--signal)" style={{ marginBottom: 6 }} />
+            <ScoreRing score={r[key] || 0} size={100} stroke={8} />
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink-soft)', marginTop: 12 }}>{label}</div>
           </div>
         ))}
       </div>
@@ -217,15 +220,15 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         {/* Sections status */}
         <div className="card">
-          <h3 style={{ marginBottom: 14, fontSize: '0.95rem' }}>Section Pipeline</h3>
+          <h3 style={{ marginBottom: 14, fontSize: '0.95rem', color: 'var(--ink)' }}>Section Pipeline</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[
-              { label: 'Approved & Locked', count: approved, color: 'var(--success)' },
-              { label: 'In Draft', count: r.sections_in_draft || 0, color: 'var(--warning)' },
-              { label: 'Not Started', count: pending, color: 'var(--text-muted)' },
+              { label: 'Approved & Locked', count: approved, color: 'var(--status-approved)' },
+              { label: 'In Draft', count: r.sections_in_draft || 0, color: 'var(--status-draft)' },
+              { label: 'Not Started', count: pending, color: 'var(--ink-faint)' },
             ].map(({ label, count, color }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{label}</span>
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--paper-sunken)', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>{label}</span>
                 <span style={{ fontWeight: 700, color }}>{count}</span>
               </div>
             ))}
@@ -237,14 +240,15 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
 
         {/* Eligibility quick status */}
         <div className="card">
-          <h3 style={{ marginBottom: 14, fontSize: '0.95rem' }}>Eligibility Checks</h3>
+          <h3 style={{ marginBottom: 14, fontSize: '0.95rem', color: 'var(--ink)' }}>Eligibility Checks</h3>
           {eligibility ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {eligibility.checks.slice(0, 4).map((c, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', padding: '6px 0', borderBottom: '1px solid var(--glass-border)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{c.name}</span>
-                  <span className={`badge ${c.passed ? 'badge-success' : 'badge-error'}`}>
-                    {c.passed ? '✓ Pass' : '✗ Fail'}
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', padding: '6px 0', borderBottom: '1px solid var(--rule)' }}>
+                  <span style={{ color: 'var(--ink-soft)' }}>{c.name}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600, color: c.passed ? 'var(--status-approved)' : 'var(--status-gap)' }}>
+                    {c.passed ? <CheckCircle2 size={14} strokeWidth={2} /> : <XCircle size={14} strokeWidth={2} />}
+                    {c.passed ? 'Pass' : 'Fail'}
                   </span>
                 </div>
               ))}
@@ -253,7 +257,7 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
               </button>
             </div>
           ) : (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</p>
+            <p style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>Loading...</p>
           )}
         </div>
         </div>
@@ -261,23 +265,27 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
         {/* Data Consistency Checks */}
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <h3 style={{ fontSize: '0.95rem', margin: 0 }}>🔍 Data Consistency Checks</h3>
+            <Search size={16} strokeWidth={1.5} color="var(--ink-soft)" />
+            <h3 style={{ fontSize: '0.95rem', margin: 0, color: 'var(--ink)' }}>Data Consistency Checks</h3>
             {consistency && (
-              <span className={`badge ${consistency.has_issues ? 'badge-error' : 'badge-success'}`}
-                style={{ fontSize: '0.72rem' }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: '0.72rem', fontWeight: 600,
+                color: consistency.has_issues ? 'var(--status-gap)' : 'var(--status-approved)',
+              }}>
                 {consistency.has_issues
                   ? `${consistency.issue_count} Issue${consistency.issue_count > 1 ? 's' : ''} Found`
-                  : '✓ All Clear'}
+                  : 'All Clear'}
               </span>
             )}
           </div>
 
           {!consistency ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading...</p>
+            <p style={{ color: 'var(--ink-faint)', fontSize: '0.85rem' }}>Loading...</p>
           ) : !consistency.has_issues ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8 }}>
-              <span style={{ fontSize: '1.2rem' }}>✅</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--status-approved-soft)', border: '1px solid rgba(61,107,79,0.25)', borderRadius: 'var(--radius-sm)' }}>
+              <CheckCircle2 size={18} strokeWidth={1.5} color="var(--status-approved)" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '0.85rem', color: 'var(--ink-soft)' }}>
                 All financial figures, capital structure components, and turnover data are internally consistent.
               </span>
             </div>
@@ -288,20 +296,25 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
                 return (
                   <div key={i} style={{
                     padding: '12px 14px',
-                    background: isCritical ? 'rgba(244,63,94,0.05)' : 'rgba(245,158,11,0.05)',
-                    border: `1px solid ${isCritical ? 'rgba(244,63,94,0.2)' : 'rgba(245,158,11,0.25)'}`,
-                    borderLeft: `3px solid ${isCritical ? 'var(--error)' : 'var(--warning)'}`,
-                    borderRadius: 8,
+                    background: isCritical ? 'var(--status-gap-soft)' : 'var(--status-draft-soft)',
+                    border: `1px solid ${isCritical ? 'rgba(118,45,63,0.25)' : 'rgba(148,111,46,0.25)'}`,
+                    borderLeft: `3px solid ${isCritical ? 'var(--status-gap)' : 'var(--status-draft)'}`,
+                    borderRadius: 'var(--radius-sm)',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'monospace' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: 'var(--font-mono)' }}>
                         {check.field.replace(/_/g, ' ')}
                       </span>
-                      <span className={`badge ${isCritical ? 'badge-error' : 'badge-warning'}`} style={{ fontSize: '0.68rem', flexShrink: 0 }}>
-                        {isCritical ? '⚠ Critical' : '⚡ Warning'}
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0,
+                        fontSize: '0.68rem', fontWeight: 600,
+                        color: isCritical ? 'var(--status-gap)' : 'var(--status-draft)',
+                      }}>
+                        <AlertTriangle size={12} strokeWidth={2} />
+                        {isCritical ? 'Critical' : 'Warning'}
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--ink-soft)', lineHeight: 1.55, margin: 0 }}>
                       {check.fix}
                     </p>
                   </div>
@@ -314,10 +327,10 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
 
       {/* Next Actions */}
       <div className="card">
-        <h3 style={{ marginBottom: 14, fontSize: '0.95rem' }}>Next Actions</h3>
+        <h3 style={{ marginBottom: 14, fontSize: '0.95rem', color: 'var(--ink)' }}>Next Actions</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {nextActions.length === 0 && (
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--ink-faint)' }}>
               Nothing outstanding right now.
             </div>
           )}
@@ -325,16 +338,16 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
             <div key={i} style={{
               display: 'flex', gap: 14, alignItems: 'flex-start',
               padding: '12px 14px',
-              background: a.urgent ? 'rgba(244,63,94,0.05)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${a.urgent ? 'rgba(244,63,94,0.15)' : 'var(--glass-border)'}`,
-              borderRadius: 10
+              background: a.urgent ? 'var(--status-gap-soft)' : 'var(--paper-sunken)',
+              border: `1px solid ${a.urgent ? 'rgba(118,45,63,0.2)' : 'var(--rule)'}`,
+              borderRadius: 'var(--radius-sm)',
             }}>
-              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>{a.icon}</span>
+              <a.icon size={18} strokeWidth={1.5} color={a.urgent ? 'var(--status-gap)' : 'var(--ink-soft)'} style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: 2 }}>{a.title}</div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{a.desc}</div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: 2, color: 'var(--ink)' }}>{a.title}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--ink-soft)' }}>{a.desc}</div>
               </div>
-              {a.urgent && <span className="badge badge-error" style={{ marginLeft: 'auto', flexShrink: 0 }}>Urgent</span>}
+              {a.urgent && <span style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--status-gap)' }}>Urgent</span>}
             </div>
           ))}
         </div>

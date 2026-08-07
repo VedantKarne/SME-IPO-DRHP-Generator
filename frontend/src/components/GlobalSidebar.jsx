@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, FileEdit, Folder, CheckCircle2, UserCheck, BookOpen } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 
 const NAV = [
-  { path: '/dashboard',       icon: '📊', label: 'Dashboard' },
-  { path: '/workspace',       icon: '📝', label: 'Document Workspace' },
-  { path: '/documents',       icon: '📁', label: 'Documents' },
-  { path: '/eligibility',     icon: '✅', label: 'Eligibility Engine' },
-  { path: '/review',          icon: '👤', label: 'Banker Review' },
-  { path: '/knowledge-base',  icon: '🧠', label: 'Knowledge Base' },
+  { path: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/workspace',       icon: FileEdit,        label: 'Document Workspace' },
+  { path: '/documents',       icon: Folder,          label: 'Documents' },
+  { path: '/eligibility',     icon: CheckCircle2,    label: 'Eligibility Engine' },
+  { path: '/review',          icon: UserCheck,       label: 'Banker Review' },
+  { path: '/knowledge-base',  icon: BookOpen,        label: 'Knowledge Base' },
 ];
 
 export default function GlobalSidebar({ companyName, approvedCount }) {
@@ -54,9 +55,9 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         {companyName && (
           <div className="sidebar-company">
             {companyName}
-            <button 
+            <button
               onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
-              style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: 'var(--sidebar-ink-soft)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
             >
               Log out
             </button>
@@ -64,16 +65,21 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         )}
 
         <nav className="sidebar-nav">
-          {NAV.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
+          {NAV.map(item => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-item ${isActive ? 'active' : ''}`}
+              >
+                <span className="nav-icon">
+                  <item.icon size={18} strokeWidth={1.5} color={isActive ? 'var(--sidebar-signal)' : 'var(--sidebar-ink-soft)'} />
+                </span>
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <hr className="sidebar-divider" />
@@ -93,24 +99,24 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
           <div
             className="status-dot"
             style={{
-              background: health === null ? 'var(--text-muted)'
-                : health.healthy ? 'var(--success)'
-                : 'var(--warning)',
+              background: health === null ? 'var(--sidebar-ink-soft)'
+                : health.healthy ? 'var(--status-approved)'
+                : 'var(--status-draft)',
             }}
           />
           <div>
             <div style={{
               fontSize: '0.75rem', fontWeight: 600,
-              color: health === null ? 'var(--text-muted)'
-                : health.healthy ? 'var(--success)'
-                : 'var(--warning)',
+              color: health === null ? 'var(--sidebar-ink-soft)'
+                : health.healthy ? 'var(--status-approved)'
+                : 'var(--status-draft)',
             }}>
               {health === null ? 'Checking…'
                 : health.reachable === false ? 'Backend unreachable'
                 : health.healthy ? 'System Online'
                 : 'Degraded'}
             </div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--sidebar-ink-soft)' }}>
               {health === null ? '\u00a0'
                 : health.reachable === false ? 'Start the API server'
                 : !health.llm_configured ? 'GROQ_API_KEY not set'

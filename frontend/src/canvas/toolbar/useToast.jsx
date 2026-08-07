@@ -20,6 +20,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { CheckCircle2, AlertTriangle, XCircle, ArrowUpRight } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // useToast hook
@@ -70,10 +71,10 @@ function useToast() {
 // ---------------------------------------------------------------------------
 
 const TYPE_ICONS = {
-  success: '✓',
-  warning: '⚠',
-  error:   '✕',
-  info:    '↗',
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  error:   XCircle,
+  info:    ArrowUpRight,
 };
 
 // ---------------------------------------------------------------------------
@@ -91,27 +92,30 @@ function ToastContainer({ toasts, dismissToast }) {
 
   return (
     <div className="toast-container" role="region" aria-label="Notifications" aria-live="polite">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`toast-item toast-item--${toast.type}${toast.exiting ? ' toast-item--exiting' : ''}`}
-          role="alert"
-          aria-atomic="true"
-        >
-          <span className="toast-item__icon" aria-hidden="true">
-            {TYPE_ICONS[toast.type] ?? TYPE_ICONS.info}
-          </span>
-          <span className="toast-item__msg">{toast.message}</span>
-          <button
-            type="button"
-            className="toast-item__close"
-            onClick={() => dismissToast(toast.id)}
-            aria-label="Dismiss notification"
+      {toasts.map((toast) => {
+        const Icon = TYPE_ICONS[toast.type] ?? TYPE_ICONS.info;
+        return (
+          <div
+            key={toast.id}
+            className={`toast-item toast-item--${toast.type}${toast.exiting ? ' toast-item--exiting' : ''}`}
+            role="alert"
+            aria-atomic="true"
           >
-            ×
-          </button>
-        </div>
-      ))}
+            <span className="toast-item__icon" aria-hidden="true">
+              <Icon size={15} strokeWidth={2} />
+            </span>
+            <span className="toast-item__msg">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-item__close"
+              onClick={() => dismissToast(toast.id)}
+              aria-label="Dismiss notification"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

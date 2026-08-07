@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 import * as canvasApi from "../services/canvasApi.js";
 import { markdownToTipTap } from "../editor/markdownToTipTap.js";
 import useCanvasStore from "../services/canvasStore.js";
@@ -250,7 +251,7 @@ export default function WholeDocPrompt({ editor, companyId, sectionName }) {
       {/* Failure notice — the draft is left untouched when this appears */}
       {error && (
         <p className="whole-doc-prompt__error" role="alert">
-          <span aria-hidden="true">⚠</span> {error}
+          <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {error}
         </p>
       )}
     </form>

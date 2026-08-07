@@ -17,13 +17,14 @@
  */
 
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const cellStyle = {
   width: '100%',
   padding: '6px 8px',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-md)',
   border: '1px solid var(--glass-border)',
-  background: 'rgba(0,0,0,0.25)',
+  background: 'var(--paper-raised)',
   color: 'var(--text-primary)',
   fontSize: '0.8rem',
 };
@@ -47,7 +48,7 @@ function Card({ title, hint, children, onSubmit, onSkip, busy, error, submitLabe
       {children}
       {error && (
         <div className="canvas-error" role="alert" style={{ marginTop: 10 }}>
-          <span aria-hidden="true">⚠</span> {error}
+          <AlertTriangle size={13} strokeWidth={2} aria-hidden="true" /> {error}
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>

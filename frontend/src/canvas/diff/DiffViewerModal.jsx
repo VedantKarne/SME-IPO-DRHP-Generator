@@ -19,6 +19,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { GitCompare, X, Check } from 'lucide-react';
 import { parseDiff, Diff, Hunk } from 'react-diff-view';
 import 'react-diff-view/style/index.css';
 import { diffLines, formatLines } from 'unidiff';
@@ -66,7 +67,7 @@ function renderToken(token, defaultRender, index) {
       return (
         <span
           key={index}
-          style={{ background: 'rgba(244,63,94,0.12)' }}
+          style={{ background: 'var(--status-gap-soft)' }}
         >
           {defaultRender(token, index)}
         </span>
@@ -75,7 +76,7 @@ function renderToken(token, defaultRender, index) {
       return (
         <span
           key={index}
-          style={{ background: 'rgba(16,185,129,0.1)' }}
+          style={{ background: 'var(--status-approved-soft)' }}
         >
           {defaultRender(token, index)}
         </span>
@@ -160,8 +161,7 @@ export default function DiffViewerModal({
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(6, 13, 31, 0.72)',
-              backdropFilter: 'blur(4px)',
+              background: 'rgba(28, 27, 25, 0.4)',
               zIndex: 1000,
             }}
             initial={{ opacity: 0 }}
@@ -184,10 +184,10 @@ export default function DiffViewerModal({
               transform: 'translate(-50%, -50%)',
               width: 'min(860px, 92vw)',
               maxHeight: '80vh',
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--glass-border)',
+              background: 'var(--paper-raised)',
+              border: '1px solid var(--rule)',
               borderRadius: 'var(--radius-lg)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(79,126,255,0.08)',
+              boxShadow: '0 4px 16px rgba(28,27,25,0.16)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -218,13 +218,13 @@ export default function DiffViewerModal({
                     justifyContent: 'center',
                     width: 28,
                     height: 28,
-                    background: 'var(--accent-dim)',
-                    borderRadius: 6,
-                    fontSize: '0.85rem',
+                    background: 'var(--signal-soft)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--signal)',
                   }}
                   aria-hidden="true"
                 >
-                  ≠
+                  <GitCompare size={14} strokeWidth={1.5} />
                 </span>
                 <h2
                   style={{
@@ -262,7 +262,7 @@ export default function DiffViewerModal({
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
               >
-                ✕
+                <X size={16} strokeWidth={2} />
               </button>
             </header>
 
@@ -279,41 +279,41 @@ export default function DiffViewerModal({
                 /* Removed line backgrounds */
                 .diff-viewer-root .diff-line-delete,
                 .diff-viewer-root .diff-code-delete {
-                  background: rgba(244,63,94,0.12) !important;
+                  background: var(--status-gap-soft) !important;
                 }
                 /* Added line backgrounds */
                 .diff-viewer-root .diff-line-insert,
                 .diff-viewer-root .diff-code-insert {
-                  background: rgba(16,185,129,0.1) !important;
+                  background: var(--status-approved-soft) !important;
                 }
                 /* Gutter numbers */
                 .diff-viewer-root .diff-gutter {
-                  background: var(--bg-surface) !important;
-                  border-right: 1px solid var(--glass-border) !important;
-                  color: var(--text-muted) !important;
+                  background: var(--paper-sunken) !important;
+                  border-right: 1px solid var(--rule) !important;
+                  color: var(--ink-faint) !important;
                   font-size: 0.75rem;
                   padding: 0 8px;
                   min-width: 40px;
                   user-select: none;
                 }
-                .diff-viewer-root .diff-gutter-delete { background: rgba(244,63,94,0.08) !important; }
-                .diff-viewer-root .diff-gutter-insert { background: rgba(16,185,129,0.06) !important; }
+                .diff-viewer-root .diff-gutter-delete { background: var(--status-gap-soft) !important; }
+                .diff-viewer-root .diff-gutter-insert { background: var(--status-approved-soft) !important; }
                 /* Code cells */
                 .diff-viewer-root .diff-code {
-                  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+                  font-family: var(--font-mono);
                   font-size: 0.82rem;
                   line-height: 1.55;
-                  color: var(--text-primary) !important;
+                  color: var(--ink) !important;
                   padding: 0 12px;
                   white-space: pre-wrap;
                   word-break: break-word;
                 }
                 /* Table */
-                .diff-viewer-root .diff-hunk-header { background: var(--bg-surface) !important; color: var(--text-secondary) !important; font-size: 0.75rem; }
+                .diff-viewer-root .diff-hunk-header { background: var(--paper-sunken) !important; color: var(--ink-soft) !important; font-size: 0.75rem; }
                 .diff-viewer-root table { width: 100%; border-collapse: collapse; }
                 .diff-viewer-root td, .diff-viewer-root th { border: none !important; }
                 /* Context lines */
-                .diff-viewer-root .diff-line { border-bottom: 1px solid rgba(255,255,255,0.03); }
+                .diff-viewer-root .diff-line { border-bottom: 1px solid var(--rule); }
               `}</style>
 
               <div className="diff-viewer-root">
@@ -369,7 +369,7 @@ export default function DiffViewerModal({
                   onClick={handleCopy}
                   aria-label="Copy proposed text to clipboard"
                 >
-                  {copied ? '✓ Copied!' : 'Copy Proposed'}
+                  {copied ? (<><Check size={13} strokeWidth={2} /> Copied!</>) : 'Copy Proposed'}
                 </button>
                 <AnimatePresence>
                   {copied && (

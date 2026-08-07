@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { Sparkles, CheckCircle2, FileEdit, AlertTriangle, GitBranch, Eye, ArrowLeft } from "lucide-react";
 import useVersionStore from "./versionStore.js";
 
 // ---------------------------------------------------------------------------
@@ -41,12 +42,12 @@ function sourceMeta(source) {
     case "ai_rewrite":
     case "ai_prompt":
     case "ai_chat":
-      return { icon: "✦", label: "AI", colorVar: "var(--accent)" }; // Purple for AI
+      return { icon: Sparkles, label: "AI", colorVar: "var(--signal)" };
     case "approval":
-      return { icon: "✓", label: "Approved", colorVar: "var(--success)" }; // Green for approvals
+      return { icon: CheckCircle2, label: "Approved", colorVar: "var(--status-approved)" };
     case "manual_save":
     default:
-      return { icon: "📝", label: "Manual Save", colorVar: "var(--text-secondary)" }; // Gray for manual/unknown
+      return { icon: FileEdit, label: "Manual Save", colorVar: "var(--ink-soft)" };
   }
 }
 
@@ -128,7 +129,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
       {/* Load/save failure — distinct from "no versions yet" */}
       {loadError && (
         <div className="canvas-error" role="alert">
-          <span aria-hidden="true">⚠</span> {loadError}
+          <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {loadError}
         </div>
       )}
 
@@ -136,7 +137,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
       <div className="version-panel__header">
         <div className="version-panel__title-row">
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="version-panel__git-icon" aria-hidden="true">⎇</span>
+            <GitBranch size={14} strokeWidth={1.5} className="version-panel__git-icon" aria-hidden="true" />
             <h3 className="version-panel__title">Version History</h3>
             {count > 0 && (
               <span className="version-panel__badge badge badge-accent">
@@ -152,7 +153,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
             className="version-panel__exit-preview btn btn-sm btn-secondary"
             onClick={handleExitPreview}
           >
-            ← Back to editing
+            <ArrowLeft size={13} strokeWidth={2} /> Back to editing
           </button>
         )}
       </div>
@@ -160,7 +161,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
       {/* ── Preview notice ── */}
       {previewIdx !== null && !compareMode && (
         <div className="version-panel__preview-notice" role="status">
-          <span aria-hidden="true">👁</span>
+          <Eye size={13} strokeWidth={1.5} aria-hidden="true" />
           Previewing version {count - previewIdx} — editor is read-only
         </div>
       )}
@@ -168,7 +169,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
       {/* ── Empty state ── */}
       {count === 0 ? (
         <div className="version-panel__empty-state">
-          <div className="version-panel__empty-icon" aria-hidden="true">⎇</div>
+          <GitBranch size={22} strokeWidth={1.5} className="version-panel__empty-icon" aria-hidden="true" />
           <p className="version-panel__empty">No versions saved yet.</p>
           <p className="version-panel__empty-sub">
             Versions are saved automatically when you edit or use AI actions.
@@ -222,7 +223,7 @@ export default function VersionHistoryPanel({ editor, activeSectionName, company
                     <div className="version-entry__info">
                       <div className="version-entry__label-row">
                         <span className="version-entry__source-icon" style={{ color: meta.colorVar }}>
-                          {meta.icon}
+                          <meta.icon size={12} strokeWidth={2} />
                         </span>
                         <span className="version-entry__label">{entry.label}</span>
                       </div>

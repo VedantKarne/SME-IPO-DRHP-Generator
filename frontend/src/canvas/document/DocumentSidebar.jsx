@@ -17,18 +17,20 @@ import useCanvasStore from '../services/canvasStore.js';
 // Helpers
 // ---------------------------------------------------------------------------
 
+// design-system.md defines exactly four status colors (approved/draft/gap/
+// pending) — no fifth "AI generated" accent. A high-scoring unlocked
+// section still reads as "in draft" until it's actually locked.
 function dotColor(section) {
-  if (section.locked)                                         return '#10b981'; // green — complete
+  if (section.locked)                                         return 'var(--status-approved)';
   const has = Boolean(section.content || section.draft_text || section.markdown);
-  if (has && (section.score ?? 0) >= 80)                     return '#a78bfa'; // purple — AI generated
-  if (has)                                                    return '#f59e0b'; // amber — in progress / draft
-  return '#3d5278';                                                             // muted — pending
+  if (has)                                                    return 'var(--status-draft)';
+  return 'var(--status-pending)';
 }
 
 function dotTitle(section) {
   if (section.locked)                                         return 'Complete';
   const has = Boolean(section.content || section.draft_text || section.markdown);
-  if (has && (section.score ?? 0) >= 80)                     return 'AI Generated';
+  if (has && (section.score ?? 0) >= 80)                     return 'In Progress — AI drafted';
   if (has)                                                    return 'In Progress';
   return 'Pending';
 }

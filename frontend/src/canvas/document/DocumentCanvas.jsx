@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -236,7 +237,7 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
             color: 'var(--text-secondary)'
           }}
         >
-          {isGenerating ? <span className="spin">⟳</span> : <span>✦</span>}
+          {isGenerating ? <Loader2 size={13} strokeWidth={2} className="spin" /> : <Sparkles size={13} strokeWidth={1.5} />}
           {isGenerating ? "Generating..." : "Generate Draft"}
         </button>
       </div>
@@ -244,7 +245,7 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
       {/* Generation failure — shown instead of silently substituting sample text */}
       {generateError && (
         <div className="doc-section__error" role="alert">
-          <span aria-hidden="true">⚠</span>
+          <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" />
           <span>{generateError}</span>
           <button
             type="button"
@@ -264,10 +265,10 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
         {/* AI-first empty state (req 8) — shown before user has added content */}
         {isEmpty && editor && (
           <div className="doc-section__empty-state" aria-hidden="true">
-            <div className="doc-section__empty-icon">✦</div>
+            <Sparkles size={22} strokeWidth={1.5} className="doc-section__empty-icon" />
             <div className="doc-section__empty-heading">Start with AI</div>
             <div className="doc-section__empty-hint">
-              Press <kbd>⌘K</kbd> to open AI, or click the <strong>✦ AI</strong> button in the toolbar to generate this section.
+              Press <kbd>⌘K</kbd> to open AI, or click the <strong>AI</strong> button in the toolbar to generate this section.
             </div>
           </div>
         )}
@@ -395,10 +396,8 @@ function slugify(name) {
 }
 
 function getSectionStatusDot(section) {
-  if (section.locked)                                           return { color: '#10b981', label: 'Complete' };
+  if (section.locked)                                           return { color: 'var(--status-approved)', label: 'Complete' };
   const has = Boolean(section.content || section.draft_text || section.markdown);
-  if (has && (section.score ?? 0) >= 80)                       return { color: '#a78bfa', label: 'AI Generated' };
-  if (has && (section.score ?? 0) >= 50)                       return { color: '#f59e0b', label: 'Draft' };
-  if (has)                                                      return { color: '#f59e0b', label: 'In Progress' };
-  return { color: '#c4ccd8', label: 'Pending' };
+  if (has)                                                      return { color: 'var(--status-draft)', label: 'Draft' };
+  return { color: 'var(--status-pending)', label: 'Pending' };
 }

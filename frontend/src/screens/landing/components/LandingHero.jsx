@@ -13,7 +13,7 @@ export default function LandingHero() {
           {/* Left: Copy */}
           <div className="col-span-12 lg:col-span-7 flex flex-col items-start">
             {/* Badge */}
-            <div className="inline-block px-3 py-1 bg-[#F4E7E5] border border-[#8A2E2E]/20 text-[#8A2E2E] font-sans font-bold text-xs uppercase tracking-widest rounded-sm mb-6">
+            <div className="inline-block px-3 py-1 bg-[#F1EEE6] border border-[#8A2E2E]/20 text-[#8A2E2E] font-sans font-bold text-xs uppercase tracking-widest rounded-sm mb-6">
               SME IPO DISCLOSURE DRAFTING SYSTEM
             </div>
 

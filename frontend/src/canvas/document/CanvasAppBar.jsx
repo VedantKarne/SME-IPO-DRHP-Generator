@@ -23,12 +23,12 @@ function ReadinessRing({ pct }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" className="appbar-ring" aria-hidden="true">
       {/* Track */}
-      <circle cx="12" cy="12" r={r} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="2.5" />
+      <circle cx="12" cy="12" r={r} fill="none" stroke="var(--rule)" strokeWidth="2.5" />
       {/* Fill */}
       <circle
         cx="12" cy="12" r={r}
         fill="none"
-        stroke="#10b981"
+        stroke="var(--status-approved)"
         strokeWidth="2.5"
         strokeDasharray={`${c}`}
         strokeDashoffset={arc}
@@ -77,7 +77,7 @@ export default function CanvasAppBar({
       <div className="canvas-appbar__brand">
         <div className="canvas-appbar__logo" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1L14.9 13H1.1L8 1Z" fill="white" fillOpacity="0.9"/>
+            <path d="M8 1L14.9 13H1.1L8 1Z" fill="var(--ink)" fillOpacity="0.9"/>
           </svg>
         </div>
         <div className="canvas-appbar__brand-text">

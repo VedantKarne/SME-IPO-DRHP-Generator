@@ -13,6 +13,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { ClipboardList, CheckCircle2 } from 'lucide-react';
 import * as canvasApi from '../services/canvasApi.js';
 
 // ---------------------------------------------------------------------------
@@ -66,7 +67,7 @@ function CitationCard({ citation, onClick }) {
       {/* Verified badge — shown only when confidence >= 90 */}
       {isVerified && (
         <span className="badge badge-success evidence-card__badge" role="status">
-          ✅ Verified against regulatory corpus
+          <CheckCircle2 size={12} strokeWidth={2} /> Verified against regulatory corpus
         </span>
       )}
     </button>
@@ -171,7 +172,7 @@ export default function EvidencePanel({ editor, companyId, sectionName }) {
       {/* Header */}
       <div className="evidence-panel__header">
         <h3 className="evidence-panel__title">
-          <span aria-hidden="true">📋</span> Regulatory Evidence
+          <ClipboardList size={14} strokeWidth={1.5} aria-hidden="true" /> Regulatory Evidence
         </h3>
         {Array.isArray(citations) && citations.length > 0 && (
           <span className="badge badge-accent evidence-panel__count" aria-label={`${citations.length} citations`}>

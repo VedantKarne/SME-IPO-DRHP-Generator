@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Loader2, Search, Package, AlertTriangle, SearchX, Brain } from 'lucide-react';
 import { authedFetch } from '../utils/auth';
 
 const API_BASE = 'http://127.0.0.1:8000';
@@ -62,8 +63,8 @@ export default function KnowledgeBase() {
 
       {/* Collection cards */}
       {loading ? (
-        <div className="card" style={{ marginBottom: 24, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          <span className="spin" style={{ marginRight: 8 }}>⟳</span>Loading collections…
+        <div className="card" style={{ marginBottom: 24, color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Loader2 size={14} strokeWidth={2} className="spin" />Loading collections…
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -86,7 +87,7 @@ export default function KnowledgeBase() {
                   ? 'var(--accent)'
                   : 'var(--glass-border)',
                 background: selectedCollection === col.name
-                  ? 'rgba(79,126,255,0.08)'
+                  ? 'var(--accent-dim)'
                   : 'var(--glass-bg)',
               }}
             >
@@ -114,7 +115,7 @@ export default function KnowledgeBase() {
           value={selectedCollection}
           onChange={e => { setSelectedCollection(e.target.value); setChunks([]); }}
           style={{
-            padding: '8px 12px', borderRadius: 8,
+            padding: '8px 12px', borderRadius: 'var(--radius-md)',
             background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
             color: 'var(--text-primary)', fontSize: '0.85rem', minWidth: 200,
           }}
@@ -142,14 +143,17 @@ export default function KnowledgeBase() {
           disabled={searching || !searchQuery.trim() || !selectedCollection}
           style={{ flexShrink: 0 }}
         >
-          {searching ? <><span className="spin">⟳</span> Searching…</> : 'Search →'}
+          {searching
+            ? <><Loader2 size={14} strokeWidth={2} className="spin" style={{ verticalAlign: -2 }} /> Searching…</>
+            : <><Search size={14} strokeWidth={2} style={{ verticalAlign: -2 }} /> Search</>}
         </button>
       </div>
 
       {/* Inline collection info */}
       {selectedInfo && (
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-          📦 <strong style={{ color: 'var(--text-secondary)' }}>{selectedInfo.name}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+          <Package size={13} strokeWidth={1.75} />
+          <strong style={{ color: 'var(--text-secondary)' }}>{selectedInfo.name}</strong>
           {' '}— {selectedInfo.count.toLocaleString()} chunks indexed
         </div>
       )}
@@ -157,11 +161,12 @@ export default function KnowledgeBase() {
       {/* Error banner */}
       {error && (
         <div style={{
-          padding: '12px 16px', borderRadius: 8, marginBottom: 16,
-          background: 'rgba(244,63,94,0.07)', border: '1px solid rgba(244,63,94,0.2)',
-          color: '#f43f5e', fontSize: '0.82rem',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '12px 16px', borderRadius: 'var(--radius-md)', marginBottom: 16,
+          background: 'var(--error-dim)', border: '1px solid var(--error)',
+          color: 'var(--error)', fontSize: '0.82rem',
         }}>
-          ⚠️ {error}
+          <AlertTriangle size={15} strokeWidth={2} /> {error}
         </div>
       )}
 
@@ -200,9 +205,9 @@ export default function KnowledgeBase() {
                     {Object.entries(chunk.metadata).map(([k, v]) => (
                       <span key={k} style={{
                         fontSize: '0.63rem', padding: '2px 8px',
-                        background: 'rgba(255,255,255,0.04)',
+                        background: 'var(--paper-sunken)',
                         border: '1px solid var(--glass-border)',
-                        borderRadius: 4, color: 'var(--text-muted)',
+                        borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)',
                       }}>
                         <strong>{k}:</strong> {String(v).slice(0, 40)}
                       </span>
@@ -229,8 +234,9 @@ export default function KnowledgeBase() {
           textAlign: 'center', padding: 48,
           color: 'var(--text-muted)', fontSize: '0.875rem',
         }}>
-          🔍 No chunks found for "{searchQuery}" in{' '}
-          <strong>{selectedCollection}</strong>.<br />
+          <SearchX size={22} strokeWidth={1.5} style={{ marginBottom: 8 }} />
+          <div>No chunks found for "{searchQuery}" in{' '}
+          <strong>{selectedCollection}</strong>.</div>
           <span style={{ fontSize: '0.78rem' }}>
             Try a different query, or select a different collection.
           </span>
@@ -243,7 +249,8 @@ export default function KnowledgeBase() {
           textAlign: 'center', padding: 48,
           color: 'var(--text-muted)', fontSize: '0.875rem',
         }}>
-          🧠 Select a collection and enter a query to search the vector store.
+          <Brain size={22} strokeWidth={1.5} style={{ marginBottom: 8 }} />
+          <div>Select a collection and enter a query to search the vector store.</div>
         </div>
       )}
     </div>

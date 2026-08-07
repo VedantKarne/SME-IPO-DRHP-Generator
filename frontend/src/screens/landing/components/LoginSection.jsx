@@ -39,7 +39,7 @@ export default function LoginSection() {
           <button
             type="button"
             onClick={handleFounderClick}
-            className="text-left bg-white border border-[#DEDAD0] rounded-sm p-6 flex flex-col items-start gap-3 cursor-pointer transition-colors duration-150 hover:border-[#8A2E2E] hover:bg-[#F4E7E5]"
+            className="text-left bg-white border border-[#DEDAD0] rounded-sm p-6 flex flex-col items-start gap-3 cursor-pointer transition-colors duration-150 hover:border-[#8A2E2E] hover:bg-[#F1EEE6]"
           >
             <Building2 size={24} strokeWidth={1.5} className="text-[#8A2E2E]" />
             <span className="font-sans font-semibold text-base text-[#1C1B19]">Founder / Promoter</span>
@@ -51,7 +51,7 @@ export default function LoginSection() {
           <button
             type="button"
             onClick={handleBankerClick}
-            className="text-left bg-white border border-[#DEDAD0] rounded-sm p-6 flex flex-col items-start gap-3 cursor-pointer transition-colors duration-150 hover:border-[#8A2E2E] hover:bg-[#F4E7E5]"
+            className="text-left bg-white border border-[#DEDAD0] rounded-sm p-6 flex flex-col items-start gap-3 cursor-pointer transition-colors duration-150 hover:border-[#8A2E2E] hover:bg-[#F1EEE6]"
           >
             <Briefcase size={24} strokeWidth={1.5} className="text-[#8A2E2E]" />
             <span className="font-sans font-semibold text-base text-[#1C1B19]">Merchant Banker</span>

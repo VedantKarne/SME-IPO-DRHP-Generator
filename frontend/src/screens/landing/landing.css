@@ -18,11 +18,11 @@
   --color-rule: #DEDAD0;
 
   --color-signal: #8A2E2E;
-  --color-signal-soft: #F4E7E5;
+  --color-signal-soft: #F1EEE6;
 
   --color-status-approved: #3D6B4F;
   --color-status-draft: #946F2E;
-  --color-status-gap: #A13D3D;
+  --color-status-gap: #762D3F;
   --color-status-pending: #9C998F;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -43,12 +43,12 @@
 
   /* Signal — single accent */
   --signal: #8A2E2E;
-  --signal-soft: #F4E7E5;
+  --signal-soft: #F1EEE6;
 
   /* Status */
   --status-approved: #3D6B4F;
   --status-draft: #946F2E;
-  --status-gap: #A13D3D;
+  --status-gap: #762D3F;
   --status-pending: #9C998F;
 
   /* Type scale */

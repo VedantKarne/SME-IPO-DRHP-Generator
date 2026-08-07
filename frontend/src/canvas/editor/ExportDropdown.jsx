@@ -4,15 +4,16 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { Download, FileText, FileEdit, BookOpen, ChevronDown } from "lucide-react";
 import * as canvasApi from "../services/canvasApi.js";
 
 // `scope` matters: the old "Export DRHP Draft" option called the per-section
 // endpoint, so it downloaded one section while its label promised the document.
 const EXPORT_OPTIONS = [
-  { id: "section_pdf",  label: "This section as PDF",   icon: "📄", fmt: "pdf",  scope: "section" },
-  { id: "section_docx", label: "This section as DOCX",  icon: "📝", fmt: "docx", scope: "section" },
-  { id: "full_docx",    label: "Full DRHP as DOCX",     icon: "📚", fmt: "docx", scope: "full" },
-  { id: "full_pdf",     label: "Full DRHP as PDF",      icon: "📕", fmt: "pdf",  scope: "full" },
+  { id: "section_pdf",  label: "This section as PDF",   icon: FileText, fmt: "pdf",  scope: "section" },
+  { id: "section_docx", label: "This section as DOCX",  icon: FileEdit, fmt: "docx", scope: "section" },
+  { id: "full_docx",    label: "Full DRHP as DOCX",     icon: BookOpen, fmt: "docx", scope: "full" },
+  { id: "full_pdf",     label: "Full DRHP as PDF",      icon: FileText, fmt: "pdf",  scope: "full" },
 ];
 
 export default function ExportDropdown({ editor, companyId, sectionName }) {
@@ -79,9 +80,9 @@ export default function ExportDropdown({ editor, companyId, sectionName }) {
             <span className="export-dropdown__spinner" aria-hidden="true" /> Exporting…
           </>
         ) : (
-          <>⬇ Export</>
+          <><Download size={14} strokeWidth={2} /> Export</>
         )}
-        <span className="export-dropdown__caret" aria-hidden="true">▾</span>
+        <ChevronDown size={12} strokeWidth={2} className="export-dropdown__caret" aria-hidden="true" />
       </button>
 
       {open && (
@@ -98,7 +99,9 @@ export default function ExportDropdown({ editor, companyId, sectionName }) {
                 className="export-dropdown__item"
                 onClick={() => handleExport(opt)}
               >
-                <span className="export-dropdown__item-icon">{opt.icon}</span>
+                <span className="export-dropdown__item-icon">
+                  <opt.icon size={14} strokeWidth={1.5} />
+                </span>
                 {opt.label}
               </button>
             </li>

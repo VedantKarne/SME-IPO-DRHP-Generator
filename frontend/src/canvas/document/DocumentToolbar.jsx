@@ -3,13 +3,17 @@
  *
  * Formatting toolbar that exactly matches the design screenshot:
  *   [Undo][Redo] | [B][I][U] | [H1][H2] | [•][1.][table] [⌄]
- *   | [✦ Generate DRHP ▾] [✦ AI Assistant ▾] | [Print] [Export ▾] [•••]
+ *   | [Generate DRHP ▾] [AI Assistant ▾] | [Print] [Export ▾] [•••]
  *
  * All AI actions remain under the "AI Assistant" dropdown (⌘K).
  * The copilot toggle is now in the AppBar — not the toolbar.
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  Sparkles, RotateCcw, Maximize2, Wand2, TrendingUp, Briefcase, BookOpen,
+  FileText, Strikethrough, Quote, AlignLeft, AlignCenter, AlignRight, X, ArrowRight,
+} from 'lucide-react';
 import * as canvasApi from '../services/canvasApi.js';
 import useCanvasStore from '../services/canvasStore.js';
 import useVersionStore from '../versions/versionStore.js';
@@ -21,12 +25,12 @@ import PrintPreview from './PrintPreview.jsx';
 // AI actions list
 // ---------------------------------------------------------------------------
 const AI_ACTIONS = [
-  { id: 'rewrite',           icon: '↺', label: 'Rewrite'           },
-  { id: 'expand',            icon: '↕', label: 'Expand'            },
-  { id: 'simplify',          icon: '◎', label: 'Simplify'          },
-  { id: 'investor_friendly', icon: '◈', label: 'Investor Friendly' },
-  { id: 'professional',      icon: '◇', label: 'Make Professional' },
-  { id: 'cite',              icon: '§', label: 'Add Citations'     },
+  { id: 'rewrite',           icon: RotateCcw,  label: 'Rewrite'           },
+  { id: 'expand',            icon: Maximize2,  label: 'Expand'            },
+  { id: 'simplify',          icon: Wand2,      label: 'Simplify'          },
+  { id: 'investor_friendly', icon: TrendingUp, label: 'Investor Friendly' },
+  { id: 'professional',      icon: Briefcase,  label: 'Make Professional' },
+  { id: 'cite',              icon: BookOpen,   label: 'Add Citations'     },
 ];
 
 // ---------------------------------------------------------------------------
@@ -193,7 +197,7 @@ export default function DocumentToolbar({
         content: ed.getJSON(),
         authorLabel: 'AI',
       });
-      showToast?.(`✦ ${actionLabel} applied`, 'success', 2800);
+      showToast?.(`${actionLabel} applied`, 'success', 2800);
     } catch (err) {
       console.error(`${actionLabel} failed:`, err);
       showToast?.(`${actionLabel} failed — ${err.message}`, 'error', 5000);
@@ -231,7 +235,7 @@ export default function DocumentToolbar({
         actionType: 'whole-doc',
         timestamp: new Date().toISOString(),
       });
-      showToast?.('✦ Instruction applied', 'success', 2800);
+      showToast?.('Instruction applied', 'success', 2800);
       setPromptText('');
     } catch (err) {
       console.error('Whole-section prompt failed:', err);
@@ -344,14 +348,14 @@ export default function DocumentToolbar({
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { ed?.chain().focus().toggleStrike().run(); setMoreFmtOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">S</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Strikethrough size={13} strokeWidth={2} /></span>
                   Strikethrough
                 </button>
               </li>
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { ed?.chain().focus().toggleBlockquote().run(); setMoreFmtOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">❝</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Quote size={13} strokeWidth={2} /></span>
                   Blockquote
                 </button>
               </li>
@@ -359,21 +363,21 @@ export default function DocumentToolbar({
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { ed?.chain().focus().setTextAlign('left').run(); setMoreFmtOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">⇤</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><AlignLeft size={13} strokeWidth={2} /></span>
                   Align Left
                 </button>
               </li>
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { ed?.chain().focus().setTextAlign('center').run(); setMoreFmtOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">↔</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><AlignCenter size={13} strokeWidth={2} /></span>
                   Align Center
                 </button>
               </li>
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { ed?.chain().focus().setTextAlign('right').run(); setMoreFmtOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">⇥</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><AlignRight size={13} strokeWidth={2} /></span>
                   Align Right
                 </button>
               </li>
@@ -384,7 +388,7 @@ export default function DocumentToolbar({
         <Sep />
 
         {/* ══════════════════════════════════════════════════
-            ✦ Generate DRHP  (solid purple primary button)
+            Generate DRHP  (solid signal-accent primary button)
            ══════════════════════════════════════════════════ */}
         <div className="dtb-gen-wrap" ref={genMenuRef}>
           <button
@@ -395,10 +399,7 @@ export default function DocumentToolbar({
             aria-expanded={genOpen}
             title="Generate full DRHP from AI"
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <Sparkles size={13} strokeWidth={2} aria-hidden="true" />
             Generate DRHP
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -410,14 +411,14 @@ export default function DocumentToolbar({
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { handleAIAction('rewrite'); setGenOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">✦</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Sparkles size={13} strokeWidth={2} /></span>
                   Generate full DRHP draft
                 </button>
               </li>
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { handleAIAction('professional'); setGenOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">◇</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><FileText size={13} strokeWidth={2} /></span>
                   Generate this section only
                 </button>
               </li>
@@ -425,7 +426,7 @@ export default function DocumentToolbar({
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { handleAIAction('cite'); setGenOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">§</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><BookOpen size={13} strokeWidth={2} /></span>
                   Add SEBI citations
                 </button>
               </li>
@@ -434,7 +435,7 @@ export default function DocumentToolbar({
         </div>
 
         {/* ══════════════════════════════════════════════════
-            ✦ AI Assistant  (outlined purple button)
+            AI Assistant  (outlined signal-accent button)
            ══════════════════════════════════════════════════ */}
         <div className="dtb-ai-wrap" ref={aiMenuRef}>
           <button
@@ -449,10 +450,7 @@ export default function DocumentToolbar({
             {(aiLoading || promptBusy) ? (
               <span className="dtb-spinner" aria-hidden="true" />
             ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                  stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <Sparkles size={13} strokeWidth={1.8} aria-hidden="true" />
             )}
             AI Assistant
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -464,11 +462,11 @@ export default function DocumentToolbar({
 
           {aiOpen && (
             <ul className="dtb-ai-menu" role="menu" aria-label="AI actions">
-              {AI_ACTIONS.map(({ id, icon, label }) => (
+              {AI_ACTIONS.map(({ id, icon: ActionIcon, label }) => (
                 <li key={id} role="none">
                   <button type="button" role="menuitem" className="dtb-ai-menu__item"
                     onClick={() => handleAIAction(id)}>
-                    <span className="dtb-ai-menu__icon" aria-hidden="true">{icon}</span>
+                    <span className="dtb-ai-menu__icon" aria-hidden="true"><ActionIcon size={13} strokeWidth={2} /></span>
                     {label}
                   </button>
                 </li>
@@ -489,7 +487,7 @@ export default function DocumentToolbar({
                   />
                   <button type="submit" className="dtb-ai-prompt-send"
                     disabled={promptBusy || !promptText.trim()} aria-label="Apply">
-                    {promptBusy ? <span className="dtb-spinner" aria-hidden="true" /> : '→'}
+                    {promptBusy ? <span className="dtb-spinner" aria-hidden="true" /> : <ArrowRight size={14} strokeWidth={2} />}
                   </button>
                 </form>
               </li>
@@ -538,7 +536,7 @@ export default function DocumentToolbar({
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
                   onClick={() => { ed?.chain().focus().unsetAllMarks().clearNodes().run(); setOverflowOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true">✕</span>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><X size={13} strokeWidth={2} /></span>
                   Clear Formatting
                 </button>
               </li>

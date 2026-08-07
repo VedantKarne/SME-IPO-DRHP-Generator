@@ -1,3 +1,5 @@
+import { CheckCircle2, XCircle, Paperclip } from 'lucide-react';
+
 export default function Eligibility({ eligibility }) {
   if (!eligibility) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
@@ -15,8 +17,8 @@ export default function Eligibility({ eligibility }) {
       {/* Overall verdict */}
       <div className="card" style={{
         marginBottom: 20,
-        background: eligibility.eligible ? 'rgba(16,185,129,0.06)' : 'rgba(244,63,94,0.06)',
-        borderColor: eligibility.eligible ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)'
+        background: eligibility.eligible ? 'var(--success-dim)' : 'var(--error-dim)',
+        borderColor: eligibility.eligible ? 'var(--success)' : 'var(--error)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -25,11 +27,14 @@ export default function Eligibility({ eligibility }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6,
               fontSize: '1.1rem', fontWeight: 700,
               color: eligibility.eligible ? 'var(--success)' : 'var(--error)',
               marginBottom: 4
             }}>
-              {eligibility.eligible ? '✅ Eligible for SME IPO' : '❌ Not Currently Eligible'}
+              {eligibility.eligible
+                ? <><CheckCircle2 size={18} strokeWidth={2} /> Eligible for SME IPO</>
+                : <><XCircle size={18} strokeWidth={2} /> Not Currently Eligible</>}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {eligibility.checks.filter(c => c.passed).length} / {eligibility.checks.length} criteria met
@@ -42,13 +47,15 @@ export default function Eligibility({ eligibility }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
         {eligibility.checks.map((check, i) => (
           <div key={i} className="card card-sm fade-in" style={{
-            borderColor: check.passed ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)',
-            background: check.passed ? 'rgba(16,185,129,0.04)' : 'rgba(244,63,94,0.04)'
+            borderColor: check.passed ? 'var(--success)' : 'var(--error)',
+            background: check.passed ? 'var(--success-dim)' : 'var(--error-dim)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: '1.2rem' }}>{check.passed ? '✅' : '❌'}</span>
+                  {check.passed
+                    ? <CheckCircle2 size={18} strokeWidth={2} color="var(--success)" />
+                    : <XCircle size={18} strokeWidth={2} color="var(--error)" />}
                   <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{check.name}</span>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>{check.reason}</p>
@@ -57,8 +64,8 @@ export default function Eligibility({ eligibility }) {
                 {check.passed ? 'PASS' : 'FAIL'}
               </span>
             </div>
-            <div style={{ marginTop: 10, padding: '6px 10px', background: 'rgba(79,126,255,0.06)', borderRadius: 6, fontSize: '0.72rem', color: 'var(--accent)', display: 'inline-block' }}>
-              📎 {check.clause_id}
+            <div style={{ marginTop: 10, padding: '6px 10px', background: 'var(--accent-dim)', borderRadius: 'var(--radius-md)', fontSize: '0.72rem', color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <Paperclip size={12} strokeWidth={2} /> {check.clause_id}
             </div>
           </div>
         ))}

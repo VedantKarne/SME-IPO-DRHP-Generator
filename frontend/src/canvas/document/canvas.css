@@ -14,18 +14,18 @@
   --doc-paper-w:        794px;        /* A4 at 96 dpi */
   --doc-paper-pad-v:    80px;         /* ~1 inch top/bottom */
   --doc-paper-pad-h:    84px;         /* ~1.1 inch left/right */
-  --doc-workspace-bg:   #e8e8e8;      /* classic Word gray desk */
-  --doc-paper-bg:       #ffffff;
-  --doc-paper-text:     #1c1c2e;
-  --doc-paper-muted:    #6b7280;
-  --doc-rule:           #e5e7eb;
-  --doc-accent:         #2563eb;
-  --doc-accent-dim:     rgba(37, 99, 235, 0.07);
-  --doc-accent-ring:    rgba(37, 99, 235, 0.18);
-  --doc-shadow-page:    0 2px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
-  --doc-shadow-hover:   0 4px 16px rgba(0,0,0,0.14);
-  --doc-font-serif:     'Georgia', 'Times New Roman', serif;
-  --doc-font-sans:      'Outfit', -apple-system, sans-serif;
+  --doc-workspace-bg:   var(--paper-sunken); /* was flat gray #e8e8e8 — now the same warm "desk" tone as the rest of the app */
+  --doc-paper-bg:       var(--paper-raised);
+  --doc-paper-text:     var(--ink);
+  --doc-paper-muted:    var(--ink-soft);
+  --doc-rule:           var(--rule);
+  --doc-accent:         var(--signal);
+  --doc-accent-dim:     var(--signal-soft);
+  --doc-accent-ring:    rgba(138, 46, 46, 0.2);
+  --doc-shadow-page:    0 1px 3px rgba(28,27,25,0.1);
+  --doc-shadow-hover:   0 2px 8px rgba(28,27,25,0.12);
+  --doc-font-serif:     var(--font-doc);
+  --doc-font-sans:      var(--font-ui);
 }
 
 /* ── Root grid ─────────────────────────────────────────────────────────── */
@@ -173,9 +173,9 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
-.canvas-header__chip-dot--blue   { background: #2563eb; }
-.canvas-header__chip-dot--green  { background: #10b981; }
-.canvas-header__chip-dot--purple { background: #a78bfa; }
+.canvas-header__chip-dot--blue   { background: var(--signal); }
+.canvas-header__chip-dot--green  { background: var(--status-approved); }
+.canvas-header__chip-dot--purple { background: var(--status-draft); }
 
 .canvas-header__chip-label {
   font-size: 0.65rem;
@@ -467,7 +467,7 @@
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
-.dtb-ai-btn:hover:not(:disabled) { background: #1d4ed8; box-shadow: 0 0 0 3px rgba(37,99,235,0.2); }
+.dtb-ai-btn:hover:not(:disabled) { background: var(--signal-hover); }
 .dtb-ai-btn--loading  { background: var(--glass-bg); color: var(--doc-accent); border: 1px solid var(--doc-accent-ring); }
 .dtb-ai-btn:disabled  { opacity: 0.55; cursor: not-allowed; }
 
@@ -560,7 +560,7 @@
   justify-content: center;
   transition: background 0.12s;
 }
-.dtb-ai-prompt-send:hover:not(:disabled) { background: #1d4ed8; }
+.dtb-ai-prompt-send:hover:not(:disabled) { background: var(--signal-hover); }
 .dtb-ai-prompt-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Spinner */
@@ -895,7 +895,7 @@
 
 /* Text selection in the paper */
 .doc-editor-content ::selection {
-  background: rgba(37, 99, 235, 0.12);
+  background: var(--signal-soft);
 }
 
 /* ── Copilot panel — sticky, never taller than viewport ─────────────────── */
@@ -928,13 +928,15 @@
 .cp-avatar {
   width: 26px;
   height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--doc-accent), #7c3aed);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-doc);
   font-size: 0.7rem;
-  color: #fff;
+  color: var(--ink);
   flex-shrink: 0;
 }
 
@@ -1076,9 +1078,9 @@
 }
 .cp-suggestion:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-.cp-suggestion--warning { border-color: rgba(245,158,11,0.22); background: rgba(245,158,11,0.04); }
-.cp-suggestion--success { border-color: rgba(16,185,129,0.2);  background: rgba(16,185,129,0.04); }
-.cp-suggestion--info    { border-color: rgba(79,126,255,0.2);  background: rgba(79,126,255,0.04); }
+.cp-suggestion--warning { border-color: rgba(148,111,46,0.3);  background: var(--status-draft-soft); }
+.cp-suggestion--success { border-color: rgba(61,107,79,0.28);  background: var(--status-approved-soft); }
+.cp-suggestion--info    { border-color: var(--rule);            background: var(--paper-sunken); }
 
 .cp-suggestion__icon {
   font-size: 0.82rem;
@@ -1273,7 +1275,7 @@ body.authoring-mode .shell-main {
 
 .canvas-header__progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--doc-accent), #7c3aed);
+  background: var(--signal);
   border-radius: 0 1px 1px 0;
   transition: width 0.7s ease;
 }
@@ -1300,9 +1302,7 @@ body.authoring-mode .shell-main {
 }
 
 .doc-section__empty-icon {
-  font-size: 1.5rem;
-  color: #cbd5e1;
-  line-height: 1;
+  color: var(--ink-faint);
 }
 
 .doc-section__empty-heading {
@@ -1636,15 +1636,15 @@ body.authoring-mode .shell-main {
 }
 
 .ai-evidence-badge--reg {
-  background: rgba(37,99,235,0.08);
-  border: 1px solid rgba(37,99,235,0.18);
-  color: #2563eb;
+  background: var(--signal-soft);
+  border: 1px solid rgba(138,46,46,0.18);
+  color: var(--signal);
 }
 
 .ai-evidence-badge--ai {
-  background: rgba(124,58,237,0.08);
-  border: 1px solid rgba(124,58,237,0.18);
-  color: #7c3aed;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
 }
 
 .ai-evidence-badge__icon {
@@ -1685,10 +1685,8 @@ body.authoring-mode .shell-main {
   font-family: var(--doc-font-sans);
   font-size: 0.8rem;
   font-weight: 500;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   pointer-events: all;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px rgba(28,27,25,0.14);
   max-width: 320px;
   line-height: 1.35;
   animation: toastSlideIn 0.18s ease forwards;
@@ -1699,27 +1697,27 @@ body.authoring-mode .shell-main {
 }
 
 .toast-item--success {
-  background: rgba(16,185,129,0.14);
-  border: 1px solid rgba(16,185,129,0.28);
-  color: #10b981;
+  background: var(--status-approved-soft);
+  border: 1px solid rgba(61,107,79,0.3);
+  color: var(--status-approved);
 }
 
 .toast-item--warning {
-  background: rgba(245,158,11,0.14);
-  border: 1px solid rgba(245,158,11,0.28);
-  color: #f59e0b;
+  background: var(--status-draft-soft);
+  border: 1px solid rgba(148,111,46,0.3);
+  color: var(--status-draft);
 }
 
 .toast-item--error {
-  background: rgba(239,68,68,0.14);
-  border: 1px solid rgba(239,68,68,0.28);
-  color: #ef4444;
+  background: var(--status-gap-soft);
+  border: 1px solid rgba(118,45,63,0.3);
+  color: var(--status-gap);
 }
 
 .toast-item--info {
-  background: rgba(37,99,235,0.12);
-  border: 1px solid rgba(37,99,235,0.22);
-  color: #2563eb;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
 }
 
 .toast-item__icon {
@@ -1839,8 +1837,9 @@ body.authoring-mode .shell-main {
 
 /* ══════════════════════════════════════════════════════════════════════════
    Generate DRHP — primary CTA button + dropdown
-   The most visually dominant action in the toolbar. Uses a blue/purple
-   gradient to stand apart from every other toolbar control.
+   The most visually dominant action in the toolbar. Solid --signal fill,
+   no gradient — design-system.md: "never more than one primary button
+   visible per view", "no gradient, no glow on hover".
    ══════════════════════════════════════════════════════════════════════════ */
 
 .dtb-generate-wrap {
@@ -1855,29 +1854,25 @@ body.authoring-mode .shell-main {
   gap: 6px;
   height: 30px;               /* taller than dtb-btn (26px) */
   padding: 0 14px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  border-radius: var(--radius-sm);
+  background: var(--signal);
   border: none;
   color: #fff;
   font-family: var(--doc-font-sans);
   font-size: 0.8rem;          /* slightly larger than other controls (0.73rem) */
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: background-color 0.15s;
   white-space: nowrap;
   letter-spacing: 0.01em;
-  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.35);
 }
 
 .dtb-generate-btn:hover:not(:disabled) {
-  opacity: 0.92;
-  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
-  transform: translateY(-1px);
+  background: var(--signal-hover);
 }
 
 .dtb-generate-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  background: var(--signal-hover);
 }
 
 .dtb-generate-btn:disabled {
@@ -1887,7 +1882,7 @@ body.authoring-mode .shell-main {
 }
 
 .dtb-generate-btn--loading {
-  background: linear-gradient(135deg, rgba(37,99,235,0.7) 0%, rgba(124,58,237,0.7) 100%);
+  background: var(--ink-faint);
 }
 
 .dtb-generate-btn__icon {
@@ -1937,8 +1932,8 @@ body.authoring-mode .shell-main {
 }
 
 .dtb-generate-menu__item:hover {
-  background: rgba(37, 99, 235, 0.1);
-  color: #fff;
+  background: var(--signal-soft);
+  color: var(--signal);
 }
 
 .dtb-generate-menu__item--primary {
@@ -1947,7 +1942,7 @@ body.authoring-mode .shell-main {
 }
 
 .dtb-generate-menu__item--primary:hover {
-  background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(124,58,237,0.15));
+  background: var(--signal-soft);
 }
 
 .dtb-generate-menu__icon {
@@ -1981,7 +1976,7 @@ body.authoring-mode .shell-main {
   display: inline-block;
   width: 1px;
   height: 20px;
-  background: rgba(37, 99, 235, 0.25);
+  background: rgba(138, 46, 46, 0.25);
   margin: 0 10px;
   flex-shrink: 0;
 }
@@ -2023,8 +2018,9 @@ body.authoring-mode .shell-main {
 .canvas-appbar__logo {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #4f7eff, #7c3aed);
-  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2108,14 +2104,14 @@ body.authoring-mode .shell-main {
   flex-shrink: 0;
 }
 .canvas-appbar__badge--doc {
-  background: rgba(79, 126, 255, 0.12);
-  color: #4f7eff;
-  border: 1px solid rgba(79, 126, 255, 0.25);
+  background: var(--signal-soft);
+  color: var(--signal);
+  border: 1px solid rgba(138, 46, 46, 0.25);
 }
 .canvas-appbar__badge--exchange {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.22);
+  background: var(--status-approved-soft);
+  color: var(--status-approved);
+  border: 1px solid rgba(61, 107, 79, 0.22);
 }
 
 /* Right controls */
@@ -2149,7 +2145,7 @@ body.authoring-mode .shell-main {
   font-family: var(--doc-font-sans);
   font-size: 0.8rem;
   font-weight: 700;
-  color: #10b981;
+  color: var(--status-approved);
 }
 
 /* Saved indicator */
@@ -2190,7 +2186,7 @@ body.authoring-mode .shell-main {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4f7eff, #7c3aed);
+  background: var(--signal);
   border: none;
   color: #fff;
   font-family: var(--doc-font-sans);
@@ -2201,10 +2197,10 @@ body.authoring-mode .shell-main {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: box-shadow 0.15s;
+  transition: background-color 0.15s;
 }
 .canvas-appbar__avatar:hover {
-  box-shadow: 0 0 0 3px rgba(79, 126, 255, 0.3);
+  background: var(--signal-hover);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2316,16 +2312,17 @@ body.authoring-mode .shell-main {
   flex-shrink: 0;
 }
 
-/* Generate DRHP — solid purple primary */
+/* Generate DRHP — solid --signal primary (was a purple gradient; two
+   conflicting definitions of .dtb-generate-btn existed in this file —
+   this one wins by source order, so it's the one that must be correct) */
 .dtb-generate-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;
   padding: 0 13px;
-  border-radius: 6px;
-  background: #6d28d9;
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: var(--radius-sm);
+  background: var(--signal);
   border: none;
   color: #fff;
   font-family: var(--doc-font-sans);
@@ -2334,25 +2331,23 @@ body.authoring-mode .shell-main {
   cursor: pointer;
   white-space: nowrap;
   letter-spacing: 0.01em;
-  transition: opacity 0.15s, box-shadow 0.15s;
-  box-shadow: 0 1px 4px rgba(109, 40, 217, 0.35);
+  transition: background-color 0.15s;
 }
 .dtb-generate-btn:hover {
-  opacity: 0.92;
-  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.45);
+  background: var(--signal-hover);
 }
 
-/* AI Assistant — outlined purple */
+/* AI Assistant — outlined, --signal accent (was purple) */
 .dtb-ai-assistant-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   height: 28px;
   padding: 0 11px;
-  border-radius: 6px;
-  background: rgba(109, 40, 217, 0.08);
-  border: 1px solid rgba(109, 40, 217, 0.3);
-  color: #a78bfa;
+  border-radius: var(--radius-sm);
+  background: var(--signal-soft);
+  border: 1px solid rgba(138, 46, 46, 0.3);
+  color: var(--signal);
   font-family: var(--doc-font-sans);
   font-size: 0.76rem;
   font-weight: 600;
@@ -2362,9 +2357,9 @@ body.authoring-mode .shell-main {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .dtb-ai-assistant-btn:hover:not(:disabled) {
-  background: rgba(109, 40, 217, 0.15);
-  border-color: rgba(109, 40, 217, 0.5);
-  color: #c4b5fd;
+  background: rgba(138, 46, 46, 0.15);
+  border-color: var(--signal);
+  color: var(--signal-hover);
 }
 .dtb-ai-assistant-btn--loading {
   background: var(--glass-bg);
@@ -2588,8 +2583,8 @@ body.authoring-mode .shell-main {
 .cp-chat-footer__send {
   width: 30px;
   height: 30px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: var(--radius-sm);
+  background: var(--signal);
   border: none;
   color: #fff;
   cursor: pointer;
@@ -2749,10 +2744,8 @@ body.authoring-mode .shell-main {
 }
 
 .evidence-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  border-color: var(--accent);
-  background: rgba(255,255,255,0.04);
-  transform: translateY(-1px);
+  border-color: var(--signal);
+  background: var(--paper-sunken);
 }
 
 .evidence-card__doc {
@@ -2818,10 +2811,10 @@ body.authoring-mode .shell-main {
 .evidence-card__badge {
   font-size: 0.7rem;
   padding: 4px 8px;
-  background: rgba(34, 197, 94, 0.1);
-  color: var(--success);
-  border: 1px solid rgba(34, 197, 94, 0.2);
-  border-radius: 4px;
+  background: var(--status-approved-soft);
+  color: var(--status-approved);
+  border: 1px solid rgba(61, 107, 79, 0.2);
+  border-radius: var(--radius-sm);
   margin-top: 6px;
   align-self: flex-start;
   display: inline-flex;

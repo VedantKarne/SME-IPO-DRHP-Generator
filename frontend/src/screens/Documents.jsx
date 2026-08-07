@@ -1,56 +1,40 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  FileBarChart, FileSignature, Factory, Leaf, ShieldCheck, Award, FileText,
+  Scale, Building2, ScrollText, CheckCircle2, XCircle, Trash2, Paperclip,
+  AlertTriangle, Bot,
+} from 'lucide-react';
 import { getToken, decodeToken, authedFetch } from '../utils/auth';
 
 const API_BASE = 'http://127.0.0.1:8000';
 
 const INITIAL_CHECKLIST = [
-  { icon: '📊', label: 'Audited Financial Statements (FY2022–24)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '📋', label: 'Board Resolution for IPO', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '🏭', label: 'Factory Licence / Registration', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '🌿', label: 'Pollution Certificate', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '🛡️', label: 'Factory Insurance Policy', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '™️', label: 'Trademark Certificates', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '📝', label: 'Vendor & Customer Contracts (material)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '⚖️', label: 'Litigation / Legal Notices', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '🏢', label: 'GST Registration Certificate', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: '📑', label: 'Memorandum & Articles of Association', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: FileBarChart, label: 'Audited Financial Statements (FY2022–24)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: FileSignature, label: 'Board Resolution for IPO', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: Factory, label: 'Factory Licence / Registration', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: Leaf, label: 'Pollution Certificate', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: ShieldCheck, label: 'Factory Insurance Policy', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: Award, label: 'Trademark Certificates', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: FileText, label: 'Vendor & Customer Contracts (material)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: Scale, label: 'Litigation / Legal Notices', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: Building2, label: 'GST Registration Certificate', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: ScrollText, label: 'Memorandum & Articles of Association', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
 ];
-
-const STATUS_COLORS = {
-  pending: 'var(--accent)',
-  processing: '#f59e0b',
-  done: '#10b981',
-  error: '#f43f5e',
-};
 
 export default function Documents() {
   const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
   const [uploadingIdx, setUploadingIdx] = useState(null);
-  
+
   // Get companyId directly from token
   const token = getToken();
   const companyId = token ? decodeToken(token)?.company_id : null;
-  
+
   const [pollingActive, setPollingActive] = useState(false);
   const fileInputRef = useRef(null);
   const activeUploadRef = useRef(null);
 
   const uploaded = checklist.filter(d => d.uploaded || d.status === 'done').length;
   const total = checklist.length;
-
-  // Keyword map: checklist label → filename keywords to match against backend records
-  const LABEL_KEYWORDS = [
-    ['Audited Financial', ['financial', 'audit', 'p&l', 'profit', 'balance_sheet']],
-    ['Board Resolution', ['board_resolution', 'board_res', 'br_']],
-    ['Factory Licence', ['factory', 'licence', 'registration']],
-    ['Pollution', ['pollution']],
-    ['Insurance', ['insurance']],
-    ['Trademark', ['trademark']],
-    ['Vendor', ['vendor', 'contract', 'customer']],
-    ['Litigation', ['litigation', 'legal_notice']],
-    ['GST', ['gst']],
-    ['Memorandum', ['moa', 'memorandum', 'articles', 'aoa']],
-  ];
 
   const reconcileWithBackend = async (cid) => {
     try {
@@ -226,21 +210,21 @@ export default function Documents() {
     if (doc.status === 'processing' || uploadingIdx === i) {
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', animation: 'pulse 1.2s infinite' }} />
-          <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600 }}>Processing…</span>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-draft)', animation: 'pulse 1.2s infinite' }} />
+          <span style={{ fontSize: '0.75rem', color: 'var(--status-draft)', fontWeight: 600 }}>Processing…</span>
         </div>
       );
     }
     if (doc.status === 'done' || doc.uploaded) {
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span className="badge badge-success">✓ Extracted</span>
-          <button 
+          <span className="badge badge-success"><CheckCircle2 size={12} strokeWidth={2} /> Extracted</span>
+          <button
             onClick={() => handleRemove(i)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
             title="Remove document"
           >
-            🗑️
+            <Trash2 size={14} strokeWidth={2} />
           </button>
         </div>
       );
@@ -256,20 +240,22 @@ export default function Documents() {
     if (doc.status === 'error') {
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: '0.72rem', color: '#f43f5e', fontWeight: 600 }}>✗ Failed</span>
-          <button 
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: 'var(--error)', fontWeight: 600 }}>
+            <XCircle size={13} strokeWidth={2} /> Failed
+          </span>
+          <button
             onClick={() => handleRemove(i)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
             title="Remove document"
           >
-            🗑️
+            <Trash2 size={14} strokeWidth={2} />
           </button>
         </div>
       );
     }
     return (
       <button className="btn btn-secondary btn-sm" onClick={() => handleUploadClick(i)}>
-        Upload →
+        Upload
       </button>
     );
   };
@@ -300,8 +286,8 @@ export default function Documents() {
             <span>Document Collection</span>
             <span style={{ color: 'var(--accent)' }}>{Math.round(uploaded / total * 100)}%</span>
           </div>
-          <div style={{ height: 8, background: 'rgba(255,255,255,0.07)', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${uploaded / total * 100}%`, background: 'linear-gradient(90deg, var(--accent), #7c3aed)', borderRadius: 4, transition: 'width 0.8s ease' }} />
+          <div style={{ height: 8, background: 'var(--paper-sunken)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${uploaded / total * 100}%`, background: 'var(--accent)', borderRadius: 'var(--radius-md)', transition: 'width 0.8s ease' }} />
           </div>
           <p style={{ marginTop: 8, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
             Nirmaan AI extracts Revenue, PAT, Auditor name, Directors, and KMP data on upload.
@@ -311,41 +297,48 @@ export default function Documents() {
 
       {/* Checklist */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {checklist.map((doc, i) => (
+        {checklist.map((doc, i) => {
+          const DocIcon = doc.icon;
+          return (
           <div
             key={i}
             className="card card-sm"
             style={{
               display: 'flex', alignItems: 'center', gap: 14,
               borderColor: doc.uploaded || doc.status === 'done'
-                ? 'rgba(16,185,129,0.2)'
+                ? 'var(--success)'
                 : doc.status === 'error'
-                ? 'rgba(244,63,94,0.2)'
-                : doc.required ? 'rgba(244,63,94,0.15)' : 'var(--glass-border)',
+                ? 'var(--error)'
+                : doc.required ? 'var(--status-gap)' : 'var(--glass-border)',
               background: doc.uploaded || doc.status === 'done'
-                ? 'rgba(16,185,129,0.04)'
+                ? 'var(--success-dim)'
                 : doc.status === 'error'
-                ? 'rgba(244,63,94,0.04)'
+                ? 'var(--error-dim)'
                 : 'var(--glass-bg)',
             }}
           >
-            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{doc.icon}</span>
+            <DocIcon size={20} strokeWidth={1.75} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{doc.label}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
                 {doc.filename
-                  ? <span style={{ color: 'var(--accent)' }}>📄 {doc.filename}</span>
-                  : doc.required ? '⚠️ Required' : 'Optional'}
+                  ? <span style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}><Paperclip size={11} strokeWidth={2} /> {doc.filename}</span>
+                  : doc.required
+                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={11} strokeWidth={2} /> Required</span>
+                    : 'Optional'}
               </div>
             </div>
             {getStatusBadge(doc, i)}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* AI extraction info */}
-      <div className="card" style={{ marginTop: 24, borderColor: 'rgba(79,126,255,0.2)', background: 'rgba(79,126,255,0.04)' }}>
-        <h3 style={{ fontSize: '0.9rem', marginBottom: 14, color: 'var(--accent)' }}>🤖 AI Extraction Pipeline</h3>
+      <div className="card" style={{ marginTop: 24, borderColor: 'var(--rule)', background: 'var(--accent-dim)' }}>
+        <h3 style={{ fontSize: '0.9rem', marginBottom: 14, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Bot size={16} strokeWidth={1.75} /> AI Extraction Pipeline
+        </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
           When you upload a financial statement, Nirmaan AI runs the full ingestion pipeline:
         </p>
@@ -358,7 +351,7 @@ export default function Documents() {
             { label: 'Embed', value: 'BGE-M3 Vectors', src: 'Vector Store' },
             { label: 'Index', value: 'Searchable in RAG', src: 'ChromaDB' },
           ].map(({ label, value, src }) => (
-            <div key={label} style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+            <div key={label} style={{ padding: '10px 12px', background: 'var(--paper-raised)', border: '1px solid var(--rule)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
               <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
               <div style={{ fontSize: '0.65rem', color: 'var(--accent)', marginTop: 2 }}>via: {src}</div>

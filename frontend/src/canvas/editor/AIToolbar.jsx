@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { Sparkles, AlertTriangle } from "lucide-react";
 import * as canvasApi from "../services/canvasApi.js";
 import useCanvasStore from "../services/canvasStore.js";
 import useVersionStore from "../versions/versionStore.js";
@@ -41,7 +42,9 @@ function AIActionButton({ onClick, title, loading = false, children }) {
       {loading ? (
         <span className="ai-toolbar__ai-spinner" aria-hidden="true" />
       ) : (
-        <span className="ai-toolbar__ai-sparkle" aria-hidden="true">✦</span>
+        <span className="ai-toolbar__ai-sparkle" aria-hidden="true">
+          <Sparkles size={12} strokeWidth={2} />
+        </span>
       )}
       {children}
     </button>
@@ -149,14 +152,14 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
       {/* Failure notice — the draft is left untouched when this appears */}
       {actionError && (
         <div className="ai-toolbar__error" role="alert">
-          <span aria-hidden="true">⚠</span> {actionError}
+          <AlertTriangle size={13} strokeWidth={2} aria-hidden="true" /> {actionError}
         </div>
       )}
 
       {/* ── AI Actions (P4) ────────────────────────────────────────── */}
       <AIActionButton
         onClick={() => handleAIAction("rewrite", "Rewrite")}
-        title="✦ AI Rewrite — rewrite selected text"
+        title="AI Rewrite — rewrite selected text"
         loading={loadingAction === "rewrite"}
       >
         Rewrite
@@ -164,7 +167,7 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
 
       <AIActionButton
         onClick={() => handleAIAction("expand", "Expand")}
-        title="✦ AI Expand — expand selected text"
+        title="AI Expand — expand selected text"
         loading={loadingAction === "expand"}
       >
         Expand
@@ -172,7 +175,7 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
 
       <AIActionButton
         onClick={() => handleAIAction("investor_friendly", "Investor Friendly")}
-        title="✦ Investor Friendly — optimise for investors"
+        title="Investor Friendly — optimise for investors"
         loading={loadingAction === "investor_friendly"}
       >
         Investor Friendly
@@ -180,7 +183,7 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
 
       <AIActionButton
         onClick={() => handleAIAction("professional", "Professional")}
-        title="✦ Professional — make tone formal and precise"
+        title="Professional — make tone formal and precise"
         loading={loadingAction === "professional"}
       >
         Professional
@@ -188,7 +191,7 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
 
       <AIActionButton
         onClick={() => handleAIAction("simplify", "Simplify")}
-        title="✦ Simplify — make text clearer"
+        title="Simplify — make text clearer"
         loading={loadingAction === "simplify"}
       >
         Simplify
@@ -196,7 +199,7 @@ export default function AIToolbar({ editor, companyId = "", sectionName = "" }) 
 
       <AIActionButton
         onClick={() => handleAIAction("cite", "Cite Evidence")}
-        title="✦ Cite Evidence — add regulatory citations"
+        title="Cite Evidence — add regulatory citations"
         loading={loadingAction === "cite"}
       >
         Cite Evidence

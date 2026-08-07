@@ -295,12 +295,9 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
             display: 'flex',
             gap: '4px',
             padding: '6px 8px',
-            background: 'var(--glass-bg, rgba(20,20,40,0.92))',
-            border: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
-            borderRadius: '8px',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            background: 'var(--paper-raised)',
+            border: '1px solid var(--rule)',
+            borderRadius: 'var(--radius-md)',
           }}
         >
           {ACTIONS.map(({ id, label }) => {
@@ -323,31 +320,25 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
                   padding: '4px 10px',
                   fontSize: '12px',
                   fontWeight: 500,
-                  borderRadius: '5px',
+                  borderRadius: 'var(--radius-sm)',
                   border: '1px solid transparent',
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
                   opacity: isDisabled ? 0.45 : 1,
-                  background: isActive
-                    ? 'var(--accent, #6c63ff)'
-                    : 'transparent',
-                  color: isActive
-                    ? '#fff'
-                    : 'var(--text-primary, #e0e0e0)',
+                  background: isActive ? 'var(--signal)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--ink)',
                   transition: 'background 0.15s, color 0.15s, opacity 0.15s',
                 }}
                 onMouseEnter={(e) => {
                   if (!isDisabled && !isActive) {
-                    e.currentTarget.style.background =
-                      'var(--accent, #6c63ff)';
+                    e.currentTarget.style.background = 'var(--signal)';
                     e.currentTarget.style.color = '#fff';
-                    e.currentTarget.style.border = '1px solid var(--accent, #6c63ff)';
+                    e.currentTarget.style.border = '1px solid var(--signal)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isDisabled && !isActive) {
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color =
-                      'var(--text-primary, #e0e0e0)';
+                    e.currentTarget.style.color = 'var(--ink)';
                     e.currentTarget.style.border = '1px solid transparent';
                   }
                 }}
@@ -379,7 +370,7 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
               to { transform: rotate(360deg); }
             }
             .selection-popup__btn:focus-visible {
-              outline: 2px solid var(--accent, #6c63ff);
+              outline: 2px solid var(--signal);
               outline-offset: 2px;
             }
           `}</style>
@@ -399,12 +390,10 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
             padding: '6px 10px',
             fontSize: '12px',
             lineHeight: 1.4,
-            borderRadius: '6px',
-            background: 'var(--error-dim, rgba(220,60,60,0.14))',
-            border: '1px solid var(--error, #dc3c3c)',
-            color: 'var(--text-primary, #e0e0e0)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--status-gap-soft)',
+            border: '1px solid var(--status-gap)',
+            color: 'var(--ink)',
           }}
         >
           {actionError}
@@ -442,24 +431,23 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
             padding: '24px',
             minWidth: '360px',
             maxWidth: '520px',
-            background: 'var(--glass-bg, rgba(20,20,40,0.97))',
-            border: '1px solid var(--glass-border, rgba(255,255,255,0.08))',
-            borderRadius: '12px',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-            color: 'var(--text-primary, #e0e0e0)',
+            background: 'var(--paper-raised)',
+            border: '1px solid var(--rule)',
+            borderRadius: 'var(--radius-lg)',
+            color: 'var(--ink)',
           }}
         >
           <h3 style={{ margin: '0 0 12px', fontSize: '15px' }}>
             {sectionName} — {diffState.actionLabel}
           </h3>
 
-          <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-muted, #888)' }}>
+          <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--ink-faint)' }}>
             Original
           </div>
           <pre
             style={{
-              background: 'rgba(244,63,94,0.08)',
-              borderRadius: '6px',
+              background: 'var(--status-gap-soft)',
+              borderRadius: 'var(--radius-md)',
               padding: '10px 12px',
               fontSize: '13px',
               whiteSpace: 'pre-wrap',
@@ -470,13 +458,13 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
             {diffState.original}
           </pre>
 
-          <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-muted, #888)' }}>
+          <div style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--ink-faint)' }}>
             Proposed
           </div>
           <pre
             style={{
-              background: 'rgba(16,185,129,0.08)',
-              borderRadius: '6px',
+              background: 'var(--status-approved-soft)',
+              borderRadius: 'var(--radius-md)',
               padding: '10px 12px',
               fontSize: '13px',
               whiteSpace: 'pre-wrap',
@@ -493,10 +481,10 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
               onClick={handleReject}
               style={{
                 padding: '7px 16px',
-                borderRadius: '6px',
-                border: '1px solid var(--glass-border, rgba(255,255,255,0.12))',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--rule)',
                 background: 'transparent',
-                color: 'var(--text-secondary, #ccc)',
+                color: 'var(--ink-soft)',
                 cursor: 'pointer',
                 fontSize: '13px',
               }}
@@ -508,9 +496,9 @@ export default function SelectionPopup({ editor, companyId, sectionName, section
               onClick={handleAccept}
               style={{
                 padding: '7px 16px',
-                borderRadius: '6px',
+                borderRadius: 'var(--radius-md)',
                 border: 'none',
-                background: 'var(--accent, #6c63ff)',
+                background: 'var(--signal)',
                 color: '#fff',
                 cursor: 'pointer',
                 fontSize: '13px',

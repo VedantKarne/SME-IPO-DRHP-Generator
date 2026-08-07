@@ -6,15 +6,6 @@ import { broadcastUpdate } from '../utils/tabSync';
 
 const API = 'http://127.0.0.1:8000';
 
-const NAV = [
-  { path: '/dashboard',       icon: '📊', label: 'Dashboard' },
-  { path: '/workspace',       icon: '📝', label: 'Document Workspace' },
-  { path: '/documents',       icon: '📁', label: 'Documents' },
-  { path: '/eligibility',     icon: '✅', label: 'Eligibility Engine' },
-  { path: '/review',          icon: '👤', label: 'Banker Review' },
-  { path: '/knowledge-base',  icon: '🧠', label: 'Knowledge Base' },
-];
-
 function CopilotRail({ companyId, currentSection }) {
   const [messages, setMessages] = useState([
     { role: 'ai', text: 'Hi! I\'m your IPO Copilot. Ask me anything about regulations, sections, or how to improve your draft.' }
@@ -60,7 +51,7 @@ function CopilotRail({ companyId, currentSection }) {
   return (
     <aside className="shell-copilot">
       <div className="copilot-header">
-        <div style={{ width: 32, height: 32, background: 'linear-gradient(135deg, var(--accent), #7c3aed)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>N</div>
+        <div style={{ width: 32, height: 32, background: 'transparent', border: '1px solid var(--ink)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-doc)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', flexShrink: 0 }}>N</div>
         <div>
           <div className="copilot-title">IPO Copilot</div>
           <div className="copilot-subtitle">Regulatory AI assistant</div>

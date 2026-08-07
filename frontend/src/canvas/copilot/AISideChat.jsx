@@ -8,6 +8,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Loader2, ArrowUp } from 'lucide-react';
 import * as canvasApi from '../services/canvasApi.js';
 
 // ---------------------------------------------------------------------------
@@ -185,7 +186,7 @@ export default function AISideChat({ companyId, sectionName }) {
     >
       {/* Header */}
       <header style={styles.header}>
-        <div style={styles.headerIcon} aria-hidden="true">✦</div>
+        <div style={styles.headerIcon} aria-hidden="true">N</div>
         <div>
           <div style={styles.headerTitle}>AI Copilot</div>
           {sectionName && (
@@ -228,15 +229,15 @@ export default function AISideChat({ companyId, sectionName }) {
             aria-label={`Quick prompt: ${chip}`}
             onMouseEnter={(e) => {
               if (!loading) {
-                e.currentTarget.style.background = 'var(--accent-dim)';
-                e.currentTarget.style.borderColor = 'rgba(79,126,255,0.3)';
-                e.currentTarget.style.color = 'var(--accent)';
+                e.currentTarget.style.background = 'var(--signal-soft)';
+                e.currentTarget.style.borderColor = 'rgba(138,46,46,0.3)';
+                e.currentTarget.style.color = 'var(--signal)';
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--glass-bg)';
-              e.currentTarget.style.borderColor = 'var(--glass-border)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.background = 'var(--paper-sunken)';
+              e.currentTarget.style.borderColor = 'var(--rule)';
+              e.currentTarget.style.color = 'var(--ink-soft)';
             }}
           >
             {chip}
@@ -283,9 +284,9 @@ export default function AISideChat({ companyId, sectionName }) {
           style={styles.sendBtn}
         >
           {loading ? (
-            <span className="spin" aria-hidden="true" style={styles.spinner}>⟳</span>
+            <Loader2 size={15} strokeWidth={2} className="spin" aria-hidden="true" />
           ) : (
-            <span aria-hidden="true">→</span>
+            <ArrowUp size={15} strokeWidth={2} aria-hidden="true" />
           )}
         </button>
       </div>
@@ -316,13 +317,15 @@ const styles = {
   headerIcon: {
     width: '30px',
     height: '30px',
-    borderRadius: '8px',
-    background: 'linear-gradient(135deg, var(--accent), #7c3aed)',
+    borderRadius: 'var(--radius-sm)',
+    background: 'transparent',
+    border: '1px solid var(--ink)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontFamily: 'var(--font-doc)',
     fontSize: '0.8rem',
-    color: 'white',
+    color: 'var(--ink)',
     flexShrink: 0,
   },
   headerTitle: {
@@ -363,7 +366,7 @@ const styles = {
     background: 'var(--glass-bg)',
     color: 'var(--text-secondary)',
     fontSize: '0.72rem',
-    fontFamily: "'Outfit', sans-serif",
+    fontFamily: 'var(--font-ui)',
     fontWeight: 500,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
@@ -381,11 +384,11 @@ const styles = {
     flex: 1,
     fontSize: '0.85rem',
     padding: '9px 12px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--glass-border)',
-    background: 'rgba(255,255,255,0.04)',
-    color: 'var(--text-primary)',
-    fontFamily: "'Outfit', sans-serif",
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--rule)',
+    background: 'var(--paper-sunken)',
+    color: 'var(--ink)',
+    fontFamily: 'var(--font-ui)',
     outline: 'none',
     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
   },

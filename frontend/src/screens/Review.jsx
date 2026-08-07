@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertTriangle, MessageSquare, Undo2, CheckCircle2, Lock } from 'lucide-react';
 import { authedFetch } from '../utils/auth';
 
 const API_BASE = 'http://127.0.0.1:8000';
@@ -75,20 +76,20 @@ export default function Review({ sections, setSections, companyId }) {
           certified should never appear certified. */}
       {certifyError && (
         <div className="canvas-error" role="alert" style={{ marginBottom: 16 }}>
-          <span aria-hidden="true">⚠</span> {certifyError}
+          <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {certifyError}
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-        <div className="card card-sm" style={{ borderColor: 'rgba(245,158,11,0.2)', background: 'rgba(245,158,11,0.05)' }}>
+        <div className="card card-sm" style={{ borderColor: 'var(--warning)', background: 'var(--warning-dim)' }}>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--warning)' }}>{pending.length}</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Awaiting Your Review</div>
         </div>
-        <div className="card card-sm" style={{ borderColor: 'rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)' }}>
+        <div className="card card-sm" style={{ borderColor: 'var(--error)', background: 'var(--error-dim)' }}>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--error)' }}>{returned.length}</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Returned to Issuer</div>
         </div>
-        <div className="card card-sm" style={{ borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.05)' }}>
+        <div className="card card-sm" style={{ borderColor: 'var(--success)', background: 'var(--success-dim)' }}>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--success)' }}>{approved.length}</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Certified & Locked</div>
         </div>
@@ -111,22 +112,22 @@ export default function Review({ sections, setSections, companyId }) {
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {actionStatus[s.id] && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent)', marginRight: 8, fontWeight: 500 }} className="fade-in">
-                  ✓ {actionStatus[s.id]}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--accent)', marginRight: 8, fontWeight: 500 }} className="fade-in">
+                  <CheckCircle2 size={13} strokeWidth={2} /> {actionStatus[s.id]}
                 </span>
               )}
-              <button 
-                className="btn btn-secondary btn-sm" 
+              <button
+                className="btn btn-secondary btn-sm"
                 onClick={() => setActiveInput(activeInput.id === s.id && activeInput.type === 'comment' ? {id:null,type:null} : {id: s.id, type: 'comment'})}
               >
-                💬 Comment
+                <MessageSquare size={13} strokeWidth={2} /> Comment
               </button>
-              <button 
-                className="btn btn-secondary btn-sm" 
-                style={{ color: 'var(--warning)' }} 
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ color: 'var(--warning)' }}
                 onClick={() => setActiveInput(activeInput.id === s.id && activeInput.type === 'request' ? {id:null,type:null} : {id: s.id, type: 'request'})}
               >
-                ↩ Request Changes
+                <Undo2 size={13} strokeWidth={2} /> Request Changes
               </button>
               <button className="btn btn-success btn-sm" onClick={async () => {
                 // Approval is auth-guarded: it is the regulatory sign-off action.
@@ -136,11 +137,11 @@ export default function Review({ sections, setSections, companyId }) {
                 } else {
                     setCertifyError(`Could not certify "${s.name}" (HTTP ${res.status}).`);
                 }
-              }}>✓ Certify</button>
+              }}><CheckCircle2 size={13} strokeWidth={2} /> Certify</button>
             </div>
           </div>
           
-          <div style={{ padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 10, fontSize: '0.82rem', color: 'var(--text-secondary)', maxHeight: 140, overflowY: 'auto', lineHeight: 1.6 }}>
+          <div style={{ padding: 16, background: 'var(--paper-sunken)', border: '1px solid var(--rule)', borderRadius: 'var(--radius-lg)', fontSize: '0.82rem', color: 'var(--text-secondary)', maxHeight: 140, overflowY: 'auto', lineHeight: 1.6 }}>
             {s.draft_text?.slice(0, 500)}...
           </div>
 
@@ -154,9 +155,9 @@ export default function Review({ sections, setSections, companyId }) {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => handleInputSubmit(e, s.id)}
                 style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 6,
-                  border: `1px solid ${activeInput.type === 'request' ? 'rgba(245,158,11,0.4)' : 'var(--glass-border)'}`,
-                  background: 'rgba(0,0,0,0.3)', color: 'var(--text-primary)',
+                  width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                  border: `1px solid ${activeInput.type === 'request' ? 'var(--warning)' : 'var(--glass-border)'}`,
+                  background: 'var(--paper-raised)', color: 'var(--text-primary)',
                   fontSize: '0.85rem'
                 }}
               />
@@ -164,9 +165,9 @@ export default function Review({ sections, setSections, companyId }) {
           )}
 
           {savedNotes[s.id] && savedNotes[s.id].map((note, idx) => (
-            <div key={idx} className="fade-in" style={{ 
-              marginTop: 10, padding: '10px 14px', borderRadius: 8, fontSize: '0.82rem',
-              background: note.type === 'request' ? 'rgba(245,158,11,0.08)' : 'rgba(79,126,255,0.08)',
+            <div key={idx} className="fade-in" style={{
+              marginTop: 10, padding: '10px 14px', borderRadius: 'var(--radius-md)', fontSize: '0.82rem',
+              background: note.type === 'request' ? 'var(--warning-dim)' : 'var(--accent-dim)',
               borderLeft: `3px solid ${note.type === 'request' ? 'var(--warning)' : 'var(--accent)'}`
             }}>
               <strong style={{ color: note.type === 'request' ? 'var(--warning)' : 'var(--accent)' }}>
@@ -177,8 +178,8 @@ export default function Review({ sections, setSections, companyId }) {
           ))}
 
           {s.flagged_gaps?.length > 0 && (
-            <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(244,63,94,0.08)', borderRadius: 8, fontSize: '0.78rem', color: 'var(--error)' }}>
-              ⚠️ {s.flagged_gaps.length} unresolved gap(s) require attention before certification.
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '8px 12px', background: 'var(--error-dim)', borderRadius: 'var(--radius-md)', fontSize: '0.78rem', color: 'var(--error)' }}>
+              <AlertTriangle size={13} strokeWidth={2} /> {s.flagged_gaps.length} unresolved gap(s) require attention before certification.
             </div>
           )}
         </div>
@@ -188,10 +189,12 @@ export default function Review({ sections, setSections, companyId }) {
         <>
           <h3 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '20px 0 10px' }}>Returned to Issuer</h3>
           {returned.map(s => (
-            <div key={s.id} className="card card-sm" style={{ marginBottom: 8, borderColor: 'rgba(239,68,68,0.2)', opacity: 0.8 }}>
+            <div key={s.id} className="card card-sm" style={{ marginBottom: 8, borderColor: 'var(--error)', opacity: 0.8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem' }}>{s.name}</span>
-                <span className="badge" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--error)' }}>↩ Needs Revision</span>
+                <span className="badge" style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--error-dim)', color: 'var(--error)' }}>
+                  <Undo2 size={11} strokeWidth={2} /> Needs Revision
+                </span>
               </div>
             </div>
           ))}
@@ -202,10 +205,10 @@ export default function Review({ sections, setSections, companyId }) {
         <>
           <h3 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '20px 0 10px' }}>Certified Sections</h3>
           {approved.map(s => (
-            <div key={s.id} className="card card-sm" style={{ marginBottom: 8, borderColor: 'rgba(16,185,129,0.2)', opacity: 0.8 }}>
+            <div key={s.id} className="card card-sm" style={{ marginBottom: 8, borderColor: 'var(--success)', opacity: 0.8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.875rem' }}>{s.name}</span>
-                <span className="badge badge-success">🔒 Certified</span>
+                <span className="badge badge-success"><Lock size={11} strokeWidth={2} /> Certified</span>
               </div>
             </div>
           ))}

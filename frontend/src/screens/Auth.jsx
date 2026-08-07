@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
@@ -116,13 +117,13 @@ export default function Auth({ onAuthSuccess }) {
             </div>
 
             {error && (
-              <div style={{ padding: '12px', marginBottom: '16px', background: 'rgba(244,63,94,0.1)', color: 'var(--error)', borderRadius: '8px', fontSize: '0.85rem', textAlign: 'center', border: '1px solid rgba(244,63,94,0.2)' }}>
+              <div style={{ padding: '12px', marginBottom: '16px', background: 'var(--error-dim)', color: 'var(--error)', borderRadius: 'var(--radius-md)', fontSize: '0.85rem', textAlign: 'center', border: '1px solid var(--error)' }}>
                 {error}
               </div>
             )}
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', marginTop: '8px', fontSize: '1rem' }} disabled={loading}>
-              {loading ? <span className="spin">⟳</span> : (isLogin ? 'Log In to Workspace' : 'Create Company Account')}
+              {loading ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (isLogin ? 'Log In to Workspace' : 'Create Company Account')}
             </button>
           </form>
         </div>

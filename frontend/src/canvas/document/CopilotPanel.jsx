@@ -22,6 +22,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Loader2, FileText, ChevronsLeft } from 'lucide-react';
 import AISideChat    from '../copilot/AISideChat.jsx';
 import EvidencePanel from '../evidence/EvidencePanel.jsx';
 import * as canvasApi from '../services/canvasApi.js';
@@ -83,9 +84,9 @@ function getSuggestionsForSection(sectionName) {
 
 // Severity → icon + colors
 const SEVERITY_META = {
-  warning: { icon: '⚠', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  border: 'rgba(245,158,11,0.22)' },
-  info:    { icon: '↗', color: '#4f7eff', bg: 'rgba(79,126,255,0.06)',  border: 'rgba(79,126,255,0.18)' },
-  success: { icon: '✓', color: '#10b981', bg: 'rgba(16,185,129,0.06)', border: 'rgba(16,185,129,0.2)'  },
+  warning: { icon: AlertTriangle, color: 'var(--status-draft)',    bg: 'var(--status-draft-soft)',    border: 'rgba(148,111,46,0.3)' },
+  info:    { icon: ArrowUpRight,  color: 'var(--ink-soft)',        bg: 'var(--paper-sunken)',          border: 'var(--rule)' },
+  success: { icon: CheckCircle2,  color: 'var(--status-approved)', border: 'rgba(61,107,79,0.28)', bg: 'var(--status-approved-soft)' },
 };
 
 // ---------------------------------------------------------------------------
@@ -114,14 +115,16 @@ function SuggestionCard({ item, onApply }) {
       onClick={handleClick}
       disabled={isApplying}
     >
-      <span className="cp-sug-icon" aria-hidden="true">{meta.icon}</span>
+      <span className="cp-sug-icon" aria-hidden="true">
+        <meta.icon size={14} strokeWidth={2} />
+      </span>
       <div className="cp-sug-body">
         <div className="cp-sug-title">{item.title}</div>
         <div className="cp-sug-desc">{item.body}</div>
       </div>
       <span className="cp-sug-arrow" aria-hidden="true">
         {isApplying ? (
-          <span className="spin" style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>⟳</span>
+          <Loader2 size={14} strokeWidth={2} className="spin" color="var(--ink-soft)" />
         ) : (
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
             <polyline points="9 18 15 12 9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -181,7 +184,7 @@ export default function CopilotPanel({
       {/* ── Header ── */}
       <div className="cp-header">
         <div className="cp-header__left">
-          <div className="cp-avatar" aria-hidden="true">✦</div>
+          <div className="cp-avatar" aria-hidden="true">N</div>
           <span className="cp-title">IPO COPILOT</span>
         </div>
         <button
@@ -191,11 +194,7 @@ export default function CopilotPanel({
           aria-label="Collapse IPO Copilot"
           title="Collapse"
         >
-          {/* Double left chevron «« */}
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <polyline points="11 17 6 12 11 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <polyline points="18 17 13 12 18 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronsLeft size={14} strokeWidth={2} />
         </button>
       </div>
 
@@ -205,21 +204,7 @@ export default function CopilotPanel({
         <div className="cp-context-box__row">
           <span className="cp-context-box__name">{displaySection}</span>
           <span className="cp-context-box__icon" aria-hidden="true">
-            <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-              <rect x="6" y="4" width="22" height="28" rx="2" fill="#e8eef8" stroke="#c8d4e8" strokeWidth="1.5"/>
-              <rect x="6" y="4" width="22" height="28" rx="2" fill="url(#cp-doc-grad)" />
-              <line x1="11" y1="12" x2="23" y2="12" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="11" y1="16" x2="23" y2="16" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="11" y1="20" x2="19" y2="20" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M26 24l4-4 3 3-4 4-3-3z" fill="#a78bfa"/>
-              <path d="M26 28l-2 2 2-2z" fill="#7c3aed" opacity="0.7"/>
-              <defs>
-                <linearGradient id="cp-doc-grad" x1="6" y1="4" x2="28" y2="32">
-                  <stop offset="0%" stopColor="#f8faff"/>
-                  <stop offset="100%" stopColor="#eef2ff"/>
-                </linearGradient>
-              </defs>
-            </svg>
+            <FileText size={22} strokeWidth={1.5} color="var(--ink-soft)" />
           </span>
         </div>
       </div>
@@ -251,7 +236,7 @@ export default function CopilotPanel({
           <div className="cp-suggestions-list" key={activeSectionName}>
             {applyError && (
               <div className="cp-error" role="alert">
-                <span aria-hidden="true">⚠</span> {applyError}
+                <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {applyError}
               </div>
             )}
             {suggestions.map((item) => (

@@ -1,31 +1,27 @@
+import { CheckCircle2, FileEdit, AlertTriangle, Circle } from "lucide-react";
 import useCanvasStore from "../services/canvasStore.js";
 
-// ---------------------------------------------------------------------------
-// Status logic: returns status object with label, color, completeness %
-// ---------------------------------------------------------------------------
+// design-system.md defines exactly four status colors — no purple "AI
+// Generated" fifth state.
 function getSectionStatus(section) {
-  if (!section) return { label: "Empty", color: "var(--text-muted, #888)", pct: 0 };
+  if (!section) return { label: "Empty", color: "var(--status-pending)", pct: 0 };
 
   const hasContent = Boolean(section.draft_text || section.content || section.markdown);
   const score = section.score || 0;
 
   if (section.locked) {
-    return { label: "Complete", color: "var(--success, #10b981)", pct: 100 };
-  }
-
-  if (hasContent && score >= 80) {
-    return { label: "AI Generated", color: "var(--purple, #a78bfa)", pct: score };
+    return { label: "Complete", color: "var(--status-approved)", pct: 100 };
   }
 
   if (hasContent && score >= 50) {
-    return { label: "Draft", color: "var(--warning, #f59e0b)", pct: score };
+    return { label: "Draft", color: "var(--status-draft)", pct: score };
   }
 
   if (hasContent || score > 0) {
-    return { label: "Needs Review", color: "var(--warning, #f59e0b)", pct: Math.max(score, 30) };
+    return { label: "Needs Review", color: "var(--status-gap)", pct: Math.max(score, 30) };
   }
 
-  return { label: "Pending", color: "var(--text-muted, #888)", pct: 0 };
+  return { label: "Pending", color: "var(--status-pending)", pct: 0 };
 }
 
 // ---------------------------------------------------------------------------
@@ -33,19 +29,18 @@ function getSectionStatus(section) {
 // ---------------------------------------------------------------------------
 function StatusBadge({ status }) {
   const iconMap = {
-    "Complete":     "✓",
-    "AI Generated": "✦",
-    "Draft":        "~",
-    "Needs Review": "⚠",
-    "Pending":      "○",
-    "Empty":        "○",
+    "Complete":     CheckCircle2,
+    "Draft":        FileEdit,
+    "Needs Review": AlertTriangle,
+    "Pending":      Circle,
+    "Empty":        Circle,
   };
 
-  const icon = iconMap[status.label] || "○";
+  const Icon = iconMap[status.label] || Circle;
 
   return (
     <div className="section-status-badge" style={{ color: status.color }}>
-      <span className="section-status-badge__icon">{icon}</span>
+      <span className="section-status-badge__icon"><Icon size={12} strokeWidth={2} /></span>
       <span className="section-status-badge__label">{status.label}</span>
       {status.pct > 0 && (
         <span className="section-status-badge__pct">{status.pct}%</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, CheckCircle2, Loader2, ArrowUp, ArrowRight } from 'lucide-react';
 import { authedFetch, decodeToken, getToken } from '../utils/auth';
 import { FinancialsForm, DirectorsForm, OfferForm } from './onboardingForms.jsx';
 
@@ -276,10 +277,10 @@ export default function Onboarding({ onComplete }) {
                 )}
 
                 {msg.type === 'eligibility' && (
-                  <div style={{ padding: '14px 16px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12 }}>
+                  <div style={{ padding: '14px 16px', background: 'var(--success-dim)', border: '1px solid var(--success)', borderRadius: 'var(--radius-lg)' }}>
                     {msg.error ? (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--warning)', fontWeight: 600 }}>
-                        ⚠️ Eligibility check {msg.error}. It will run again once your
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--warning)', fontWeight: 600 }}>
+                        <AlertTriangle size={14} strokeWidth={2} /> Eligibility check {msg.error}. It will run again once your
                         financials and director details are on file.
                       </div>
                     ) : !msg.report?.checks?.length ? (
@@ -290,19 +291,22 @@ export default function Onboarding({ onComplete }) {
                     ) : (
                       <>
                         <div style={{
+                          display: 'flex', alignItems: 'center', gap: 6,
                           fontSize: '0.8rem', fontWeight: 600, marginBottom: 10,
                           color: msg.report.eligible ? 'var(--success)' : 'var(--warning)',
                         }}>
                           {msg.report.eligible
-                            ? '✅ Meets the SEBI checks we can evaluate'
-                            : '⚠️ Some SEBI checks are not met yet'}
+                            ? <><CheckCircle2 size={14} strokeWidth={2} /> Meets the SEBI checks we can evaluate</>
+                            : <><AlertTriangle size={14} strokeWidth={2} /> Some SEBI checks are not met yet</>}
                         </div>
                         {msg.report.checks.map((c, i) => (
                           <div key={i} title={c.reason} style={{ fontSize: '0.8rem', padding: '3px 0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                               <span style={{ color: 'var(--text-secondary)' }}>{c.name}</span>
-                              <span style={{ color: c.passed ? 'var(--success)' : 'var(--warning)' }}>
-                                {c.passed ? '✓ Pass' : '⚠️ Not met'}
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: c.passed ? 'var(--success)' : 'var(--warning)' }}>
+                                {c.passed
+                                  ? <><CheckCircle2 size={12} strokeWidth={2} /> Pass</>
+                                  : <><AlertTriangle size={12} strokeWidth={2} /> Not met</>}
                               </span>
                             </div>
                             {!c.passed && c.reason && (
@@ -325,7 +329,7 @@ export default function Onboarding({ onComplete }) {
                 <div className="interview-avatar" style={{ width: 28, height: 28, fontSize: '0.7rem', flexShrink: 0 }}>N</div>
                 {isChecking ? (
                   <div className="interview-msg-ai-bubble" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    <span className="spin" style={{ fontSize: '1rem' }}>⟳</span>
+                    <Loader2 size={15} strokeWidth={2} className="spin" />
                     Running eligibility check...
                   </div>
                 ) : (
@@ -350,8 +354,8 @@ export default function Onboarding({ onComplete }) {
                 style={{ flex: 1 }}
                 autoFocus
               />
-              <button type="submit" className="btn btn-primary" disabled={inputDisabled || !inputVal.trim()}>
-                ↑
+              <button type="submit" className="btn btn-primary" disabled={inputDisabled || !inputVal.trim()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ArrowUp size={16} strokeWidth={2.5} />
               </button>
             </form>
           </div>
@@ -360,9 +364,9 @@ export default function Onboarding({ onComplete }) {
         {/* Skip link */}
         <button
           onClick={onComplete}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
         >
-          Skip to demo workspace →
+          Skip to demo workspace <ArrowRight size={12} strokeWidth={2} />
         </button>
       </div>
     </div>

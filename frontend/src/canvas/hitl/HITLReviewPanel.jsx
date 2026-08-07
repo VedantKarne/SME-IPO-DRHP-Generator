@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import * as canvasApi from '../services/canvasApi.js';
 
 const ACTIONS = [
@@ -75,7 +76,7 @@ export default function HITLReviewPanel({ sectionId, sectionName, onResolved }) 
   if (error && state.status !== 'pending_review') {
     return (
       <section className="hitl-panel hitl-panel--error" role="alert">
-        <span aria-hidden="true">⚠</span> {error}
+        <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {error}
         <button type="button" onClick={load}>Retry</button>
       </section>
     );
