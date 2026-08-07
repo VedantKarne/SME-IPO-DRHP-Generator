@@ -137,7 +137,7 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
           console.error('Autosave failed:', e);
           onAutosave?.(section.name, e);
         }
-      }, 2000);
+      }, 5000);
     },
   });
 

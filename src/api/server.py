@@ -4,9 +4,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails
+from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails, AuditLog, SectionVersion
 from src.api import wizard
 
+import os
 import uuid
 import logging
 
@@ -61,21 +62,54 @@ def get_db():
 # PRIORITY 1 — GET /api/sections/{company_id}
 # Now includes flagged_gaps in the response
 # ─────────────────────────────────────────────
+# Which uploaded document types a section depends on, keyed by doc_type id.
+#
+# Three keys used to be unreachable because they are not members of
+# SECTIONS_25, and the lookup iterates SECTIONS_25 — so their rules never fired.
+# "Financial Information" and "Government and Other Approvals" duplicated rules
+# already covered by "Financial Statements (3 Years)" and "Other Regulatory &
+# Statutory Disclosures" respectively, and are dropped.
+#
+# "Outstanding Litigations and Material Developments" is now in the section
+# list as "Outstanding Litigation and Material Developments" (matching real
+# precedent filings, which use the singular form). doc_type 7 (Litigation /
+# Legal Notices) maps directly to it. The Risk Factors stopgap is removed.
 SECTION_DOC_MAP = {
     "Financial Statements (3 Years)": ["0"],
-    "Financial Information": ["0"],
     "Management Discussion & Analysis": ["0"],
     "Capital Structure": ["0", "9"],
     "General Information": ["1", "8"],
     "Cover Page & General Information": ["1", "8"],
     "History and Corporate Structure": ["1", "9"],
     "Objects of the Offer": ["1"],
-    "Government and Other Approvals": ["2", "3", "5", "8"],
     "Other Regulatory & Statutory Disclosures": ["2", "3", "5", "8"],
     "Our Business": ["2", "3", "4", "5", "6"],
-    "Risk Factors": ["2", "3", "4", "6", "7"],
-    "Outstanding Litigations and Material Developments": ["7"]
+    # doc_type 7 (Litigation / Legal Notices) now maps to the dedicated chapter
+    # that was added to SECTIONS_25. The previous stopgap of routing to Risk
+    # Factors is removed.
+    "Outstanding Litigation and Material Developments": ["7"],
+    "Risk Factors": ["2", "3", "4", "6"],
 }
+
+
+def required_doc_types(section_name: str) -> list:
+    """
+    Document types a section depends on, tolerant of section-name variants.
+
+    Falls back to canonical resolution so a rule written against one spelling
+    ("Outstanding Litigations..." vs "Outstanding Litigation...") still applies.
+    """
+    if section_name in SECTION_DOC_MAP:
+        return SECTION_DOC_MAP[section_name]
+
+    from src.config.sections import resolve
+    target = resolve(section_name)
+    if target is None:
+        return []
+    for key, doc_types in SECTION_DOC_MAP.items():
+        if resolve(key) is target:
+            return doc_types
+    return []
 
 DOC_TYPE_LABELS = {
     "0": "Audited Financial Statements",
@@ -98,7 +132,11 @@ SECTIONS_25 = [
     "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group",
     "Related Party Transactions", "Dividend Policy", "Financial Statements (3 Years)",
     "Management Discussion & Analysis", "Corporate Governance", "Terms of the Issue",
-    "Other Regulatory & Statutory Disclosures", "Material Contracts & Documents",
+    "Other Regulatory & Statutory Disclosures",
+    # Added: present in 14/20 real SEBI filings; was previously missing from
+    # the section list and routed to Risk Factors as a stopgap via doc_type 7.
+    "Outstanding Litigation and Material Developments",
+    "Material Contracts & Documents",
     "Declaration & Undertakings"
 ]
 
@@ -130,14 +168,14 @@ def get_company_sections(company_id: str, current_user: dict = Depends(get_curre
             flagged_gaps = s.flagged_gaps if s else []
             has_gaps = bool(flagged_gaps)
 
-            required_doc_types = SECTION_DOC_MAP.get(s_name, [])
+            required_doc_types_for_section = required_doc_types(s_name)
             missing_docs = []
             unsynced_docs = []
 
             all_required_present = True
             stale = False
 
-            for dtype in required_doc_types:
+            for dtype in required_doc_types_for_section:
                 if dtype not in doc_latest_uploads:
                     missing_docs.append(DOC_TYPE_LABELS.get(dtype, dtype))
                     all_required_present = False
@@ -169,7 +207,7 @@ def get_company_sections(company_id: str, current_user: dict = Depends(get_curre
                 # Promoter-approved sections are always GREEN regardless of gaps
                 sync_status = "green"
 
-            elif not required_doc_types:
+            elif not required_doc_types_for_section:
                 # Doc-independent sections (rely on promoter onboarding data only).
                 if not has_draft:
                     sync_status = "red"       # Nothing generated yet
@@ -258,12 +296,18 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
         }
 
 
+        import time as _time
+        _run_started = _time.time()
         try:
             graph.invoke(initial_state, config=config)
         except Exception as agent_exc:
-            # Some LangGraph versions raise GraphInterrupt; others return silently.
-            # We log it but always fall through to read state from checkpointer below.
-            logger.warning(f"graph.invoke raised (may be normal interrupt): {agent_exc}")
+            # LangGraph raises GraphInterrupt for HITL pauses. We fall through to read state.
+            # Real errors (like LLM rate limits) must bubble up as 500s so the UI can show them.
+            if type(agent_exc).__name__ in ("GraphInterrupt", "NodeInterrupt"):
+                logger.info(f"graph.invoke interrupted (HITL): {agent_exc}")
+            else:
+                logger.error(f"graph.invoke failed: {agent_exc}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Generation failed: {agent_exc}")
 
         # Always read the accumulated state from the MemorySaver checkpointer.
         # This is the only reliable source of truth for both:
@@ -324,6 +368,32 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
             db.commit()
             db.refresh(new_section)
             section_id = str(new_section.id)
+
+        # Audit trail. The audit_log table has always defined query,
+        # retrieved_clause_ids, confidence and latency_ms, but nothing populated
+        # them — document upload was the single write site in the codebase, so
+        # nothing recorded how a draft was produced or what it was grounded in.
+        try:
+            reg_ctx = result.get("regulatory_context", "") or ""
+            prec_ctx = result.get("precedent_context", "") or ""
+            # Citation headers as emitted by rag_search, e.g.
+            # "[icdr_....pdf | Chapter IX | Reg 238 | Lock-in ...]"
+            cited = re.findall(r"\[([^\]\n]{5,200})\]", reg_ctx + "\n" + prec_ctx)
+            db.add(AuditLog(
+                event_type="section_generated",
+                company_id=comp_uuid,
+                section_name=request.section_name,
+                query=f"generate:{request.section_name}",
+                retrieved_clause_ids=cited[:25],
+                confidence=float(completeness_score or 0.0),
+                model_used="llama-3.3-70b-versatile",
+                latency_ms=int((_time.time() - _run_started) * 1000),
+            ))
+            db.commit()
+        except Exception as audit_exc:
+            # Never fail a generation because the audit write failed, but do not
+            # hide it either.
+            logger.warning(f"Audit log write failed for {request.section_name}: {audit_exc}")
 
         return {
             "status": "success",
@@ -399,64 +469,98 @@ def run_consistency_checks(company_id: str, current_user: dict = Depends(get_cur
 # PRIORITY 3 — GET /api/readiness/{company_id}
 # IPO Readiness Dashboard sub-scores
 # ─────────────────────────────────────────────
+def compute_readiness(company_id, db) -> dict:
+    """
+    Single source of truth for readiness, computed live from generated_section.
+
+    The `readiness_score` table is defined and migrated but nothing in the
+    codebase ever writes to it, so /api/session/restore — which read from that
+    table — always reported zeros while /api/readiness reported real numbers for
+    the same company. Both now call this.
+    """
+    comp_uuid = company_id if isinstance(company_id, uuid.UUID) else uuid.UUID(str(company_id))
+    sections = db.query(GeneratedSection).filter(
+        GeneratedSection.company_id == comp_uuid
+    ).all()
+
+    total = len(SECTIONS_25)
+    done = len([s for s in sections if s.is_locked])
+    draft_count = len([s for s in sections if s.status == "draft" and not s.is_locked])
+    gap_count = sum(len(s.flagged_gaps or []) for s in sections)
+
+    avg_score = (
+        sum(s.completeness_score or 0 for s in sections) / len(sections)
+        if sections else 0.0
+    )
+
+    financial_sections = ["Financial Statements (3 Years)", "Management Discussion & Analysis", "Capital Structure", "Basis of Issue Price"]
+    legal_sections = ["Risk Factors", "Key Industry Regulations", "Corporate Governance", "Other Regulatory & Statutory Disclosures"]
+    mgmt_sections = ["Management & Board of Directors", "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group"]
+
+    def avg_cat_score(names):
+        matched = [s for s in sections if s.section_name in names]
+        if not matched:
+            return 0.0
+        return round(sum(s.completeness_score or 0 for s in matched) / len(matched) * 100)
+
+    return {
+        "total_sections": total,
+        "sections_approved": done,
+        "sections_in_draft": draft_count,
+        "sections_pending": total - done - draft_count,
+        "total_open_gaps": gap_count,
+        "overall_score": round(avg_score * 100),
+        "financial_score": avg_cat_score(financial_sections),
+        "legal_score": avg_cat_score(legal_sections),
+        "management_score": avg_cat_score(mgmt_sections),
+    }
+
+
+@app.get("/api/health")
+def health():
+    """
+    Real service health. The sidebar used to display a permanently green
+    "System Online / Groq + BGE-M3" badge that was never derived from anything,
+    so an empty index or a missing API key still read as healthy.
+    """
+    status = {"api": True, "llm_configured": bool(os.environ.get("GROQ_API_KEY"))}
+
+    try:
+        from src.retrieval.vector_store import VectorStore
+        vs = VectorStore()
+        counts = {name: vs.count(name) for name in
+                  ("regulatory_clauses", "precedent_chunks", "client_documents")}
+        status["corpus"] = counts
+        status["retrieval_ready"] = counts["regulatory_clauses"] > 0
+    except Exception as e:
+        status["corpus"] = {}
+        status["retrieval_ready"] = False
+        status["corpus_error"] = str(e)
+
+    status["healthy"] = status["api"] and status["llm_configured"] and status["retrieval_ready"]
+    return status
+
+
 @app.get("/api/readiness/{company_id}")
 def get_readiness(company_id: str, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        comp_uuid = uuid.UUID(company_id)
-        sections = db.query(GeneratedSection).filter(
-            GeneratedSection.company_id == comp_uuid
-        ).all()
-
-        total = 25  # Target: 25 DRHP sections
-        done = len([s for s in sections if s.is_locked])
-        draft_count = len([s for s in sections if s.status == "draft" and not s.is_locked])
-        gap_count = sum(len(s.flagged_gaps or []) for s in sections)
-
-        avg_score = (
-            sum(s.completeness_score or 0 for s in sections) / len(sections)
-            if sections else 0.0
-        )
-
-        # Calculate sub-scores by section category
-        financial_sections = ["Financial Statements (3 Years)", "Management Discussion & Analysis", "Capital Structure", "Basis of Issue Price"]
-        legal_sections = ["Risk Factors", "Key Industry Regulations", "Corporate Governance", "Other Regulatory & Statutory Disclosures"]
-        mgmt_sections = ["Management & Board of Directors", "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group"]
-
-        def avg_cat_score(names):
-            matched = [s for s in sections if s.section_name in names]
-            if not matched:
-                return 0.0
-            return round(sum(s.completeness_score or 0 for s in matched) / len(matched) * 100)
-
-        return {
-            "total_sections": total,
-            "sections_approved": done,
-            "sections_in_draft": draft_count,
-            "sections_pending": total - done - draft_count,
-            "total_open_gaps": gap_count,
-            "overall_score": round(avg_score * 100),
-            "financial_score": avg_cat_score(financial_sections),
-            "legal_score": avg_cat_score(legal_sections),
-            "management_score": avg_cat_score(mgmt_sections),
-        }
+        require_company_access(current_user, company_id)
+        return compute_readiness(company_id, db)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         db.close()
 
 
-# ─────────────────────────────────────────────
-# VERSION HISTORY endpoints
-# ─────────────────────────────────────────────
-
-from src.extraction.schema import SectionVersion
-
 class VersionCreateRequest(BaseModel):
     label: str
     source: str
     content: dict
     author_label: str
+
 
 @app.get("/api/sections/{company_id}/{section_name}/versions")
 def get_versions(
@@ -499,6 +603,18 @@ def save_version(
     require_company_access(current_user, company_id)
     db = next(get_db())
     try:
+        if req.label == 'Auto-save':
+            existing = db.query(SectionVersion).filter(
+                SectionVersion.company_id == company_id,
+                SectionVersion.section_name == section_name,
+                SectionVersion.label == 'Auto-save'
+            ).first()
+            if existing:
+                existing.content = req.content
+                # Update time if needed, though created_at is often sufficient for ordering
+                db.commit()
+                return {"status": "success", "id": existing.id}
+
         new_version = SectionVersion(
             company_id=company_id,
             section_name=section_name,
@@ -543,8 +659,8 @@ class SetupRequest(BaseModel):
     name: str
     industry: str
     years: str
-    revenue: str
-    litigations: str
+    revenue: str = ""
+    litigations: str = ""
 
 @app.post("/api/companies/{company_id}/setup")
 def setup_company(company_id: str, request: SetupRequest, current_user: dict = Depends(get_current_user)):
@@ -554,25 +670,46 @@ def setup_company(company_id: str, request: SetupRequest, current_user: dict = D
     """
     db = SessionLocal()
     try:
+        require_company_access(current_user, company_id)
         comp_uuid = uuid.UUID(company_id)
         company = db.query(Company).filter(Company.id == comp_uuid).first()
         if not company:
-            return {"status": "error", "detail": "Company not found"}
+            raise HTTPException(status_code=404, detail="Company not found")
 
         company.name = request.name
-        
-        # Parse litigation answer roughly
-        ans = request.litigations.lower()
-        has_lit = any(word in ans for word in ["yes", "yeah", "have", "pending", "yup", "true", "one", "two"])
-        if "no" in ans or "not" in ans:
-            has_lit = False
 
-        # Update KMP litigation flag so the Eligibility Engine reacts dynamically
-        director = db.query(DirectorKMP).filter(DirectorKMP.company_id == company.id).first()
-        if director:
-            director.pending_litigation = has_lit
-            director.litigation_details = "Pending civil case" if has_lit else ""
-            
+        # Retain the free-text answers instead of discarding them. `industry`
+        # and `years` were accepted and silently dropped — the user typed them
+        # and nothing kept them. dynamic_checklist is the company-scoped JSON
+        # column; a dedicated column would be better if these become load-bearing.
+        checklist = dict(company.dynamic_checklist or {})
+        checklist["onboarding_answers"] = {
+            "industry": request.industry,
+            "years_operating": request.years,
+            "revenue_freetext": request.revenue,
+            "litigation_freetext": request.litigations,
+        }
+        company.dynamic_checklist = checklist
+
+        # Litigation is now captured per-director through the structured
+        # onboarding step (POST /api/wizard/directors). This keyword sniff runs
+        # only as a fallback for the older free-text flow, and only when no
+        # director record exists — it must not overwrite what a user explicitly
+        # entered against a named director.
+        directors = db.query(DirectorKMP).filter(DirectorKMP.company_id == company.id).all()
+        if request.litigations and not directors:
+            ans = request.litigations.lower()
+            has_lit = any(w in ans for w in ["yes", "yeah", "have", "pending", "yup", "true"])
+            if "no" in ans or "not" in ans:
+                has_lit = False
+            if has_lit:
+                db.add(DirectorKMP(
+                    company_id=company.id,
+                    name="(unnamed — from onboarding)",
+                    pending_litigation=True,
+                    litigation_details=request.litigations[:500],
+                ))
+
         db.commit()
         return {"status": "success"}
     finally:

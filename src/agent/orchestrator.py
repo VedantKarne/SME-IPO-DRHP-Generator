@@ -4,9 +4,9 @@ import operator
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt, Command
 
-from src.agent.tools import rag_search, get_company_data, get_client_document_context
+from src.agent.tools import rag_search, RetrievalUnavailable, get_company_data, get_client_document_context
 from src.agent.prompts import DRAFT_SECTION_SYSTEM_PROMPT
-from src.agent.groq_client import get_groq_client  # Bug 3 Fix: use singleton getter
+from src.agent.groq_client import get_groq_client
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,14 @@ class AgentState(TypedDict):
     # "unknown", not "clean". Distinguishing these matters on a filing document.
     consistency_check_failed: bool
     consistency_check_error: str
+    # Same distinction for retrieval: an empty context because nothing matched is
+    # not the same as an empty context because retrieval was unavailable.
+    regulatory_retrieval_failed: bool
+    precedent_retrieval_failed: bool
+    # Separate keys per corpus: these two nodes run in parallel, and LangGraph
+    # rejects two concurrent writes to the same key in a single step.
+    regulatory_retrieval_error: str
+    precedent_retrieval_error: str
     
     # Drafting
     draft_text: str
@@ -42,25 +50,55 @@ class AgentState(TypedDict):
     gaps: List[Dict[str, Any]]
 
 # Nodes
+def _retrieve(label: str, **kwargs) -> tuple:
+    """
+    Run a retrieval and report whether it actually succeeded.
+
+    Returns (context, failed, error). An empty context with failed=False means
+    "the corpus was searched and matched nothing" — which is a different claim
+    from "retrieval was unavailable", and the two must not be conflated on a
+    document that carries regulatory citations.
+    """
+    try:
+        context = rag_search(**kwargs)
+    except RetrievalUnavailable as e:
+        logger.error(f"{label} retrieval unavailable: {e}")
+        return "", True, str(e)
+
+    if not context.strip():
+        logger.warning(f"{label} retrieval returned no matches — is the corpus indexed?")
+    return context, False, ""
+
+
 def regulatory_retrieval_node(state: AgentState) -> dict:
     logger.info(f"Retrieving regulatory context for {state['current_section']}...")
-    context = rag_search(
+    context, failed, error = _retrieve(
+        "Regulatory",
         query=f"What are the ICDR requirements for {state['current_section']}?",
         corpus="regulatory",
         query_type="compliance",
-        k=3
+        k=3,
     )
-    return {"regulatory_context": context}
+    return {
+        "regulatory_context": context,
+        "regulatory_retrieval_failed": failed,
+        "regulatory_retrieval_error": error,
+    }
 
 def precedent_retrieval_node(state: AgentState) -> dict:
     logger.info(f"Retrieving precedent context for {state['current_section']}...")
-    context = rag_search(
+    context, failed, error = _retrieve(
+        "Precedent",
         query=f"Show me examples of the {state['current_section']} section.",
         corpus="precedent",
         query_type="precedent",
-        k=3
+        k=3,
     )
-    return {"precedent_context": context}
+    return {
+        "precedent_context": context,
+        "precedent_retrieval_failed": failed,
+        "precedent_retrieval_error": error,
+    }
 
 def data_fetch_node(state: AgentState) -> dict:
     logger.info(f"Fetching structured company facts and client document context for {state['company_name']}...")
@@ -134,22 +172,27 @@ def consistency_validator_node(state: AgentState) -> dict:
     return {"consistency_errors": errors, "consistency_check_failed": False}
 
 def draft_generation_node(state: AgentState) -> dict:
-    logger.info("Drafting section using Groq Llama 3.3 70B...")
+    logger.info("Drafting section using Groq Llama 3.1 8B Instant...")
     
-    # Bug 3 Fix: Use the module-level singleton — no new object created on each call.
     client = get_groq_client()
     
-    user_prompt = f"""Draft the '{state['current_section']}' section.
-    
-REGULATORY CONTEXT:
-{state.get('regulatory_context', 'None')}
+    messages = [
+        {"role": "system", "content": DRAFT_SECTION_SYSTEM_PROMPT},
+        {"role": "user", "content": f"""
+Please draft the '{state['current_section']}' section of the DRHP.
 
-PRECEDENT EXAMPLES:
-{state.get('precedent_context', 'None')}
+REGULATORY CONTEXT:
+{state.get('regulatory_context', '')[:4000] if state.get('regulatory_context') else 'Not available for this section.'}
+
+PRECEDENT CONTEXT:
+{state.get('precedent_context', '')[:4000] if state.get('precedent_context') else 'Not available for this section.'}
 
 COMPANY FACTS:
-{state.get('company_facts', 'None')}
-"""
+{state.get('company_facts', '')[:8000] if state.get('company_facts') else 'No company facts provided.'}
+"""}
+    ]
+    
+    user_prompt = messages[1]["content"]
 
     if state.get("human_feedback"):
         user_prompt += f"\n\nHUMAN REVISION REQUEST:\n{state['human_feedback']}\nPlease rewrite the draft incorporating this feedback."
@@ -163,7 +206,11 @@ COMPANY FACTS:
         {"role": "user", "content": user_prompt}
     ]
     
-    draft = client.generate(messages, max_tokens=2500)
+    # 2500 tokens truncated drafts mid-sentence once citations became verbatim
+    # source headers (a single regulatory citation can run to ~90 characters, and
+    # a well-cited section carries dozens). A truncated draft is worse than a
+    # short one: it ends mid-clause and the gap detector scores the fragment.
+    draft = client.generate(messages, max_tokens=1500)
     current_revisions = state.get("revisions", 0)
     
     return {"draft_text": draft, "revisions": current_revisions + 1}

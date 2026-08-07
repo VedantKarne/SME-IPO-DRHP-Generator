@@ -145,8 +145,12 @@ SME-IPO-DRHP-Generator/
 ### Run the Ingestion Pipeline
 
 ```bash
-python -m src.ingestion.runners.master_ingestion_runner
+python -m src.ingestion.runners.main_ingestion_runner --selected-precedents --skip-raptor
 ```
+
+> **Note:** Use `--selected-precedents` to embed only the 6 SME-segment filings (not all 20 precedents).
+> Use `--skip-raptor` to skip the RAPTOR Groq summarisation pass if you do not need hierarchical
+> summaries and want to save ~10 minutes. Omit both flags to run the full pipeline.
 
 **What happens:**
 1. ✅ PDF parsing (PyMuPDF + Docling) — ~2–10 min depending on PDF count/size
@@ -192,8 +196,19 @@ uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
 
 **Verify it's running:**
 ```bash
-curl http://localhost:8000/health
-# Response: {"status": "ok", "version": "1.0"}
+curl http://localhost:8000/api/health | python3 -m json.tool
+# Response:
+# {
+#   "api": true,
+#   "llm_configured": true,
+#   "corpus": {
+#     "regulatory_clauses": 896,
+#     "precedent_chunks": 5037,
+#     "client_documents": 0
+#   },
+#   "retrieval_ready": true,
+#   "healthy": true
+# }
 ```
 
 Open Swagger UI: http://localhost:8000/docs
@@ -258,12 +273,15 @@ pytest tests/ -v
 - `tests/manual_tests/` — Manual validation scripts
 
 ```bash
-# Run a specific phase test
+# Run a specific phase test (recommended — running the whole suite at once can OOM)
 pytest tests/Phase_tests/test_phase_0_wizard_api.py -v
 
 # Run with output capture disabled (see print statements)
-pytest tests/ -v -s
+pytest tests/Phase_tests/test_phase_4_retrieval.py -v -s
 ```
+
+> **Warning:** Running `pytest tests/ -v` across the full suite loads BGE-M3 and Docling
+> in the same process and has been killed at exit 137 (OOM). Run per-file instead.
 
 ---
 
@@ -290,8 +308,8 @@ export PYTHONPATH=$PYTHONPATH:/path/to/SME-IPO-DRHP-Generator
 
 This is safe to ignore — `get_or_create_collection()` is idempotent. If you want a clean re-index:
 ```bash
-rm -rf Databases/.chroma
-python -m src.ingestion.runners.master_ingestion_runner
+rm -rf Databases/.chroma Databases/parent_doc_store.db
+python -m src.ingestion.runners.main_ingestion_runner --selected-precedents --skip-raptor
 ```
 
 ### `RateLimitError` from Groq

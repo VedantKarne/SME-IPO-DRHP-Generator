@@ -10,8 +10,11 @@ export default function Review({ sections, setSections, companyId }) {
   const [savedNotes, setSavedNotes] = useState({});
   const [certifyError, setCertifyError] = useState(null);
 
-  const pending = sections.filter(s => !s.locked && s.draft_text && !s.returned);
-  const returned = sections.filter(s => !s.locked && s.returned);
+  // `returned` now comes from the persisted status; the local flag is kept so
+  // the UI updates immediately after a request without a refetch.
+  const isReturned = (s) => s.returned || s.status === 'revision_requested';
+  const pending = sections.filter(s => !s.locked && s.draft_text && !isReturned(s));
+  const returned = sections.filter(s => !s.locked && isReturned(s));
   const approved = sections.filter(s => s.locked);
 
   const handleAction = (id, msg) => {
@@ -21,23 +24,43 @@ export default function Review({ sections, setSections, companyId }) {
     }, 3000);
   };
 
-  const handleInputSubmit = (e, id) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
-      const isReq = activeInput.type === 'request';
+  const handleInputSubmit = async (e, id) => {
+    if (e.key !== 'Enter' || !inputValue.trim()) return;
+
+    const isReq = activeInput.type === 'request';
+    const note = inputValue.trim();
+
+    // These used to be useState-only: the note vanished on refresh and the
+    // "Returned" state was faked client-side, so a section the reviewer had
+    // sent back silently reappeared in the pending queue.
+    setCertifyError(null);
+    try {
+      const res = await authedFetch(`${API_BASE}/api/sections/${id}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ note, request_changes: isReq }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+
       setSavedNotes(prev => ({
         ...prev,
-        [id]: [...(prev[id] || []), { text: inputValue, type: activeInput.type }]
+        [id]: [...(prev[id] || []), { text: note, type: activeInput.type }]
       }));
       setInputValue('');
       setActiveInput({ id: null, type: null });
       handleAction(id, isReq ? 'Changes requested' : 'Comment saved');
-      
+
       if (isReq) {
-        // Move to 'Returned' state so it leaves the pending queue!
-        setTimeout(() => {
-            setSections(prev => prev.map(sec => sec.id === id ? { ...sec, returned: true } : sec));
-        }, 1200);
+        setSections(prev => prev.map(sec => (
+          sec.id === id ? { ...sec, returned: true, status: data.status } : sec
+        )));
       }
+    } catch (err) {
+      console.error('Review note failed:', err);
+      setCertifyError(`Could not save that note — ${err.message}`);
     }
   };
 

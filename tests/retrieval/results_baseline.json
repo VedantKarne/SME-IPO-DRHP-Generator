@@ -1,0 +1,431 @@
+{
+  "per_query": [
+    {
+      "query": "minimum promoter contribution SME IPO 20 percent",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p1_c3",
+        "sme_segment_consultation_paper_CH_REG26_p1_c0",
+        "sme_segment_consultation_paper_CH_REG26_p1_c1",
+        "sme_segment_consultation_paper_CH_REG26_p2_c0",
+        "sme_segment_consultation_paper_CH_REG26_p2_c2"
+      ],
+      "expected_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p1_c1",
+        "sme_segment_consultation_paper_CH_REG26_p1_c3",
+        "sme_segment_consultation_paper_CH_REG26_p1_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.724
+    },
+    {
+      "query": "promoter lock-in period SME exchange listing",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p2_c0",
+        "icdr_amendments_latest_summary_CHV_REG167_p0_c2",
+        "icdr_amendments_latest_summary_CHIX_REG261_p0_c1",
+        "icdr_amendments_latest_summary_CHIV_REG115_p0_c0",
+        "icdr_amendments_latest_summary_CHIX_REG243_p0_c0"
+      ],
+      "expected_ids": [
+        "icdr_amendments_latest_summary_CHIX_REG261_p0_c1",
+        "icdr_amendments_latest_summary_CHV_REG167_p0_c2",
+        "sme_segment_consultation_paper_CH_REG26_p2_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.641
+    },
+    {
+      "query": "post-issue paid up capital limit 25 crore SME",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p4_c0",
+        "sme_segment_consultation_paper_CH_REG26_p4_c1",
+        "icdr_amendments_latest_summary_CHIX_REG276_p0_c0",
+        "icdr_amendments_latest_summary_CHIX_REG277_p0_c0",
+        "sme_segment_consultation_paper_CH_REG3_p0_c0"
+      ],
+      "expected_ids": [
+        "icdr_amendments_latest_summary_CHIX_REG276_p0_c0",
+        "sme_segment_consultation_paper_CH_REG26_p4_c1",
+        "sme_segment_consultation_paper_CH_REG26_p4_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.538
+    },
+    {
+      "query": "outstanding litigation disclosure directors pending criminal",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c2",
+        "icdr_amendments_latest_summary_CHV_REG163_p0_c0",
+        "sme_segment_consultation_paper_CH_REG26_p5_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p0_c1"
+      ],
+      "expected_ids": [
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c2",
+        "icdr_amendments_latest_summary_CHV_REG163_p0_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.309
+    },
+    {
+      "query": "SME IPO allotment minimum number investors",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p1_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p0_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p0_c2",
+        "icdr_amendments_latest_summary_CHX_REG287_p0_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p2_c3"
+      ],
+      "expected_ids": [
+        "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p0_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p0_c2",
+        "sme_segment_consultation_paper_CH_REG26_p1_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.22
+    },
+    {
+      "query": "eligibility criteria SME exchange net tangible assets",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG28_p1_c0",
+        "sme_segment_consultation_paper_CH_REG28_p1_c2",
+        "sme_segment_consultation_paper_CH_REG28_p1_c1",
+        "sme_segment_consultation_paper_CH_REG3_p0_c0",
+        "sme_segment_consultation_paper_CH_REG28_p0_c0"
+      ],
+      "expected_ids": [
+        "sme_segment_consultation_paper_CH_REG28_p1_c0",
+        "sme_segment_consultation_paper_CH_REG28_p1_c1",
+        "sme_segment_consultation_paper_CH_REG28_p1_c2"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.211
+    },
+    {
+      "query": "DRHP filing requirements intermediary merchant banker",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p6_c0",
+        "sme_segment_consultation_paper_CH_REG4_p0_c0",
+        "icdr_amendments_latest_summary_CHIV_REG121_p0_c0",
+        "icdr_amendments_latest_summary_CHVII_REG184_p0_c0",
+        "icdr_amendments_latest_summary_CHIX_REG244_p0_c0"
+      ],
+      "expected_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p6_c0",
+        "icdr_amendments_latest_summary_CHIV_REG121_p0_c0",
+        "sme_segment_consultation_paper_CH_REG4_p0_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.184
+    },
+    {
+      "query": "SME IPO price band fixed price",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "icdr_amendments_latest_summary_CHIX_REG250_p0_c0",
+        "sme_segment_consultation_paper_CH_REG13_p0_c0",
+        "sme_segment_consultation_paper_CH_REG26_p0_c1",
+        "sme_segment_consultation_paper_CH_REG28_p1_c0",
+        "sme_segment_consultation_paper_CH_REG3_p0_c0"
+      ],
+      "expected_ids": [
+        "sme_segment_consultation_paper_CH_REG26_p0_c1",
+        "icdr_amendments_latest_summary_CHIX_REG250_p0_c0",
+        "sme_segment_consultation_paper_CH_REG13_p0_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.194
+    },
+    {
+      "query": "risk factors business competition section",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_basmati_rice_ltd_p20400_c300",
+        "drhp_advit_jewels_ltd_p14400_c0",
+        "drhps_png_reva_diamond_jewellery_ltd_p34800_c300",
+        "drhp_inovision_ltd_p12000_c300",
+        "drhp_basmati_rice_ltd_p158400_c0"
+      ],
+      "expected_ids": [
+        "drhp_basmati_rice_ltd_p20400_c300",
+        "drhp_advit_jewels_ltd_p14400_c0",
+        "drhps_png_reva_diamond_jewellery_ltd_p34800_c300"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.253
+    },
+    {
+      "query": "capital structure equity shares issued paid up",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_basmati_rice_ltd_p62400_c0",
+        "drhp_basmati_rice_ltd_p62400_c300",
+        "drhp_om_power_ltd_p183600_c0",
+        "drhp_inovision_ltd_p56400_c0",
+        "drhp_inovision_ltd_p60000_c0"
+      ],
+      "expected_ids": [
+        "drhp_basmati_rice_ltd_p62400_c0",
+        "drhp_om_power_ltd_p183600_c0",
+        "drhp_basmati_rice_ltd_p62400_c300"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.213
+    },
+    {
+      "query": "objects of the offer use of proceeds expansion",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_om_power_ltd_p42000_c600",
+        "drhp_om_power_ltd_p42000_c300",
+        "drhp_rajputana_stainless_steel_ltd_p74400_c300",
+        "drhp_rajputana_stainless_steel_ltd_p81600_c600",
+        "drhp_advit_jewels_ltd_p63600_c900"
+      ],
+      "expected_ids": [
+        "drhp_rajputana_stainless_steel_ltd_p74400_c300",
+        "drhp_om_power_ltd_p42000_c300",
+        "drhp_om_power_ltd_p42000_c600"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.214
+    },
+    {
+      "query": "management board directors remuneration qualifications",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_inovision_ltd_p136800_c0",
+        "drhp_inovision_ltd_p136800_c300",
+        "drhp_om_power_ltd_p156000_c300",
+        "drhps_png_reva_diamond_jewellery_ltd_p225600_c0",
+        "drhp_rajputana_stainless_steel_ltd_p237600_c0"
+      ],
+      "expected_ids": [
+        "drhp_om_power_ltd_p156000_c300",
+        "drhp_inovision_ltd_p136800_c0",
+        "drhp_inovision_ltd_p136800_c300"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.207
+    },
+    {
+      "query": "industry overview market size growth manufacturing",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_rajputana_stainless_steel_ltd_p96000_c600",
+        "drhp_rajputana_stainless_steel_ltd_p96000_c300",
+        "drhp_rajputana_stainless_steel_ltd_p96000_c900",
+        "drhp_om_power_ltd_p92400_c300",
+        "drhps_png_reva_diamond_jewellery_ltd_p94800_c0"
+      ],
+      "expected_ids": [
+        "drhp_rajputana_stainless_steel_ltd_p96000_c300",
+        "drhp_rajputana_stainless_steel_ltd_p96000_c600",
+        "drhp_rajputana_stainless_steel_ltd_p96000_c900"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.214
+    },
+    {
+      "query": "promoter background experience holding",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_basmati_rice_ltd_p42000_c600",
+        "drhps_png_reva_diamond_jewellery_ltd_p34800_c600",
+        "drhps_png_reva_diamond_jewellery_ltd_p38400_c0",
+        "drhp_rajputana_stainless_steel_ltd_p21600_c900",
+        "drhp_rajputana_stainless_steel_ltd_p187200_c600"
+      ],
+      "expected_ids": [
+        "drhps_png_reva_diamond_jewellery_ltd_p34800_c600",
+        "drhp_basmati_rice_ltd_p42000_c600",
+        "drhps_png_reva_diamond_jewellery_ltd_p38400_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.202
+    },
+    {
+      "query": "financial indebtedness borrowings loans",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_rajputana_stainless_steel_ltd_p171600_c0",
+        "drhps_png_reva_diamond_jewellery_ltd_p34800_c0",
+        "drhp_inovision_ltd_p194400_c300",
+        "drhp_inovision_ltd_p24000_c300",
+        "drhp_advit_jewels_ltd_p207600_c0"
+      ],
+      "expected_ids": [
+        "drhp_inovision_ltd_p194400_c300",
+        "drhp_rajputana_stainless_steel_ltd_p171600_c0",
+        "drhps_png_reva_diamond_jewellery_ltd_p34800_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.214
+    },
+    {
+      "query": "litigation disputes arbitration pending",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_basmati_rice_ltd_p201600_c0",
+        "drhp_basmati_rice_ltd_p201600_c900",
+        "drhp_basmati_rice_ltd_p202800_c0",
+        "drhp_inovision_ltd_p196800_c0",
+        "drhp_inovision_ltd_p196800_c300"
+      ],
+      "expected_ids": [
+        "drhp_basmati_rice_ltd_p201600_c900",
+        "drhp_basmati_rice_ltd_p202800_c0",
+        "drhp_basmati_rice_ltd_p201600_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.238
+    },
+    {
+      "query": "disclosure requirements related party transactions",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p1_c2",
+        "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p1_c3",
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p26_c0",
+        "sme_segment_consultation_paper_CH_REG28_p2_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c0"
+      ],
+      "expected_ids": [
+        "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p1_c2",
+        "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p26_c0",
+        "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p1_c3"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.225
+    },
+    {
+      "query": "dividend policy declaration board approval",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_om_power_ltd_p276000_c300",
+        "drhp_basmati_rice_ltd_p264000_c0",
+        "drhp_rajputana_stainless_steel_ltd_p144000_c300",
+        "drhp_advit_jewels_ltd_p217200_c300",
+        "drhp_advit_jewels_ltd_p200400_c300"
+      ],
+      "expected_ids": [
+        "drhp_om_power_ltd_p276000_c300",
+        "drhp_rajputana_stainless_steel_ltd_p144000_c300",
+        "drhp_basmati_rice_ltd_p264000_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.234
+    },
+    {
+      "query": "general corporate purposes working capital",
+      "corpus": "precedent",
+      "mode": "precedent",
+      "retrieved_ids": [
+        "drhp_advit_jewels_ltd_p68400_c0",
+        "drhp_advit_jewels_ltd_p37200_c900",
+        "drhp_advit_jewels_ltd_p31200_c900",
+        "drhp_advit_jewels_ltd_p111600_c300",
+        "drhp_advit_jewels_ltd_p16800_c600"
+      ],
+      "expected_ids": [
+        "drhp_advit_jewels_ltd_p37200_c900",
+        "drhp_advit_jewels_ltd_p31200_c900",
+        "drhp_advit_jewels_ltd_p68400_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.253
+    },
+    {
+      "query": "SME exchange BSE emerge eligibility",
+      "corpus": "regulatory",
+      "mode": "compliance",
+      "retrieved_ids": [
+        "sme_segment_consultation_paper_CH_REG5_p0_c0",
+        "sme_segment_consultation_paper_CH_REG28_p0_c0",
+        "sme_segment_consultation_paper_CH_REG28_p0_c2",
+        "sme_segment_consultation_paper_CH_REG3_p0_c0",
+        "icdr_amendments_latest_summary_CHIX_REG277_p0_c0"
+      ],
+      "expected_ids": [
+        "sme_segment_consultation_paper_CH_REG28_p0_c0",
+        "sme_segment_consultation_paper_CH_REG28_p0_c2",
+        "sme_segment_consultation_paper_CH_REG5_p0_c0"
+      ],
+      "hits": 3,
+      "precision_at_k": 0.6,
+      "recall_at_k": 1.0,
+      "latency_s": 1.204
+    }
+  ],
+  "aggregate": {
+    "mean_precision_at_k": 0.6,
+    "mean_recall_at_k": 1.0,
+    "labelled_queries": 20,
+    "total_queries": 20,
+    "k": 5
+  }
+}

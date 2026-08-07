@@ -65,7 +65,13 @@ async function toApiError(res) {
   } catch {
     // Non-JSON error body — the status alone is what we have.
   }
-  return new ApiError(detail || MESSAGE_BY_KIND[kind], {
+  // Auth and forbidden errors must always show the user-friendly message — the
+  // raw backend detail ("Invalid token", "Not authenticated", etc.) is an
+  // implementation detail that is meaningless to the user.
+  const message = (kind === 'auth' || kind === 'forbidden')
+    ? MESSAGE_BY_KIND[kind]
+    : (detail || MESSAGE_BY_KIND[kind]);
+  return new ApiError(message, {
     status: res.status,
     kind,
     detail,
@@ -149,6 +155,8 @@ export const SECTIONS_25 = [
   'Corporate Governance',
   'Terms of the Issue',
   'Other Regulatory & Statutory Disclosures',
+  // Present in 14/20 real SEBI filings; added to match the backend SECTIONS_25.
+  'Outstanding Litigation and Material Developments',
   'Material Contracts & Documents',
   'Declaration & Undertakings',
 ];
@@ -393,6 +401,41 @@ export async function exportFull(companyId, fmt) {
     `/api/export/full/${encodeURIComponent(fmt)}`,
     jsonBody({ company_id: companyId }),
     'blob'
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Human-in-the-loop review
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch the pending HITL interrupt payload for a section.
+ *
+ * The backend pauses the LangGraph run at `hitl_review_interrupt` when a draft
+ * scores below threshold. These endpoints have existed since Phase 9 with no
+ * caller anywhere in the frontend, so the pause was never surfaced to anyone.
+ *
+ * @param {string} sectionId  GeneratedSection UUID (not the section name)
+ * @returns {Promise<{status: string, payload?: object}>}
+ *   status is one of: pending_review | completed_or_not_paused | no_interrupts_found
+ * @throws {ApiError}
+ */
+export async function getHitlPending(sectionId) {
+  return request(`/api/hitl/pending/${encodeURIComponent(sectionId)}`);
+}
+
+/**
+ * Resume a paused review with the human's decision.
+ *
+ * @param {string} sectionId
+ * @param {'approve'|'revise'|'reject'} action
+ * @param {string} [feedback]  Required in practice for 'revise'
+ * @throws {ApiError}
+ */
+export async function submitHitlFeedback(sectionId, action, feedback) {
+  return request(
+    `/api/hitl/submit/${encodeURIComponent(sectionId)}`,
+    jsonBody({ action, feedback: feedback || null })
   );
 }
 

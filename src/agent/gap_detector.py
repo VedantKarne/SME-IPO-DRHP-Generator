@@ -37,8 +37,20 @@ def flag_gaps(section_name: str, draft_text: str) -> Tuple[float, List[Gap]]:
             continue
         filtered_bracket_gaps.append(match)
     
-    # Combine and deduplicate — explicit GAP markers take priority
-    all_matches = list(set(explicit_gaps + filtered_bracket_gaps))
+    # Combine and deduplicate, preserving first-appearance order.
+    #
+    # This was `list(set(...))`. Python randomises string hashing per process, so
+    # the order of a section's flagged gaps changed between runs — the list shown
+    # to a reviewer, and the order they were persisted in, was arbitrary. Gaps
+    # should read in the order they occur in the draft.
+    seen = set()
+    all_matches = []
+    for match in explicit_gaps + filtered_bracket_gaps:
+        key = match.strip()
+        if key in seen:
+            continue
+        seen.add(key)
+        all_matches.append(match)
     
     for match in all_matches:
         description = match.strip()

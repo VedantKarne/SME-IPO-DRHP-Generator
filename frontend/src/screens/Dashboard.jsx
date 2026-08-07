@@ -46,12 +46,69 @@ const SUBSCORES = [
   { key: 'overall_score',   label: 'Compliance', icon: '📋', color: 'var(--warning)' },
 ];
 
-const NEXT_ACTIONS = [
-  { icon: '📄', title: 'Upload Audited Financials', desc: 'FY2022–FY2024 Balance Sheets required for Revenue section', urgent: true },
-  { icon: '📝', title: 'Generate Risk Factors section', desc: 'Click Generate in Document Workspace', urgent: false },
-  { icon: '⚖️', title: 'Resolve KMP Litigation disclosure', desc: 'Rahul Sharma — provide litigation details for mandatory disclosure', urgent: true },
-  { icon: '✅', title: 'Get Merchant Banker approval', desc: '2 sections awaiting intermediary certification', urgent: false },
-];
+/**
+ * Next actions, derived from the company's actual state.
+ *
+ * This was a fixed array rendered unconditionally — including an item naming a
+ * fabricated individual ("Rahul Sharma — provide litigation details") and a
+ * hardcoded "2 sections awaiting certification". Every user saw the same list
+ * regardless of their data.
+ */
+function buildNextActions({ sections = [], readiness = {}, eligibility }) {
+  const actions = [];
+
+  const failed = (eligibility?.checks || []).filter((c) => !c.passed);
+  failed.forEach((check) => {
+    actions.push({
+      icon: '⚖️',
+      title: `Resolve: ${check.name}`,
+      desc: check.reason || 'Eligibility condition not met.',
+      urgent: true,
+    });
+  });
+
+  const blocked = sections.filter((s) => s.sync_status === 'red' && (s.missing_docs || []).length);
+  if (blocked.length) {
+    const docs = [...new Set(blocked.flatMap((s) => s.missing_docs))].slice(0, 3);
+    actions.push({
+      icon: '📄',
+      title: `Upload ${docs.length > 1 ? 'missing documents' : docs[0]}`,
+      desc: `${blocked.length} section${blocked.length > 1 ? 's are' : ' is'} blocked: ${docs.join(', ')}`,
+      urgent: true,
+    });
+  }
+
+  const undrafted = sections.filter((s) => !s.draft_text);
+  if (undrafted.length) {
+    actions.push({
+      icon: '📝',
+      title: `Generate ${undrafted.length} remaining section${undrafted.length > 1 ? 's' : ''}`,
+      desc: `Starting with "${undrafted[0].name}" in the Document Workspace`,
+      urgent: false,
+    });
+  }
+
+  const awaiting = sections.filter((s) => s.draft_text && !s.locked);
+  if (awaiting.length) {
+    actions.push({
+      icon: '✅',
+      title: 'Get Merchant Banker approval',
+      desc: `${awaiting.length} section${awaiting.length > 1 ? 's' : ''} awaiting intermediary certification`,
+      urgent: false,
+    });
+  }
+
+  if (readiness.total_open_gaps) {
+    actions.push({
+      icon: '⚠️',
+      title: `Close ${readiness.total_open_gaps} flagged gap${readiness.total_open_gaps > 1 ? 's' : ''}`,
+      desc: 'Open the flagged gaps panel in the Document Workspace',
+      urgent: true,
+    });
+  }
+
+  return actions;
+}
 
 export default function Dashboard({ companyId, companyName, sections, readiness, eligibility: propEligibility, consistency: propConsistency }) {
   const navigate = useNavigate();
@@ -81,16 +138,24 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const promoterName = 'Vedant';
+  // Was hardcoded to a single first name for every account.
+  const promoterName = (companyName || '').trim() || 'there';
 
   const eligibility = eligibilityData;
   const consistency = consistencyData;
 
   const r = readiness || {};
   const overall = r.overall_score || 0;
-  const pending = r.sections_pending ?? 22;
+  // `?? 22` invented a section count before readiness had loaded.
+  const pending = r.sections_pending ?? 0;
   const approved = r.sections_approved ?? 0;
   const openGaps = r.total_open_gaps ?? 0;
+
+  const nextActions = buildNextActions({
+    sections: sections || [],
+    readiness: r,
+    eligibility,
+  });
 
   // Estimate days based on pending sections
   const estimatedDays = pending * 2;
@@ -251,7 +316,12 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
       <div className="card">
         <h3 style={{ marginBottom: 14, fontSize: '0.95rem' }}>Next Actions</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {NEXT_ACTIONS.map((a, i) => (
+          {nextActions.length === 0 && (
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              Nothing outstanding right now.
+            </div>
+          )}
+          {nextActions.map((a, i) => (
             <div key={i} style={{
               display: 'flex', gap: 14, alignItems: 'flex-start',
               padding: '12px 14px',

@@ -6,7 +6,7 @@
 
 ## Overview
 
-The ingestion pipeline is a **one-time offline process** that transforms raw PDF documents into a dual-corpus vector knowledge base. It is orchestrated by `src/ingestion/runners/master_ingestion_runner.py`.
+The ingestion pipeline is a **one-time offline process** that transforms raw PDF documents into a dual-corpus vector knowledge base. It is orchestrated by `src/ingestion/runners/main_ingestion_runner.py`.
 
 ```
 Original_Docs/
@@ -42,7 +42,7 @@ Original_Docs/
 - Place in `Original_Docs/Precedents/`
 - **Required filename format**: `Company_Exchange_Year.pdf`
   - Example: `AaravTech_BSE_2024.pdf`
-  - `Company`, `Exchange`, `Year` become metadata on each chunk
+  - Company name, exchange, and year are resolved from a curated registry (`src/config/precedent_registry.py`), not split from the filename
 - The pipeline processes these with Docling (layout-aware parsing) and `PrecedentChunker`
 
 ---
@@ -102,39 +102,52 @@ This injection makes the embedding spatially aware of the regulatory hierarchy, 
 ### RegulatoryChunk Schema
 ```python
 class RegulatoryChunk:
-    clause_id: str          # e.g., "ICDR_2018_Reg229_3"
-    parent_id: str          # Parent chapter ID
-    chapter: str            # e.g., "Chapter IV"
-    regulation_number: str  # e.g., "229(3)"
-    text: str               # Enriched chunk text
-    source_doc: str         # Source PDF filename
+    clause_id: str          # e.g., "icdr_amendments_latest_summary_CHIX_REG238_p0_c1"
+    parent_id: str          # e.g., "icdr_amendments_latest_summary_CHIX_REG238_p0"
+    chapter: str            # e.g., "IX" (Roman numeral from "CHAPTER IX")
+    chapter_title: str      # e.g., "Small and Medium Enterprises"
+    regulation_number: str  # e.g., "238"
+    regulation_title: str   # e.g., "Lock-in of specified securities"
+    applicability: str      # "SME" | "UNSPECIFIED" — derived, not hardcoded
+    text: str               # Child chunk text (≤350 words)
+    enriched_text: str      # Breadcrumb-prefixed text — this is what is embedded
+    source_doc: str         # Source PDF filename (without extension)
 ```
 
 ---
 
 ## Step 2b: Precedent Chunking (`src/ingestion/precedent_chunker.py`)
 
-The `PrecedentChunker` uses Docling's `HybridChunker` for structure-aware chunking:
+The `PrecedentChunker` uses **word-level overlap chunking** with a curated metadata registry.
+
+> **Note:** An earlier version of this document stated that `PrecedentChunker` uses Docling's
+> `HybridChunker`. That method is a `pass` stub in the current codebase and is not invoked.
+> The live path is overlap-based word chunking.
 
 ### Parent-Child Architecture
 A two-level chunk hierarchy is created:
 
-- **Child chunks** (small, ~200-400 tokens): Used for precision retrieval. Indexed in ChromaDB.
-- **Parent chunks** (full section text): Stored in `parent_doc_store.db`. Returned to the LLM for rich context.
+- **Child chunks** (~350 words, 50-word overlap): Used for precision retrieval. Indexed in ChromaDB.
+- **Parent chunks** (~1 200 words): Stored in `parent_doc_store.db`. Returned to the LLM for rich context.
 
 When a child chunk is retrieved by the RAG engine, `ParentDocStore.expand_to_parent()` swaps it with the full parent passage — giving the LLM more coherent context while keeping search precision.
+
+### Metadata
+Company name, exchange, and year come from `src/config/precedent_registry.py` — an explicit curated map from filename → `{company, exchange, year, segment}`. This replaced the earlier filename-split approach, which produced `company='drhps'` for every filing whose name started with `drhp_`.
 
 ### PrecedentChunk Schema
 ```python
 class PrecedentChunk:
     chunk_id: str     # Unique ID for ChromaDB
-    parent_id: str    # Parent section ID
-    text: str         # Chunk text
+    parent_id: str    # Parent block ID
+    text: str         # Child chunk text (≤350 words)
     metadata: {
-        "company": str,   # From filename
-        "exchange": str,  # From filename
-        "year": str,      # From filename
-        "section": str    # DRHP section name (detected by Docling heading path)
+        "company": str,    # From precedent_registry.py
+        "exchange": str,   # From precedent_registry.py
+        "year": str,       # From precedent_registry.py
+        "segment": str,    # "SME" or "Mainboard"
+        "section": str,    # DRHP chapter name (from TOC-derived attribution)
+        "source_doc": str  # PDF filename (without extension)
     }
 ```
 
@@ -269,7 +282,7 @@ self._save_fallback_sparse()  # Writes to Databases/.chroma/fallback_sparse.json
 
 ## Batch Processing & Memory Management
 
-The `index_chunks()` function in `master_ingestion_runner.py` processes in batches of 32 (default) to prevent OOM errors:
+The `index_chunks()` function in `main_ingestion_runner.py` processes in batches of 32 (default) to prevent OOM errors:
 
 ```python
 for i in range(0, len(nodes), batch_size):
@@ -286,21 +299,29 @@ The explicit `gc.collect()` after each batch prevents tensor accumulation on the
 
 ## Re-running the Pipeline
 
-To re-parse PDFs from scratch:
+> **`scripts/reparse.py` does NOT re-run ingestion.** That script recomputes gap flags on
+> the wizard demo data only. Do not use it to re-parse PDFs.
+
+Full re-ingest from scratch:
 ```bash
-python scripts/reparse.py
+# Delete the vector store and parent store so dense and sparse stay in sync.
+# (Deleting only one of them silently desyncs retrieval.)
+rm -rf Databases/.chroma Databases/parent_doc_store.db
+
+# Re-run ingestion. Use --selected-precedents to limit to the 6 SME filings.
+# Use --skip-raptor to skip the RAPTOR Groq summarisation pass (saves ~10 min).
+python -m src.ingestion.runners.main_ingestion_runner --selected-precedents --skip-raptor
 ```
 
-To re-index without re-parsing (if only embedder changed):
+Re-index without re-parsing (e.g. if only the embedder changed):
 ```bash
 # Clear ChromaDB collections first
 python -c "import chromadb; c = chromadb.PersistentClient('Databases/.chroma'); c.delete_collection('regulatory_clauses'); c.delete_collection('precedent_chunks')"
-# Then run ingestion
-python -m src.ingestion.runners.master_ingestion_runner
+# Then re-run ingestion (parsed JSONL cache is reused automatically)
+python -m src.ingestion.runners.main_ingestion_runner --selected-precedents --skip-raptor
 ```
 
-To test with limited pages (faster):
-```python
-# In master_ingestion_runner.py __main__ block:
-reg_chunks, prec_chunks = process_pdfs(max_pages=5)
+Limit pages for fast smoke-testing:
+```bash
+python -m src.ingestion.runners.main_ingestion_runner --max-pages 5
 ```

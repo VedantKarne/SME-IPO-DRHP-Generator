@@ -3,7 +3,7 @@
  * P7: v1/v2/v3 tags, timestamps, Compare + Restore, clean timeline UI.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useVersionStore from "./versionStore.js";
 
 // ---------------------------------------------------------------------------

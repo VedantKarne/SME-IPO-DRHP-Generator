@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import uuid
 
 from src.extraction.schema import GeneratedSection, ChatMessage, Company
-from src.agent.groq_client import RateLimitAwareGroqClient
+from src.agent.groq_client import get_groq_client, LLMUnavailable
 from src.api.server import get_db
 from src.api.auth_router import get_current_user, require_company_access
 
@@ -63,13 +63,16 @@ def chat_edit_section(
     
     user_prompt = f"Current Draft:\n{section.draft_text}\n\nUser Request: {request.prompt}\n\nPlease provide the complete revised text."
     
-    client = RateLimitAwareGroqClient()
+    client = get_groq_client()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
     ]
     
-    new_draft = client.generate(messages, max_tokens=2500)
+    try:
+        new_draft = client.generate(messages, max_tokens=2500)
+    except LLMUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e))
     
     # Save interaction to DB
     user_msg = ChatMessage(section_id=section.id, role="user", content=request.prompt)

@@ -24,6 +24,7 @@ import DocumentSidebar  from './DocumentSidebar.jsx';
 import DocumentToolbar  from './DocumentToolbar.jsx';
 import DocumentCanvas   from './DocumentCanvas.jsx';
 import CopilotPanel     from './CopilotPanel.jsx';
+import HITLReviewPanel from '../hitl/HITLReviewPanel.jsx';
 
 const COPILOT_DEFAULT_W = 330;
 const COPILOT_MIN_W     = 260;
@@ -123,6 +124,13 @@ export default function CanvasLayout({ companyId, companyName }) {
           copilotOpen={copilotOpen}
           onToggleCopilot={toggleCopilot}
           showToast={showToast}
+        />
+        {/* Surfaces a paused LangGraph review. Renders nothing when there is
+            nothing awaiting a decision. */}
+        <HITLReviewPanel
+          sectionId={sections[activeSectionIdx]?.id}
+          sectionName={activeSectionName}
+          onResolved={(action) => showToast(`Review ${action}d`, 'success', 2500)}
         />
         <DocumentCanvas
           companyId={companyId}

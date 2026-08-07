@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from src.api.auth_router import get_current_user, require_company_access
 from pydantic import BaseModel
 from src.agent.tools import rag_search
-from src.agent.groq_client import RateLimitAwareGroqClient
+from src.agent.groq_client import get_groq_client, LLMUnavailable
 
 router = APIRouter(prefix="/api/copilot", tags=["Copilot"])
 
@@ -62,13 +62,18 @@ def ask_copilot(
         f"User Question: {request.question}"
     )
 
-    client = RateLimitAwareGroqClient()
+    client = get_groq_client()
     messages = [
         {"role": "system", "content": COPILOT_SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt}
     ]
 
-    answer = client.generate(messages, max_tokens=600)
+    try:
+        answer = client.generate(messages, max_tokens=600)
+    except LLMUnavailable as e:
+        # Retryable outage, not a server bug — and the caller must not receive a
+        # placeholder answer that reads like a real one.
+        raise HTTPException(status_code=503, detail=str(e))
 
     import re
     citations = re.findall(r'\[Reg[^\]]+\]', answer)
