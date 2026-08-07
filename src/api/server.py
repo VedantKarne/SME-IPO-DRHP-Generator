@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails, AuditLog
+from src.extraction.schema import Base, GeneratedSection, Company, FinancialStatement, DirectorKMP, OfferDetails, AuditLog, SectionVersion
 from src.api import wizard
 
 import os
@@ -70,11 +70,10 @@ def get_db():
 # already covered by "Financial Statements (3 Years)" and "Other Regulatory &
 # Statutory Disclosures" respectively, and are dropped.
 #
-# "Outstanding Litigations and Material Developments" was the interesting one:
-# the app's 25-section list has no litigation chapter at all, even though 14 of
-# the 20 precedent filings carry one (see src/config/sections.py). Until that
-# chapter exists, a litigation upload (doc_type 7) is routed to Risk Factors,
-# which is where such disclosure would otherwise surface.
+# "Outstanding Litigations and Material Developments" is now in the section
+# list as "Outstanding Litigation and Material Developments" (matching real
+# precedent filings, which use the singular form). doc_type 7 (Litigation /
+# Legal Notices) maps directly to it. The Risk Factors stopgap is removed.
 SECTION_DOC_MAP = {
     "Financial Statements (3 Years)": ["0"],
     "Management Discussion & Analysis": ["0"],
@@ -85,7 +84,11 @@ SECTION_DOC_MAP = {
     "Objects of the Offer": ["1"],
     "Other Regulatory & Statutory Disclosures": ["2", "3", "5", "8"],
     "Our Business": ["2", "3", "4", "5", "6"],
-    "Risk Factors": ["2", "3", "4", "6", "7"],
+    # doc_type 7 (Litigation / Legal Notices) now maps to the dedicated chapter
+    # that was added to SECTIONS_25. The previous stopgap of routing to Risk
+    # Factors is removed.
+    "Outstanding Litigation and Material Developments": ["7"],
+    "Risk Factors": ["2", "3", "4", "6"],
 }
 
 
@@ -129,7 +132,11 @@ SECTIONS_25 = [
     "Key Managerial Personnel (KMP)", "Our Promoters & Promoter Group",
     "Related Party Transactions", "Dividend Policy", "Financial Statements (3 Years)",
     "Management Discussion & Analysis", "Corporate Governance", "Terms of the Issue",
-    "Other Regulatory & Statutory Disclosures", "Material Contracts & Documents",
+    "Other Regulatory & Statutory Disclosures",
+    # Added: present in 14/20 real SEBI filings; was previously missing from
+    # the section list and routed to Risk Factors as a stopgap via doc_type 7.
+    "Outstanding Litigation and Material Developments",
+    "Material Contracts & Documents",
     "Declaration & Undertakings"
 ]
 
@@ -294,9 +301,13 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
         try:
             graph.invoke(initial_state, config=config)
         except Exception as agent_exc:
-            # Some LangGraph versions raise GraphInterrupt; others return silently.
-            # We log it but always fall through to read state from checkpointer below.
-            logger.warning(f"graph.invoke raised (may be normal interrupt): {agent_exc}")
+            # LangGraph raises GraphInterrupt for HITL pauses. We fall through to read state.
+            # Real errors (like LLM rate limits) must bubble up as 500s so the UI can show them.
+            if type(agent_exc).__name__ in ("GraphInterrupt", "NodeInterrupt"):
+                logger.info(f"graph.invoke interrupted (HITL): {agent_exc}")
+            else:
+                logger.error(f"graph.invoke failed: {agent_exc}", exc_info=True)
+                raise HTTPException(status_code=500, detail=f"Generation failed: {agent_exc}")
 
         # Always read the accumulated state from the MemorySaver checkpointer.
         # This is the only reliable source of truth for both:
@@ -592,6 +603,18 @@ def save_version(
     require_company_access(current_user, company_id)
     db = next(get_db())
     try:
+        if req.label == 'Auto-save':
+            existing = db.query(SectionVersion).filter(
+                SectionVersion.company_id == company_id,
+                SectionVersion.section_name == section_name,
+                SectionVersion.label == 'Auto-save'
+            ).first()
+            if existing:
+                existing.content = req.content
+                # Update time if needed, though created_at is often sufficient for ordering
+                db.commit()
+                return {"status": "success", "id": existing.id}
+
         new_version = SectionVersion(
             company_id=company_id,
             section_name=section_name,

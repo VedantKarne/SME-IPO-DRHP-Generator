@@ -6,7 +6,7 @@ from langgraph.types import interrupt, Command
 
 from src.agent.tools import rag_search, RetrievalUnavailable, get_company_data, get_client_document_context
 from src.agent.prompts import DRAFT_SECTION_SYSTEM_PROMPT
-from src.agent.groq_client import get_groq_client  # Bug 3 Fix: use singleton getter
+from src.agent.groq_client import get_groq_client
 
 logger = logging.getLogger(__name__)
 
@@ -172,45 +172,27 @@ def consistency_validator_node(state: AgentState) -> dict:
     return {"consistency_errors": errors, "consistency_check_failed": False}
 
 def draft_generation_node(state: AgentState) -> dict:
-    logger.info("Drafting section using Groq Llama 3.3 70B...")
+    logger.info("Drafting section using Groq Llama 3.1 8B Instant...")
     
-    # Bug 3 Fix: Use the module-level singleton — no new object created on each call.
     client = get_groq_client()
     
-    # Be explicit about *why* a context block is empty. Passing a bare "None"
-    # for an unavailable corpus invites the model to supply regulation numbers
-    # from memory, which then read as retrieved citations in the final document.
-    def _context_block(value: str, failed: bool, label: str) -> str:
-        if failed:
-            return (f"[UNAVAILABLE — {label} retrieval failed. Do NOT cite any "
-                    f"{label.lower()} source; state that the reference could not be verified.]")
-        if not (value or "").strip():
-            return (f"[EMPTY — no matching {label.lower()} material was found. Do NOT "
-                    f"invent citations; draft only from the company facts below.]")
-        return value
-
-    regulatory_block = _context_block(
-        state.get('regulatory_context', ''),
-        state.get('regulatory_retrieval_failed', False),
-        "Regulatory",
-    )
-    precedent_block = _context_block(
-        state.get('precedent_context', ''),
-        state.get('precedent_retrieval_failed', False),
-        "Precedent",
-    )
-
-    user_prompt = f"""Draft the '{state['current_section']}' section.
+    messages = [
+        {"role": "system", "content": DRAFT_SECTION_SYSTEM_PROMPT},
+        {"role": "user", "content": f"""
+Please draft the '{state['current_section']}' section of the DRHP.
 
 REGULATORY CONTEXT:
-{regulatory_block}
+{state.get('regulatory_context', '')[:4000] if state.get('regulatory_context') else 'Not available for this section.'}
 
-PRECEDENT EXAMPLES:
-{precedent_block}
+PRECEDENT CONTEXT:
+{state.get('precedent_context', '')[:4000] if state.get('precedent_context') else 'Not available for this section.'}
 
 COMPANY FACTS:
-{state.get('company_facts', 'None')}
-"""
+{state.get('company_facts', '')[:8000] if state.get('company_facts') else 'No company facts provided.'}
+"""}
+    ]
+    
+    user_prompt = messages[1]["content"]
 
     if state.get("human_feedback"):
         user_prompt += f"\n\nHUMAN REVISION REQUEST:\n{state['human_feedback']}\nPlease rewrite the draft incorporating this feedback."
@@ -228,7 +210,7 @@ COMPANY FACTS:
     # source headers (a single regulatory citation can run to ~90 characters, and
     # a well-cited section carries dozens). A truncated draft is worse than a
     # short one: it ends mid-clause and the gap detector scores the fragment.
-    draft = client.generate(messages, max_tokens=6000)
+    draft = client.generate(messages, max_tokens=1500)
     current_revisions = state.get("revisions", 0)
     
     return {"draft_text": draft, "revisions": current_revisions + 1}

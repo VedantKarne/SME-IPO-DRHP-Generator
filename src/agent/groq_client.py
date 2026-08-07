@@ -65,7 +65,7 @@ class _CircuitBreaker:
 
 
 class RateLimitAwareGroqClient:
-    def __init__(self, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, model: str = "llama-3.1-8b-instant"):
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             logger.warning("GROQ_API_KEY not set. Drafting may fail.")
@@ -79,7 +79,7 @@ class RateLimitAwareGroqClient:
         retry=retry_if_exception_type(RateLimitError),
         before_sleep=lambda retry_state: logger.warning(f"Groq Rate limit hit. Retrying in {retry_state.next_action.sleep}s...")
     )
-    def _groq_generate(self, messages: List[Dict[str, str]], max_tokens: int = 4000) -> str:
+    def _groq_generate(self, messages: List[Dict[str, str]], max_tokens: int = 3000) -> str:
         response = self.client.chat.completions.create(
             messages=messages,
             model=self.model,
@@ -88,7 +88,7 @@ class RateLimitAwareGroqClient:
         )
         return response.choices[0].message.content
 
-    def generate(self, messages: List[Dict[str, str]], max_tokens: int = 4000) -> str:
+    def generate(self, messages: List[Dict[str, str]], max_tokens: int = 3000) -> str:
         """
         Draft with exponential backoff on rate limits, behind a circuit breaker.
 
@@ -122,4 +122,13 @@ def get_groq_client() -> RateLimitAwareGroqClient:
     if _groq_client_instance is None:
         _groq_client_instance = RateLimitAwareGroqClient()
     return _groq_client_instance
+
+_fast_groq_client_instance: Optional[RateLimitAwareGroqClient] = None
+
+def get_fast_groq_client() -> RateLimitAwareGroqClient:
+    """Returns a shared singleton fast Groq client (e.g. 8B) for summarization and internal tasks."""
+    global _fast_groq_client_instance
+    if _fast_groq_client_instance is None:
+        _fast_groq_client_instance = RateLimitAwareGroqClient(model="llama-3.1-8b-instant")
+    return _fast_groq_client_instance
 

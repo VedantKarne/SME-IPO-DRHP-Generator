@@ -38,6 +38,8 @@ DRHP_SECTIONS = [
     "Capital Structure",
     "Objects of the Issue",
     "Basis of Issue Price",
+    # Added to match SECTIONS_25 in server.py (present in 14/20 real filings).
+    "Outstanding Litigation and Material Developments",
     "Legal & Other Information",
     "Key Industry Regulations",
     "Corporate Governance",
@@ -69,7 +71,9 @@ def _classify_chunk_section(text: str, doc_type: str) -> str:
         "board_resolution": "Corporate Governance",
         "moa": "Legal & Other Information",
         "aoa": "Legal & Other Information",
-        "litigation": "Risk Factors",
+        # Litigation documents now map to the dedicated chapter that exists in
+        # SECTIONS_25. Previously this routed to Risk Factors as a stopgap.
+        "litigation": "Outstanding Litigation and Material Developments",
         "gst_certificate": "Legal & Other Information",
     }
     if doc_type in doc_type_map:

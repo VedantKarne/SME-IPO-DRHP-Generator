@@ -1,0 +1,19 @@
+{
+  "type": "grid_search",
+  "best": {
+    "compliance": {
+      "weights": {
+        "dense": 0.3,
+        "sparse": 0.7
+      },
+      "best_mean_precision_at_k": 0.6
+    },
+    "precedent": {
+      "weights": {
+        "dense": 0.3,
+        "sparse": 0.7
+      },
+      "best_mean_precision_at_k": 0.6
+    }
+  }
+}

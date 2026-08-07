@@ -1,0 +1,222 @@
+[
+  {
+    "query": "minimum promoter contribution SME IPO 20 percent",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 26 | minimum promoter contribution / MPC",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG26_p1_c3",
+      "sme_segment_consultation_paper_CH_REG26_p1_c0",
+      "sme_segment_consultation_paper_CH_REG26_p1_c1"
+    ]
+  },
+  {
+    "query": "promoter lock-in period SME exchange listing",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 26 | promoter lock-in",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG26_p2_c0",
+      "icdr_amendments_latest_summary_CHV_REG167_p0_c2",
+      "icdr_amendments_latest_summary_CHIX_REG261_p0_c1"
+    ]
+  },
+  {
+    "query": "post-issue paid up capital limit 25 crore SME",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 26 | capital limit",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG26_p4_c0",
+      "sme_segment_consultation_paper_CH_REG26_p4_c1",
+      "icdr_amendments_latest_summary_CHIX_REG276_p0_c0"
+    ]
+  },
+  {
+    "query": "outstanding litigation disclosure directors pending criminal",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: icdr_amendments_latest_summary | SCHEDULE VI | litigation disclosure",
+    "expected_clause_ids_any_of": [
+      "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c0",
+      "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p25_c2",
+      "icdr_amendments_latest_summary_CHV_REG163_p0_c0"
+    ]
+  },
+  {
+    "query": "SME IPO allotment minimum number investors",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 26 | min allottees",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG26_p1_c0",
+      "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p0_c0",
+      "icdr_amendments_latest_summary_CHSCHEDULEXIV_SCHEDULE_XIV_p0_c2"
+    ]
+  },
+  {
+    "query": "eligibility criteria SME exchange net tangible assets",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 28 | eligibility criteria",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG28_p1_c0",
+      "sme_segment_consultation_paper_CH_REG28_p1_c2",
+      "sme_segment_consultation_paper_CH_REG28_p1_c1"
+    ]
+  },
+  {
+    "query": "DRHP filing requirements intermediary merchant banker",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 26 | due diligence certificate",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG26_p6_c0",
+      "sme_segment_consultation_paper_CH_REG4_p0_c0",
+      "icdr_amendments_latest_summary_CHIV_REG121_p0_c0"
+    ]
+  },
+  {
+    "query": "SME IPO price band fixed price",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: icdr_amendments_latest_summary | Chapter IX | Reg 250 | price band",
+    "expected_clause_ids_any_of": [
+      "icdr_amendments_latest_summary_CHIX_REG250_p0_c0",
+      "sme_segment_consultation_paper_CH_REG13_p0_c0",
+      "sme_segment_consultation_paper_CH_REG26_p0_c1"
+    ]
+  },
+  {
+    "query": "risk factors business competition section",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_basmati_rice_ltd | Forward-looking Statements",
+    "expected_clause_ids_any_of": [
+      "drhp_basmati_rice_ltd_p20400_c300",
+      "drhp_advit_jewels_ltd_p14400_c0",
+      "drhps_png_reva_diamond_jewellery_ltd_p34800_c300"
+    ]
+  },
+  {
+    "query": "capital structure equity shares issued paid up",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_basmati_rice_ltd | General Information | capital structure",
+    "expected_clause_ids_any_of": [
+      "drhp_basmati_rice_ltd_p62400_c0",
+      "drhp_basmati_rice_ltd_p62400_c300",
+      "drhp_om_power_ltd_p183600_c0"
+    ]
+  },
+  {
+    "query": "objects of the offer use of proceeds expansion",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_om_power_ltd | Risk Factors | objects of issue",
+    "expected_clause_ids_any_of": [
+      "drhp_om_power_ltd_p42000_c600",
+      "drhp_om_power_ltd_p42000_c300",
+      "drhp_rajputana_stainless_steel_ltd_p74400_c300"
+    ]
+  },
+  {
+    "query": "management board directors remuneration qualifications",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_inovision_ltd | Our Management | board remuneration",
+    "expected_clause_ids_any_of": [
+      "drhp_inovision_ltd_p136800_c0",
+      "drhp_inovision_ltd_p136800_c300",
+      "drhp_om_power_ltd_p156000_c300"
+    ]
+  },
+  {
+    "query": "industry overview market size growth manufacturing",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_rajputana_stainless_steel_ltd | Industry Overview",
+    "expected_clause_ids_any_of": [
+      "drhp_rajputana_stainless_steel_ltd_p96000_c600",
+      "drhp_rajputana_stainless_steel_ltd_p96000_c300",
+      "drhp_rajputana_stainless_steel_ltd_p96000_c900"
+    ]
+  },
+  {
+    "query": "promoter background experience holding",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_basmati_rice_ltd | Risk Factors | promoter holding",
+    "expected_clause_ids_any_of": [
+      "drhp_basmati_rice_ltd_p42000_c600",
+      "drhps_png_reva_diamond_jewellery_ltd_p34800_c600",
+      "drhps_png_reva_diamond_jewellery_ltd_p38400_c0"
+    ]
+  },
+  {
+    "query": "financial indebtedness borrowings loans",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_rajputana_stainless_steel_ltd | Capitalisation Statement",
+    "expected_clause_ids_any_of": [
+      "drhp_rajputana_stainless_steel_ltd_p171600_c0",
+      "drhps_png_reva_diamond_jewellery_ltd_p34800_c0",
+      "drhp_inovision_ltd_p194400_c300"
+    ]
+  },
+  {
+    "query": "litigation disputes arbitration pending",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_basmati_rice_ltd | Outstanding Litigation and Material Developments",
+    "expected_clause_ids_any_of": [
+      "drhp_basmati_rice_ltd_p201600_c0",
+      "drhp_basmati_rice_ltd_p201600_c900",
+      "drhp_basmati_rice_ltd_p202800_c0"
+    ]
+  },
+  {
+    "query": "disclosure requirements related party transactions",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: icdr_amendments_latest_summary | SCHEDULE V | RPT disclosure",
+    "expected_clause_ids_any_of": [
+      "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p1_c2",
+      "icdr_amendments_latest_summary_CHSCHEDULEV_SCHEDULE_V_p1_c3",
+      "icdr_amendments_latest_summary_CHSCHEDULEVI_SCHEDULE_VI_p26_c0"
+    ]
+  },
+  {
+    "query": "dividend policy declaration board approval",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_om_power_ltd | Articles of Association | dividend",
+    "expected_clause_ids_any_of": [
+      "drhp_om_power_ltd_p276000_c300",
+      "drhp_basmati_rice_ltd_p264000_c0",
+      "drhp_rajputana_stainless_steel_ltd_p144000_c300"
+    ]
+  },
+  {
+    "query": "general corporate purposes working capital",
+    "corpus": "precedent",
+    "mode": "precedent",
+    "description": "PRECEDENT: drhp_advit_jewels_ltd | Objects of the Issue | working capital",
+    "expected_clause_ids_any_of": [
+      "drhp_advit_jewels_ltd_p68400_c0",
+      "drhp_advit_jewels_ltd_p37200_c900",
+      "drhp_advit_jewels_ltd_p31200_c900"
+    ]
+  },
+  {
+    "query": "SME exchange BSE emerge eligibility",
+    "corpus": "regulatory",
+    "mode": "compliance",
+    "description": "REGULATORY: sme_segment_consultation_paper | Reg 5 | BSE/NSE SME platform",
+    "expected_clause_ids_any_of": [
+      "sme_segment_consultation_paper_CH_REG5_p0_c0",
+      "sme_segment_consultation_paper_CH_REG28_p0_c0",
+      "sme_segment_consultation_paper_CH_REG28_p0_c2"
+    ]
+  }
+]

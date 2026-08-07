@@ -65,7 +65,13 @@ async function toApiError(res) {
   } catch {
     // Non-JSON error body — the status alone is what we have.
   }
-  return new ApiError(detail || MESSAGE_BY_KIND[kind], {
+  // Auth and forbidden errors must always show the user-friendly message — the
+  // raw backend detail ("Invalid token", "Not authenticated", etc.) is an
+  // implementation detail that is meaningless to the user.
+  const message = (kind === 'auth' || kind === 'forbidden')
+    ? MESSAGE_BY_KIND[kind]
+    : (detail || MESSAGE_BY_KIND[kind]);
+  return new ApiError(message, {
     status: res.status,
     kind,
     detail,
@@ -149,6 +155,8 @@ export const SECTIONS_25 = [
   'Corporate Governance',
   'Terms of the Issue',
   'Other Regulatory & Statutory Disclosures',
+  // Present in 14/20 real SEBI filings; added to match the backend SECTIONS_25.
+  'Outstanding Litigation and Material Developments',
   'Material Contracts & Documents',
   'Declaration & Undertakings',
 ];

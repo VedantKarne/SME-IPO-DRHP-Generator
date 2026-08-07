@@ -25,7 +25,6 @@ import DocumentToolbar  from './DocumentToolbar.jsx';
 import DocumentCanvas   from './DocumentCanvas.jsx';
 import CopilotPanel     from './CopilotPanel.jsx';
 import HITLReviewPanel from '../hitl/HITLReviewPanel.jsx';
-import VersionHistoryPanel from '../versions/VersionHistoryPanel.jsx';
 
 const COPILOT_DEFAULT_W = 330;
 const COPILOT_MIN_W     = 260;
@@ -161,18 +160,6 @@ export default function CanvasLayout({ companyId, companyName }) {
         activeSectionName={activeSectionName}
         activeEditor={activeEditor}
       />
-
-      {/* ── Version history ──
-          The panel existed but was unreachable: an unclosed SOURCE_META literal
-          made the module a syntax error, and only an unused barrel imported it.
-          Syntax repaired; this is its first actual mount. */}
-      {copilotOpen && (
-        <VersionHistoryPanel
-          editor={activeEditor}
-          activeSectionName={activeSectionName}
-          companyId={companyId}
-        />
-      )}
 
       {/* ── Toast notifications ── */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
