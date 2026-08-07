@@ -34,8 +34,11 @@ jobs:
         env:
           # auth_router raises without this; conftest also sets a throwaway value.
           JWT_SECRET_KEY: ci-only-not-a-real-secret
+          # Tests import from src.*  — set the repo root on the path so Python
+          # can find the package without an editable install.
+          PYTHONPATH: .
         run: |
-          pytest tests/Phase_tests/test_phase_2_chunking.py \
+          python -m pytest tests/Phase_tests/test_phase_2_chunking.py \
                  tests/Phase_tests/test_phase_7_eligibility.py \
                  tests/Phase_tests/test_phase_8_gap_detector.py \
                  tests/Phase_tests/test_phase_18_export_conformance.py \
