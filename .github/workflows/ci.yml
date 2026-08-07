@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.9"
           cache: pip
 
       - name: Install test dependencies
@@ -42,7 +42,7 @@ jobs:
                  tests/Phase_tests/test_phase_7_eligibility.py \
                  tests/Phase_tests/test_phase_8_gap_detector.py \
                  tests/Phase_tests/test_phase_18_export_conformance.py \
-                 -q --tb=short
+                 -v --tb=long
 
   frontend:
     runs-on: ubuntu-latest
