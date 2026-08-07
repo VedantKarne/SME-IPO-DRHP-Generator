@@ -18,8 +18,8 @@ import pytest
 
 from docx import Document
 
-from src.agent.document_assembler import build_docx, group_sections, sort_by_sebi_toc
-from src.config.sections import CANONICAL_SECTIONS, LEGACY_SECTIONS_25, resolve
+from src.agent.document_assembler import build_docx, build_pdf, group_sections, sort_by_sebi_toc
+from src.config.sections import CANONICAL_SECTIONS, LEGACY_SECTIONS_25, grouped, resolve
 
 TEST_DIR = "tests/results/phase_18_export"
 os.makedirs(TEST_DIR, exist_ok=True)
@@ -176,3 +176,103 @@ def test_approved_only_export_excludes_drafts():
     assert "Risk Factors" not in text
     # A filing-ready export must not carry the working-draft warning.
     assert "not been approved" not in text
+
+
+# ---------------------------------------------------------------------------
+# Cover page — geometry and boilerplate measured from a real filed prospectus
+# (Original_Docs/Precedents/drhp_physics_wallah.pdf)
+# ---------------------------------------------------------------------------
+
+def test_pdf_cover_page_has_no_unrenderable_glyphs():
+    """
+    The base-14 PDF fonts use WinAnsiEncoding, which does not include ₹ (U+20B9)
+    or ● (U+25CF) — both appeared as mojibake ("I", "[G]") without an embedded
+    Unicode font. The cover module uses "Rs." and "•" instead.
+    """
+    import fitz
+
+    path = os.path.join(TEST_DIR, "cover_glyphs.pdf")
+    build_pdf(
+        [_section("Risk Factors", "Placeholder.")],
+        path, company_name="Glyph Test Limited", include_drafts=True,
+        cover={"company_name": "Glyph Test Limited", "total_shares": 1000000,
+               "price_per_share": 50, "issue_size_lakhs": 500},
+        all_chapters=grouped(),
+    )
+    text = fitz.open(path)[0].get_text()
+    assert "Rs." in text
+    assert "500.00" in text  # issue size actually reached the page
+    for bad in ("�", "[G]", "I500", "I50"):
+        assert bad not in text, f"unrenderable-glyph artifact found: {bad!r}"
+
+
+def test_pdf_cover_page_uses_real_company_data():
+    """The cover must carry the company's actual details, not placeholders,
+    for every field that was supplied."""
+    import fitz
+
+    path = os.path.join(TEST_DIR, "cover_real_data.pdf")
+    cover = {
+        "company_name": "Rajputana Precision Steels Limited",
+        "cin": "U27100RJ2015PLC047823",
+        "registered_office": "Plot No. 42, RIICO Industrial Area, Bhiwadi, Rajasthan",
+        "promoters": ["Vikram Deshpande"],
+        "total_shares": 4000000,
+        "price_per_share": 125,
+        "issue_size_lakhs": 5000,
+    }
+    build_pdf(
+        [_section("Risk Factors", "Placeholder.")],
+        path, company_name=cover["company_name"], include_drafts=True,
+        cover=cover, all_chapters=grouped(),
+    )
+    text = fitz.open(path)[0].get_text()
+    assert "RAJPUTANA PRECISION STEELS LIMITED" in text
+    assert cover["cin"] in text
+    assert "RIICO Industrial Area" in text
+    assert "VIKRAM DESHPANDE" in text
+    assert "4,000,000" in text
+    assert "5,000.00" in text
+
+
+def test_pdf_cover_page_placeholders_missing_fields_honestly():
+    """
+    Fields the company has not supplied render as the "[•]" placeholder real
+    draft filings use — never as an invented value.
+    """
+    import fitz
+
+    path = os.path.join(TEST_DIR, "cover_missing_fields.pdf")
+    build_pdf(
+        [_section("Risk Factors", "Placeholder.")],
+        path, company_name="Sparse Data Limited", include_drafts=True,
+        cover={"company_name": "Sparse Data Limited"},  # nothing else supplied
+        all_chapters=grouped(),
+    )
+    text = fitz.open(path)[0].get_text()
+    assert "[•]" in text
+    assert "SPARSE DATA LIMITED" in text
+
+
+def test_pdf_table_of_contents_marks_undrafted_chapters():
+    """
+    The contents page must show the full canonical DRHP structure and flag
+    which chapters are not yet drafted — an early-stage export must not imply
+    the drafted sections are the whole filing.
+    """
+    import fitz
+
+    path = os.path.join(TEST_DIR, "cover_toc.pdf")
+    build_pdf(
+        [_section("Risk Factors", "Placeholder.")],
+        path, company_name="TOC Test Limited", include_drafts=True,
+        cover={}, all_chapters=grouped(),
+    )
+    toc_text = fitz.open(path)[1].get_text()
+    assert "TABLE OF CONTENTS" in toc_text
+    assert "SECTION II" in toc_text and "Risk Factors" in toc_text
+    # The drafted chapter must NOT carry the undrafted marker.
+    risk_line = next(l for l in toc_text.split("\n") if l.strip() == "Risk Factors")
+    assert "[•]" not in risk_line
+    # An undrafted chapter must carry it.
+    assert "Our Business [•]" in toc_text or "Our Business  [•]" in toc_text

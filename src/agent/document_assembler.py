@@ -10,6 +10,7 @@ mounted /api/export/full endpoint returned a plain-text stub.
 Ordering and grouping now come from src/config/sections.py, which is derived
 from the tables of contents of the 20 filings in Original_Docs/Precedents.
 """
+import logging
 import os
 import re
 import uuid
@@ -20,12 +21,20 @@ from sqlalchemy.orm import Session
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer
+
+from src.agent.drhp_cover import (
+    BODY_FONT, BOLD_FONT, MARGIN, PAGE_SIZE,
+    build_cover_flowables, build_toc_flowables,
+)
 
 from src.config.sections import canonical_name, resolve, sort_key
 from src.extraction.schema import GeneratedSection
+
+logger = logging.getLogger(__name__)
 
 # Statuses that represent reviewed, sign-off-ready content.
 APPROVED_STATUSES = ("promoter_reviewed", "intermediary_certified")
@@ -189,54 +198,104 @@ def build_docx(
 # PDF
 # ---------------------------------------------------------------------------
 
+
+def _markdown_to_reportlab(text: str) -> str:
+    """
+    Convert the markdown subset the drafting model emits into ReportLab's
+    mini-HTML, so headings and **bold** render properly instead of appearing as
+    literal asterisks and hash marks in the PDF body — build_docx already
+    handled this via _add_markdown/_add_runs; the PDF path escaped and
+    line-broke the raw text without parsing it at all.
+    """
+    escaped = _escape(text or "")
+    # Re-apply bold spans after escaping (escaping does not touch '*').
+    escaped = _BOLD.sub(r"<b>\1</b>", escaped)
+    lines = []
+    for line in escaped.split("\n"):
+        heading = _HEADING.match(line)
+        if heading:
+            lines.append(f"<b>{heading.group(2)}</b>")
+        else:
+            lines.append(line)
+    return "<br/>".join(lines)
+
+
 def build_pdf(
     sections: List[GeneratedSection],
     output_path: str,
     company_name: str = "",
     include_drafts: bool = True,
+    cover: dict = None,
+    all_chapters=None,
 ) -> None:
-    doc = SimpleDocTemplate(output_path, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
+    """
+    Build the PDF: a SEBI-format cover page and table of contents, then the
+    drafted sections.
 
-    story.append(Paragraph("DRAFT RED HERRING PROSPECTUS", styles["Title"]))
-    story.append(Paragraph("(Subject to completion and revision)", styles["Italic"]))
-    if company_name:
-        story.append(Spacer(1, 12))
-        story.append(Paragraph(f"<b>{_escape(company_name.upper())}</b>", styles["Heading2"]))
-    if include_drafts:
-        story.append(Spacer(1, 12))
-        story.append(Paragraph(
-            "<i>This export includes unapproved sections. Working draft, not a "
-            "filing-ready document.</i>", styles["Normal"]))
-    story.append(PageBreak())
+    `cover` carries the registrant details used on page 1 (see
+    document_assembler_node, which assembles it from the company record). When it
+    is absent the cover still renders, using the "[●]" convention real draft
+    filings use for values not yet fixed.
+    """
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=PAGE_SIZE,
+        leftMargin=MARGIN, rightMargin=MARGIN,
+        topMargin=MARGIN, bottomMargin=MARGIN,
+        title=f"Draft Red Herring Prospectus — {company_name}" if company_name else "Draft Red Herring Prospectus",
+        author=company_name or "",
+        subject="Draft Red Herring Prospectus",
+        # Identify the tool that produced the file. Filed prospectuses carry the
+        # provenance of whatever produced them; a generated draft should carry
+        # its own rather than borrowing another filing's.
+        creator="Nirmaan AI — SME IPO DRHP Generator",
+    )
+
+    styles = getSampleStyleSheet()
+    body = ParagraphStyle("drhp_body", parent=styles["Normal"],
+                          fontName=BODY_FONT, fontSize=9.5, leading=12, spaceAfter=4)
+    h1 = ParagraphStyle("drhp_h1", parent=styles["Heading1"],
+                        fontName=BOLD_FONT, fontSize=12, leading=15, spaceBefore=6, spaceAfter=6)
+    h2 = ParagraphStyle("drhp_h2", parent=styles["Heading2"],
+                        fontName=BOLD_FONT, fontSize=10.5, leading=13, spaceBefore=4, spaceAfter=4)
+
+    cover = cover or {}
+    story = build_cover_flowables(
+        company_name=company_name or cover.get("company_name", ""),
+        cin=cover.get("cin", ""),
+        registered_office=cover.get("registered_office", ""),
+        contact_person=cover.get("contact_person", ""),
+        contact_email=cover.get("contact_email", ""),
+        contact_phone=cover.get("contact_phone", ""),
+        website=cover.get("website", ""),
+        promoters=cover.get("promoters", []),
+        total_shares=cover.get("total_shares"),
+        price_per_share=cover.get("price_per_share"),
+        issue_size_lakhs=cover.get("issue_size_lakhs"),
+    )
 
     groups = group_sections(sections)
+    drafted = [canonical_name(sec.section_name) for sec in sections]
 
-    story.append(Paragraph("TABLE OF CONTENTS", styles["Heading1"]))
-    for group, group_title, group_sections_list in groups:
-        story.append(Paragraph(f"<b>{group} – {_escape(group_title.upper())}</b>", styles["Normal"]))
-        for section in group_sections_list:
-            story.append(Paragraph(f"&nbsp;&nbsp;&nbsp;{_escape(canonical_name(section.section_name))}",
-                                   styles["Normal"]))
-        story.append(Spacer(1, 6))
-    story.append(PageBreak())
+    # The contents page lists the full DRHP structure when the canonical chapter
+    # list is supplied, so an early-stage document shows what is still to come
+    # rather than implying the drafted sections are the whole filing.
+    story += build_toc_flowables(all_chapters or groups, drafted_names=drafted)
 
     for group, group_title, group_sections_list in groups:
-        story.append(Paragraph(f"{group} – {_escape(group_title.upper())}", styles["Heading1"]))
+        story.append(Paragraph(f"{group} – {_escape(group_title.upper())}", h1))
         for section in group_sections_list:
-            story.append(Paragraph(_escape(canonical_name(section.section_name)), styles["Heading2"]))
+            story.append(Paragraph(_escape(canonical_name(section.section_name)), h2))
             if section.status not in APPROVED_STATUSES:
                 story.append(Paragraph(
-                    f"<i>[Unapproved draft — status: {_escape(section.status)}]</i>",
-                    styles["Normal"]))
-            body = _escape(section.draft_text or "").replace("\n", "<br/>")
-            story.append(Paragraph(body, styles["Normal"]))
+                    f"<i>[Unapproved draft — status: {_escape(section.status)}]</i>", body))
+            text = _markdown_to_reportlab(section.draft_text or "")
+            story.append(Paragraph(text, body))
             if section.supporting_clause_ids:
                 story.append(Spacer(1, 6))
                 story.append(Paragraph(
                     "<b>Regulatory citations:</b> " + _escape(", ".join(section.supporting_clause_ids)),
-                    styles["Normal"]))
+                    body))
             story.append(PageBreak())
 
     doc.build(story)
@@ -280,12 +339,49 @@ def document_assembler_node(
                  "No drafted sections found for this company."
         return {"error": detail, "sections_included": 0}
 
+    # Assemble the cover-page facts from the company's own record. Anything the
+    # company has not supplied is left to render as "[●]", which is the
+    # convention filed draft prospectuses use for values not yet fixed.
     company = None
+    cover = {}
     try:
-        from src.extraction.schema import Company
+        from src.extraction.schema import Company, DirectorKMP, OfferDetails
         company = db.query(Company).filter(Company.id == comp_uuid).first()
+        if company:
+            directors = db.query(DirectorKMP).filter(
+                DirectorKMP.company_id == comp_uuid).all()
+            offer = db.query(OfferDetails).filter(
+                OfferDetails.company_id == comp_uuid).first()
+
+            # Promoters are the executive directors on record; a dedicated
+            # promoter flag does not exist on the schema yet.
+            promoters = [d.name for d in directors
+                         if d.name and "independent" not in (d.designation or "").lower()]
+            compliance = next(
+                (d for d in directors
+                 if "secretary" in (d.designation or "").lower()
+                 or "compliance" in (d.designation or "").lower()),
+                None)
+
+            cover = {
+                "company_name": company.name,
+                "cin": company.cin,
+                "registered_office": company.registered_office or "",
+                "contact_person": (
+                    f"{compliance.name}<br/>{compliance.designation}" if compliance
+                    else (f"{directors[0].name}<br/>{directors[0].designation or ''}"
+                          if directors else "")
+                ),
+                "contact_email": "",
+                "contact_phone": "",
+                "website": "",
+                "promoters": promoters,
+                "total_shares": float(offer.total_shares_offered) if offer and offer.total_shares_offered else None,
+                "price_per_share": float(offer.price_per_share) if offer and offer.price_per_share else None,
+                "issue_size_lakhs": float(offer.total_issue_size_lakhs) if offer and offer.total_issue_size_lakhs else None,
+            }
     except Exception:
-        pass
+        logger.exception("Could not assemble cover-page details; rendering with placeholders")
     company_name = company.name if company else ""
 
     export_dir = os.path.join(
@@ -307,8 +403,10 @@ def document_assembler_node(
         result["docx_path"] = docx_path
 
     if "pdf" in formats:
+        from src.config.sections import grouped as canonical_grouped
         pdf_path = os.path.join(export_dir, f"DRHP_{company_id}.pdf")
-        build_pdf(sections, pdf_path, company_name, include_drafts)
+        build_pdf(sections, pdf_path, company_name, include_drafts,
+                  cover=cover, all_chapters=canonical_grouped())
         result["pdf_path"] = pdf_path
 
     return result

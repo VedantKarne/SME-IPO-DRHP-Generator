@@ -61,3 +61,10 @@ master_implementation_plan.md
 Data_Flow_Diagram.md
 check_yields.py
 desktop.ini
+
+# ── Generated exports ──────────────────────────────────────────────────
+# Assembled DRHP output from document_assembler_node — regenerated per
+# company on every export call, not source. A pre-existing tracked file may
+# still show as modified here; that is a separate cleanup, not this rule.
+exports/*.docx
+exports/*.pdf
