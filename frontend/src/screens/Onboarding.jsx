@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { authedFetch, decodeToken, getToken } from '../utils/auth';
 import { FinancialsForm, DirectorsForm, OfferForm } from './onboardingForms.jsx';
 import { saveCompanyProfile, PROFILE_QUESTIONS } from '../utils/companyProfile.js';
-import ProfileQuestionInput, { SampleDataChip } from '../components/ProfileQuestionInput.jsx';
+import ProfileQuestionInput from '../components/ProfileQuestionInput.jsx';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -28,7 +28,7 @@ const INTERVIEW_SCRIPT = [
   { ai: "That's everything I need to start. Setting up your workspace…" },
 ];
 
-export default function Onboarding({ onComplete, onUseSampleData }) {
+export default function Onboarding({ onComplete }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
@@ -266,7 +266,6 @@ export default function Onboarding({ onComplete, onUseSampleData }) {
                     question={PROFILE_QUESTIONS[msg.questionIdx]}
                     onSubmit={(value) => handleProfileAnswer(msg.questionIdx, msg.scriptIndex, value)}
                     onSkip={() => handleProfileSkip(msg.questionIdx, msg.scriptIndex)}
-                    extraAction={msg.questionIdx === 0 && onUseSampleData ? <SampleDataChip onClick={onUseSampleData} /> : undefined}
                   />
                 )}
 

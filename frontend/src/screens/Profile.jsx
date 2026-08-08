@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Building2, PencilLine, CheckCircle2 } from 'lucide-react';
 import { getToken, decodeToken } from '../utils/auth';
-import { isDemoMode } from '../utils/demoMode';
-import { DEMO_PROFILE_ANSWERS } from '../data/demoSeed.js';
 import { PROFILE_SECTIONS, PROFILE_QUESTIONS, getCompanyProfile, saveCompanyProfile, computeProfileCompletion } from '../utils/companyProfile.js';
 import ProfileChatModal from '../components/ProfileChatModal.jsx';
 
@@ -23,9 +21,8 @@ function formatAnswer(question, value) {
 export default function Profile({ companyName }) {
   const token = getToken();
   const companyId = token ? decodeToken(token)?.company_id : null;
-  const demo = isDemoMode();
 
-  const [answers, setAnswers] = useState(() => (demo ? DEMO_PROFILE_ANSWERS : getCompanyProfile(companyId)));
+  const [answers, setAnswers] = useState(() => getCompanyProfile(companyId));
   const [editing, setEditing] = useState(false);
 
   const { percent, answeredCount, totalCount } = computeProfileCompletion(answers);

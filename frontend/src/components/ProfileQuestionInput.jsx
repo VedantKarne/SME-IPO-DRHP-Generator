@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowUp, Sparkles } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 
 /**
  * ProfileQuestionInput — the answer control for a single question from
@@ -12,7 +12,7 @@ import { ArrowUp, Sparkles } from 'lucide-react';
  * - select     → one tap on an option submits immediately
  * - multiselect→ toggle chips (+ exclusive "None yet") + a Continue button
  */
-export default function ProfileQuestionInput({ question, initialValue, onSubmit, onSkip, extraAction }) {
+export default function ProfileQuestionInput({ question, initialValue, onSubmit, onSkip }) {
   const { type, options, noneOption } = question;
   const [text, setText] = useState(type === 'text' || type === 'date' ? (initialValue || '') : '');
   const [selected, setSelected] = useState(() => (type === 'multiselect' && Array.isArray(initialValue) ? initialValue : []));
@@ -39,7 +39,6 @@ export default function ProfileQuestionInput({ question, initialValue, onSubmit,
           </button>
         </form>
         <div className="chat-quick-actions">
-          {extraAction}
           <button type="button" className="chat-skip-link" onClick={onSkip}>
             {question.optional ? 'Skip' : 'Skip for now'}
           </button>
@@ -64,7 +63,6 @@ export default function ProfileQuestionInput({ question, initialValue, onSubmit,
           ))}
         </div>
         <div className="chat-quick-actions">
-          {extraAction}
           <button type="button" className="chat-skip-link" onClick={onSkip}>Skip for now</button>
         </div>
       </div>
@@ -105,17 +103,8 @@ export default function ProfileQuestionInput({ question, initialValue, onSubmit,
         <button type="button" className="btn btn-primary btn-sm" onClick={confirm} disabled={!selected.length}>
           Continue
         </button>
-        {extraAction}
         <button type="button" className="chat-skip-link" onClick={onSkip}>Skip for now</button>
       </div>
     </div>
-  );
-}
-
-export function SampleDataChip({ onClick }) {
-  return (
-    <button type="button" className="btn btn-secondary btn-sm" onClick={onClick}>
-      <Sparkles size={13} strokeWidth={2} /> Continue with sample data
-    </button>
   );
 }

@@ -15,8 +15,6 @@ import CanvasRoot from './canvas/CanvasRoot';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
-import { isDemoMode, startDemoMode } from './utils/demoMode';
-import { DEMO_SECTIONS, DEMO_ELIGIBILITY, DEMO_READINESS, DEMO_CONSISTENCY } from './data/demoSeed.js';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -55,19 +53,6 @@ export default function App() {
       setCompanyId(company_id);
       setCompanyName(company_name);
 
-      // Demo mode has no real backend company behind it — see utils/demoMode.js
-      // and data/demoSeed.js. This also covers a page refresh while in demo
-      // mode: the fake token survives in localStorage, so state repopulates
-      // from the same seed instead of hitting /api/session/restore with a
-      // company_id the backend has never heard of.
-      if (isDemoMode()) {
-        setSections(DEMO_SECTIONS);
-        setEligibility(DEMO_ELIGIBILITY);
-        setReadiness(DEMO_READINESS);
-        setConsistency(DEMO_CONSISTENCY);
-        return;
-      }
-
       const r = await authedFetch(`${API}/api/session/restore`);
       if (r.ok) {
         const data = await r.json();
@@ -92,13 +77,6 @@ export default function App() {
     navigate('/documents');
   };
 
-  /** "Continue with sample data" — see the profile chat step in Onboarding.jsx. */
-  const handleUseSampleData = () => {
-    startDemoMode();
-    bootstrap();
-    navigate('/dashboard');
-  };
-
   const approvedCount = sections.filter(s => s.locked).length;
 
   return (
@@ -109,10 +87,7 @@ export default function App() {
         path="/onboarding"
         element={
           <ProtectedRoute>
-            <Onboarding
-              onComplete={handleOnboardingComplete}
-              onUseSampleData={isDemoMode() ? handleUseSampleData : undefined}
-            />
+            <Onboarding onComplete={handleOnboardingComplete} />
           </ProtectedRoute>
         }
       />
