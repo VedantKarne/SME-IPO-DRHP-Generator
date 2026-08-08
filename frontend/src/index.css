@@ -358,8 +358,17 @@ body {
   transition: width 0.8s ease;
 }
 
-.sidebar-status {
+.sidebar-footer {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logout {
+  margin-top: 8px;
+}
+
+.sidebar-status {
   display: flex;
   align-items: center;
   gap: 8px;

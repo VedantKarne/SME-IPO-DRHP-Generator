@@ -20,9 +20,16 @@ function formatAnswer(question, value) {
 
 export default function Profile({ companyName }) {
   const token = getToken();
-  const companyId = token ? decodeToken(token)?.company_id : null;
+  const decoded = token ? decodeToken(token) : null;
+  const companyId = decoded?.company_id ?? null;
+  // companyName is also passed down as a prop from App's async bootstrap
+  // effect, but that arrives a render late — reading it straight from the
+  // token here is synchronous, so the very first render (this useState
+  // initializer only ever runs once) already has the right value to match
+  // against the demo account in getCompanyProfile.
+  const tokenCompanyName = decoded?.company_name ?? null;
 
-  const [answers, setAnswers] = useState(() => getCompanyProfile(companyId));
+  const [answers, setAnswers] = useState(() => getCompanyProfile(companyId, tokenCompanyName));
   const [editing, setEditing] = useState(false);
 
   const { percent, answeredCount, totalCount } = computeProfileCompletion(answers);

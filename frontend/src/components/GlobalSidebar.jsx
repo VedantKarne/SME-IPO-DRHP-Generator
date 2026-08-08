@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileEdit, Folder, CheckCircle2, UserCheck, BookOpen } from 'lucide-react';
+import { LayoutDashboard, FileEdit, Folder, CheckCircle2, UserCheck, BookOpen, User, LogOut } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 import useCanvasStore from '../canvas/services/canvasStore.js';
@@ -12,6 +12,7 @@ const NAV = [
   { path: '/eligibility',     icon: CheckCircle2,    label: 'Eligibility Engine' },
   { path: '/review',          icon: UserCheck,       label: 'Banker Review' },
   { path: '/knowledge-base',  icon: BookOpen,        label: 'Knowledge Base' },
+  { path: '/profile',         icon: User,            label: 'Profile' },
 ];
 
 export default function GlobalSidebar({ companyName, approvedCount }) {
@@ -60,23 +61,7 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         </div>
 
         {!railMode && companyName && (
-          <div className="sidebar-company">
-            <Link
-              to="/profile"
-              title="View company profile"
-              style={{ color: 'inherit', textDecoration: 'none' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--sidebar-signal)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'inherit'; }}
-            >
-              {companyName}
-            </Link>
-            <button
-              onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
-              style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: 'var(--sidebar-ink-soft)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Log out
-            </button>
-          </div>
+          <div className="sidebar-company">{companyName}</div>
         )}
 
         <nav className="sidebar-nav">
@@ -99,6 +84,7 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
           })}
         </nav>
 
+        <div className="sidebar-footer">
         {!railMode && (
         <>
         <hr className="sidebar-divider" />
@@ -146,6 +132,18 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         </div>
         </>
         )}
+
+          <button
+            className="nav-item sidebar-logout"
+            title={railMode ? 'Log out' : undefined}
+            onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
+          >
+            <span className="nav-icon">
+              <LogOut size={18} strokeWidth={1.5} color="var(--sidebar-ink-soft)" />
+            </span>
+            {!railMode && 'Log out'}
+          </button>
+        </div>
       </aside>
     </>
   );

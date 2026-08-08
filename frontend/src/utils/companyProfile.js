@@ -153,18 +153,51 @@ export const PROFILE_QUESTIONS = [
 const REQUIRED_KEYS = PROFILE_QUESTIONS.filter((q) => q.required).map((q) => q.key);
 
 // ---------------------------------------------------------------------------
+// Demo account defaults
+// ---------------------------------------------------------------------------
+// The demo login (demo@nirmaan.ai) is backed by real seeded Company /
+// FinancialStatement / OfferDetails / DirectorKMP records in the backend
+// (src/extraction/db_session.py: seed_demo_user()), not by this localStorage
+// survey — so a fresh demo login has never "answered" these questions and
+// shows 0% even though the answers to most of them are already known.
+// Prefill from that real seeded data instead of leaving it blank. Fields
+// with no real backend equivalent (incorporation_date, employee_count,
+// ipo_timeline) are left unanswered rather than guessed.
+const DEMO_COMPANY_NAME = 'Nirmaan Technologies Ltd';
+
+const DEMO_PROFILE_DEFAULTS = {
+  legal_name: 'Nirmaan Technologies Ltd',
+  org_type: 'Private Limited Company',
+  industry: 'Manufacturing',
+  cin: 'U72200MH2021PTC123456',
+  business_model: 'Manufacturing',
+  annual_revenue: '₹10–25 Crore',
+  purpose: 'Preparing for an SME IPO',
+  intermediaries: ['None yet'],
+};
+
+// ---------------------------------------------------------------------------
 // Persistence
 // ---------------------------------------------------------------------------
 
-/** getCompanyProfile(companyId) → saved answers object, or {} if none saved. */
-export function getCompanyProfile(companyId) {
+/**
+ * getCompanyProfile(companyId, companyName?) → saved answers object.
+ * For the seeded demo account, unanswered fields fall back to
+ * DEMO_PROFILE_DEFAULTS; anything already saved (a real edit) always wins.
+ */
+export function getCompanyProfile(companyId, companyName) {
   if (!companyId) return {};
+  let saved = {};
   try {
     const raw = localStorage.getItem(STORAGE_PREFIX + companyId);
-    return raw ? JSON.parse(raw) : {};
+    saved = raw ? JSON.parse(raw) : {};
   } catch {
-    return {};
+    saved = {};
   }
+  if (companyName === DEMO_COMPANY_NAME) {
+    return { ...DEMO_PROFILE_DEFAULTS, ...saved };
+  }
+  return saved;
 }
 
 /** saveCompanyProfile(companyId, answers) — merges over any existing saved answers. */
