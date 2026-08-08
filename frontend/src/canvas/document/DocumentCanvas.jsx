@@ -150,20 +150,31 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
     return () => { if (editorRefs) delete editorRefs.current[section.name]; };
   }, [editor, section.name, editorRefs]);
 
-  // Load initial content
+  // Load initial content. `section` here comes from CanvasRoot's async bootstrap
+  // fetch — on first paint it's usually still an empty stub, and this effect
+  // used to depend only on [editor] (created once, on mount), so content that
+  // arrived a moment later from the real API response never made it into the
+  // editor: the sidebar/store had it, the visible page didn't. Re-running when
+  // draft_text/markdown show up fixes that.
+  //
+  // section.content is checked but NOT a trigger: it's the live echo of the
+  // user's own typing (onUpdate below), so watching it would re-run this on
+  // every keystroke — including the very first one in an empty section,
+  // which would immediately echo the just-typed content back through
+  // setContent and reset the cursor.
+  const loadedRealContentRef = useRef(false);
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || loadedRealContentRef.current) return;
+    const hasRealContent = section.content || section.draft_text || section.markdown;
+    if (!hasRealContent) return; // nothing to load yet — keep the editor's default empty state
     let content;
     if (section.content)          content = section.content;
     else if (section.draft_text)  content = markdownToTipTap(section.draft_text);
-    else if (section.markdown)    content = markdownToTipTap(section.markdown);
-    // No content yet: leave the editor genuinely empty. The empty state below
-    // invites the user to generate a draft. Pre-filling it with example prose
-    // made an undrafted section look authored.
-    else                          content = { type: 'doc', content: [{ type: 'paragraph' }] };
+    else                           content = markdownToTipTap(section.markdown);
     editor.commands.setContent(content, false);
     lastSaved.current = JSON.stringify(content);
-  }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadedRealContentRef.current = true;
+  }, [editor, section.draft_text, section.markdown]);
 
   useEffect(() => () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); }, []);
 
