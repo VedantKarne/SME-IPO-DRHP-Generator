@@ -10,13 +10,13 @@ from src.api.auth_router import get_current_user, require_company_access
 router = APIRouter(prefix="/api/sections", tags=["Locking & Approval"])
 
 class LockResponse(BaseModel):
-    section_id: str
+    section_id: uuid.UUID
     status: str
     is_locked: bool
 
 @router.post("/{section_id}/approve", response_model=LockResponse)
 def approve_and_lock_section(
-    section_id: str,
+    section_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -27,16 +27,11 @@ def approve_and_lock_section(
     This is the regulatory sign-off action. It was previously unauthenticated:
     any anonymous caller could certify any section of any company.
     """
-    try:
-        sec_uuid = uuid.UUID(section_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid section_id UUID format")
-
-    section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+    section = db.query(GeneratedSection).filter(GeneratedSection.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")
 
-    require_company_access(current_user, section.company_id)
+    require_company_access(current_user, str(section.company_id))
 
     section.is_locked = True
     section.status = 'intermediary_certified'
@@ -80,14 +75,14 @@ class ReviewNoteRequest(BaseModel):
 
 
 class ReviewNoteResponse(BaseModel):
-    section_id: str
+    section_id: uuid.UUID
     status: str
     note_count: int
 
 
 @router.post("/{section_id}/review", response_model=ReviewNoteResponse)
 def add_review_note(
-    section_id: str,
+    section_id: uuid.UUID,
     req: ReviewNoteRequest,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -99,16 +94,11 @@ def add_review_note(
     if not note:
         raise HTTPException(status_code=400, detail="A note is required.")
 
-    try:
-        sec_uuid = uuid.UUID(section_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid section_id UUID format")
-
-    section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+    section = db.query(GeneratedSection).filter(GeneratedSection.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")
 
-    require_company_access(current_user, section.company_id)
+    require_company_access(current_user, str(section.company_id))
 
     if section.is_locked:
         raise HTTPException(
@@ -144,23 +134,18 @@ def add_review_note(
 
 @router.get("/{section_id}/review")
 def list_review_notes(
-    section_id: str,
+    section_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
     """Reviewer notes for a section, oldest first."""
     from src.extraction.schema import ChatMessage
 
-    try:
-        sec_uuid = uuid.UUID(section_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid section_id UUID format")
-
-    section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+    section = db.query(GeneratedSection).filter(GeneratedSection.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")
 
-    require_company_access(current_user, section.company_id)
+    require_company_access(current_user, str(section.company_id))
 
     notes = db.query(ChatMessage).filter(
         ChatMessage.section_id == section.id,

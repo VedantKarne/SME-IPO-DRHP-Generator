@@ -6,8 +6,10 @@ from src.agent.groq_client import get_groq_client, LLMUnavailable
 
 router = APIRouter(prefix="/api/copilot", tags=["Copilot"])
 
+import uuid
+
 class CopilotRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     current_section: str
     question: str
 
@@ -44,7 +46,7 @@ def ask_copilot(
     General purpose IPO Copilot — answers regulatory questions,
     explains clauses, and helps improve DRHP sections.
     """
-    require_company_access(current_user, request.company_id)
+    require_company_access(current_user, str(request.company_id))
 
 
     # 1. Retrieve regulatory context to ground citations

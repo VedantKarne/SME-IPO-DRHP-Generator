@@ -431,7 +431,7 @@ def run_all_checks_by_id(company_id: str, db: Session) -> List[Dict]:
     from src.extraction.schema import Company
 
     try:
-        comp_uuid = _uuid.UUID(company_id)
+        comp_uuid = company_id if isinstance(company_id, _uuid.UUID) else _uuid.UUID(str(company_id))
         company = db.query(Company).filter(Company.id == comp_uuid).first()
         if not company:
             return []

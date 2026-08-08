@@ -5,15 +5,17 @@ from src.eligibility.checker import EligibilityEngine, EligibilityReport
 
 router = APIRouter(prefix="/api/eligibility", tags=["Eligibility"])
 
+import uuid
+
 @router.get("/{company_id}", response_model=EligibilityReport)
-async def check_eligibility(company_id: str, db: Session = Depends(get_db)):
+async def check_eligibility(company_id: uuid.UUID, db: Session = Depends(get_db)):
     """
     Evaluates SME IPO eligibility criteria for a given company.
     Returns a report detailing whether the company passed or failed specific SEBI ICDR rules.
     """
     engine = EligibilityEngine(db_session=db)
     try:
-        report = engine.check_all(company_id)
+        report = engine.check_all(str(company_id))
         return report
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

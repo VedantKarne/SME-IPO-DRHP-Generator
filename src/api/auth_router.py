@@ -63,10 +63,16 @@ def require_company_access(current_user: dict, company_id) -> str:
     Raises 403 on mismatch. Mirrors the check already used in
     document_upload_router.
     """
-    company_id_str = str(company_id)
-    if str(current_user.get("company_id")) != company_id_str:
+    import uuid
+    try:
+        req_comp_uuid = uuid.UUID(str(company_id))
+        user_comp_uuid = uuid.UUID(str(current_user.get("company_id")))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=403, detail="Invalid company ID format")
+
+    if req_comp_uuid != user_comp_uuid:
         raise HTTPException(status_code=403, detail="Not authorized for this company")
-    return company_id_str
+    return str(req_comp_uuid)
 
 
 def get_db():

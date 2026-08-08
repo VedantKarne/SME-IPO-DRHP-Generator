@@ -141,16 +141,15 @@ SECTIONS_25 = [
 ]
 
 @app.get("/api/sections/{company_id}")
-def get_company_sections(company_id: str, current_user: dict = Depends(get_current_user)):
+def get_company_sections(company_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        sec_uuid = uuid.UUID(company_id)
-        sections = db.query(GeneratedSection).filter(GeneratedSection.company_id == sec_uuid).all()
+        sections = db.query(GeneratedSection).filter(GeneratedSection.company_id == company_id).all()
         section_map = {s.section_name: s for s in sections}
         
         from src.extraction.schema import UploadedDocument
         uploaded_docs = db.query(UploadedDocument).filter(
-            UploadedDocument.company_id == sec_uuid,
+            UploadedDocument.company_id == company_id,
             UploadedDocument.status == 'done'
         ).all()
         
@@ -254,7 +253,7 @@ def get_company_sections(company_id: str, current_user: dict = Depends(get_curre
 # THE KEY BRIDGE: calls the real LangGraph agent
 # ─────────────────────────────────────────────
 class AgentRunRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     section_name: str
 
 @app.post("/api/agent/run")
@@ -264,154 +263,155 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
     Runs: RAG retrieval → consistency check → Groq drafting → gap validation → HITL interrupt.
     Saves the result (including thread_id) to the generated_section table.
     """
+    # 1. Look up company synchronously so we can 404 fast
     db = SessionLocal()
     try:
-        comp_uuid = uuid.UUID(request.company_id)
-        company = db.query(Company).filter(Company.id == comp_uuid).first()
+        company = db.query(Company).filter(Company.id == request.company_id).first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
-
-        from src.agent.orchestrator import graph, AgentState
-        
-        # Bug 1 Fix: Generate thread_id here and persist it to the DB so the
-        # HITL resume endpoint can retrieve and use it.
-        thread_id = str(uuid.uuid4())
-        config = {"configurable": {"thread_id": thread_id}}
-
-        initial_state: AgentState = {
-            "company_name": company.name,
-            "company_id": str(company.id),       # ← Pass company_id for client_documents retrieval
-            "current_section": request.section_name,
-            "regulatory_context": "",
-            "precedent_context": "",
-            "company_facts": "",
-            "consistency_errors": [],
-            "draft_text": "",
-            "human_feedback": "",
-            "status": "draft",
-            "langgraph_thread_id": thread_id,
-            "completeness_score": 0.0,
-            "revisions": 0,
-            "gaps": []
-        }
-
-
-        import time as _time
-        _run_started = _time.time()
-        try:
-            graph.invoke(initial_state, config=config)
-        except Exception as agent_exc:
-            # LangGraph raises GraphInterrupt for HITL pauses. We fall through to read state.
-            # Real errors (like LLM rate limits) must bubble up as 500s so the UI can show them.
-            if type(agent_exc).__name__ in ("GraphInterrupt", "NodeInterrupt"):
-                logger.info(f"graph.invoke interrupted (HITL): {agent_exc}")
-            else:
-                logger.error(f"graph.invoke failed: {agent_exc}", exc_info=True)
-                raise HTTPException(status_code=500, detail=f"Generation failed: {agent_exc}")
-
-        # Always read the accumulated state from the MemorySaver checkpointer.
-        # This is the only reliable source of truth for both:
-        #   (a) Normal completion  — state has final values
-        #   (b) HITL interrupt     — graph.invoke() returns {}, state is in checkpointer
-        state_snapshot = graph.get_state(config)
-        result = state_snapshot.values if state_snapshot and state_snapshot.values else {}
-
-        draft_text = result.get("draft_text", "")
-        completeness_score = result.get("completeness_score", 0.0)
-        gaps = result.get("gaps", [])
-
-        # ── Post-process: strip inline ⚠️ GAP markers from the draft text ─────────
-        # The gap_detector extracts them into `gaps` (flagged_gaps). We must also
-        # clean the draft so readers see only the finished prose, not placeholder tokens.
-        import re
-
-        # Remove full lines that are *only* a GAP marker (e.g. a standalone bullet line)
-        draft_text = re.sub(r"^[ \t]*(?:⚠️\s*)?GAP:\s*[^\n]+$", "", draft_text, flags=re.MULTILINE | re.IGNORECASE)
-
-        # Remove inline GAP markers embedded mid-sentence
-        draft_text = re.sub(r"(?:⚠️\s*)?GAP:\s*\[?[^,.;\n⚠️\]]+\]?", "[information pending]", draft_text, flags=re.IGNORECASE)
-
-        # Clean up leftover ⚠️ emoji if any remain orphaned
-        draft_text = re.sub(r"⚠️\s*", "", draft_text)
-
-        # Collapse multiple blank lines caused by removed markers
-        draft_text = re.sub(r"\n{3,}", "\n\n", draft_text).strip()
-        # ─────────────────────────────────────────────────────────────────────────
-
-        existing = db.query(GeneratedSection).filter(
-            GeneratedSection.company_id == comp_uuid,
-            GeneratedSection.section_name == request.section_name
-        ).first()
-
-        if existing:
-            existing.draft_text = draft_text
-            existing.completeness_score = completeness_score
-            existing.flagged_gaps = gaps
-            existing.status = "draft"
-            existing.is_locked = False
-            existing.langgraph_thread_id = thread_id  # Bug 1 Fix: always refresh thread_id
-            db.commit()
-            db.refresh(existing)
-            section_id = str(existing.id)
-        else:
-            new_section = GeneratedSection(
-                company_id=comp_uuid,
-                section_name=request.section_name,
-                draft_text=draft_text,
-                completeness_score=completeness_score,
-                flagged_gaps=gaps,
-                status="draft",
-                is_locked=False,
-                langgraph_thread_id=thread_id  # Bug 1 Fix: persist thread_id
-            )
-            db.add(new_section)
-            db.commit()
-            db.refresh(new_section)
-            section_id = str(new_section.id)
-
-        # Audit trail. The audit_log table has always defined query,
-        # retrieved_clause_ids, confidence and latency_ms, but nothing populated
-        # them — document upload was the single write site in the codebase, so
-        # nothing recorded how a draft was produced or what it was grounded in.
-        try:
-            reg_ctx = result.get("regulatory_context", "") or ""
-            prec_ctx = result.get("precedent_context", "") or ""
-            # Citation headers as emitted by rag_search, e.g.
-            # "[icdr_....pdf | Chapter IX | Reg 238 | Lock-in ...]"
-            cited = re.findall(r"\[([^\]\n]{5,200})\]", reg_ctx + "\n" + prec_ctx)
-            db.add(AuditLog(
-                event_type="section_generated",
-                company_id=comp_uuid,
-                section_name=request.section_name,
-                query=f"generate:{request.section_name}",
-                retrieved_clause_ids=cited[:25],
-                confidence=float(completeness_score or 0.0),
-                model_used="llama-3.3-70b-versatile",
-                latency_ms=int((_time.time() - _run_started) * 1000),
-            ))
-            db.commit()
-        except Exception as audit_exc:
-            # Never fail a generation because the audit write failed, but do not
-            # hide it either.
-            logger.warning(f"Audit log write failed for {request.section_name}: {audit_exc}")
-
-        return {
-            "status": "success",
-            "section_id": section_id,
-            "section_name": request.section_name,
-            "completeness_score": completeness_score,
-            "gap_count": len(gaps),
-            "langgraph_thread_id": thread_id,  # Bug 1 Fix: expose to frontend
-            "draft_text": draft_text,
-            "draft_preview": draft_text[:300] + "..." if len(draft_text) > 300 else draft_text
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Agent run failed: {str(e)}")
     finally:
         db.close()
+
+    from fastapi.responses import StreamingResponse
+    import queue
+    import threading
+    import json
+    import time as _time
+    from src.agent.orchestrator import graph, AgentState
+
+    # Bug 1 Fix: Generate thread_id here and persist it to the DB so the
+    # HITL resume endpoint can retrieve and use it.
+    thread_id = str(uuid.uuid4())
+    config = {"configurable": {"thread_id": thread_id}}
+
+    stream_q = queue.Queue()
+
+    initial_state: AgentState = {
+        "company_name": company.name,
+        "company_id": str(company.id),       # ← Pass company_id for client_documents retrieval
+        "current_section": request.section_name,
+        "regulatory_context": "",
+        "precedent_context": "",
+        "company_facts": "",
+        "consistency_errors": [],
+        "draft_text": "",
+        "human_feedback": "",
+        "status": "draft",
+        "langgraph_thread_id": thread_id,
+        "stream_queue": stream_q,
+        "completeness_score": 0.0,
+        "revisions": 0,
+        "gaps": []
+    }
+
+    _run_started = _time.time()
+
+    def run_graph_thread():
+        try:
+            graph.invoke(initial_state, config=config)
+            stream_q.put({"type": "graph_finished"})
+        except Exception as agent_exc:
+            if type(agent_exc).__name__ in ("GraphInterrupt", "NodeInterrupt"):
+                logger.info(f"graph.invoke interrupted (HITL): {agent_exc}")
+                stream_q.put({"type": "graph_finished"})
+            else:
+                logger.error(f"graph.invoke failed: {agent_exc}", exc_info=True)
+                stream_q.put({"type": "error", "content": str(agent_exc)})
+
+    threading.Thread(target=run_graph_thread).start()
+
+    async def event_stream():
+        import asyncio
+        db_session = SessionLocal()
+        try:
+            while True:
+                msg = await asyncio.to_thread(stream_q.get)
+                if msg["type"] == "token":
+                    yield f"data: {json.dumps({'type': 'token', 'content': msg['content']})}\n\n"
+                elif msg["type"] == "error":
+                    yield f"data: {json.dumps({'type': 'error', 'content': msg['content']})}\n\n"
+                    break
+                elif msg["type"] == "graph_finished":
+                    # Graph is finished, save state and emit final
+                    state_snapshot = graph.get_state(config)
+                    result = state_snapshot.values if state_snapshot and state_snapshot.values else {}
+                    
+                    draft_text = result.get("draft_text", "")
+                    completeness_score = result.get("completeness_score", 0.0)
+                    gaps = result.get("gaps", [])
+
+                    import re
+                    # Clean up draft text
+                    draft_text = re.sub(r"^[ \t]*(?:⚠️\s*)?GAP:\s*[^\n]+$", "", draft_text, flags=re.MULTILINE | re.IGNORECASE)
+                    draft_text = re.sub(r"(?:⚠️\s*)?GAP:\s*\[?[^,.;\n⚠️\]]+\]?", "[information pending]", draft_text, flags=re.IGNORECASE)
+                    draft_text = re.sub(r"⚠️\s*", "", draft_text)
+                    draft_text = re.sub(r"\n{3,}", "\n\n", draft_text).strip()
+
+                    existing = db_session.query(GeneratedSection).filter(
+                        GeneratedSection.company_id == request.company_id,
+                        GeneratedSection.section_name == request.section_name
+                    ).first()
+
+                    if existing:
+                        existing.draft_text = draft_text
+                        existing.completeness_score = completeness_score
+                        existing.flagged_gaps = gaps
+                        existing.status = "draft"
+                        existing.is_locked = False
+                        existing.langgraph_thread_id = thread_id
+                        db_session.commit()
+                        db_session.refresh(existing)
+                        section_id = str(existing.id)
+                    else:
+                        new_section = GeneratedSection(
+                            company_id=request.company_id,
+                            section_name=request.section_name,
+                            draft_text=draft_text,
+                            completeness_score=completeness_score,
+                            flagged_gaps=gaps,
+                            status="draft",
+                            is_locked=False,
+                            langgraph_thread_id=thread_id
+                        )
+                        db_session.add(new_section)
+                        db_session.commit()
+                        db_session.refresh(new_section)
+                        section_id = str(new_section.id)
+
+                    try:
+                        reg_ctx = result.get("regulatory_context", "") or ""
+                        prec_ctx = result.get("precedent_context", "") or ""
+                        cited = re.findall(r"\[([^\]\n]{5,200})\]", reg_ctx + "\n" + prec_ctx)
+                        db_session.add(AuditLog(
+                            event_type="section_generated",
+                            company_id=request.company_id,
+                            section_name=request.section_name,
+                            query=f"generate:{request.section_name}",
+                            retrieved_clause_ids=cited[:25],
+                            confidence=float(completeness_score or 0.0),
+                            model_used="llama-3.1-8b-instant",
+                            latency_ms=int((_time.time() - _run_started) * 1000),
+                        ))
+                        db_session.commit()
+                    except Exception as audit_exc:
+                        logger.warning(f"Audit log write failed for {request.section_name}: {audit_exc}")
+
+                    final_payload = {
+                        "status": "success",
+                        "section_id": section_id,
+                        "section_name": request.section_name,
+                        "completeness_score": completeness_score,
+                        "gap_count": len(gaps),
+                        "langgraph_thread_id": thread_id,
+                        "draft_text": draft_text,
+                        "draft_preview": draft_text[:300] + "..." if len(draft_text) > 300 else draft_text
+                    }
+                    yield f"data: {json.dumps({'type': 'final', 'metadata': final_payload})}\n\n"
+                    break
+        finally:
+            db_session.close()
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 # ─────────────────────────────────────────────
@@ -419,12 +419,12 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
 # The live Eligibility Engine result
 # ─────────────────────────────────────────────
 @app.get("/api/eligibility/{company_id}")
-def check_eligibility(company_id: str, current_user: dict = Depends(get_current_user)):
+def check_eligibility(company_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
         from src.eligibility.checker import EligibilityEngine
         engine_obj = EligibilityEngine(db_session=db)
-        report = engine_obj.check_all(company_id)
+        report = engine_obj.check_all(str(company_id))
         return report.model_dump()
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -439,7 +439,7 @@ def check_eligibility(company_id: str, current_user: dict = Depends(get_current_
 # Independent of LangGraph — called by the Dashboard at page load.
 # ─────────────────────────────────────────────
 @app.get("/api/consistency/{company_id}")
-def run_consistency_checks(company_id: str, current_user: dict = Depends(get_current_user)):
+def run_consistency_checks(company_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Run all consistency validation rules for the given company.
 
@@ -453,7 +453,7 @@ def run_consistency_checks(company_id: str, current_user: dict = Depends(get_cur
     db = SessionLocal()
     try:
         from src.agent.consistency_checker import run_all_checks_by_id
-        errors = run_all_checks_by_id(company_id=company_id, db=db)
+        errors = run_all_checks_by_id(company_id=str(company_id), db=db)
         return {
             "has_issues": len(errors) > 0,
             "issue_count": len(errors),
@@ -478,7 +478,7 @@ def compute_readiness(company_id, db) -> dict:
     table — always reported zeros while /api/readiness reported real numbers for
     the same company. Both now call this.
     """
-    comp_uuid = company_id if isinstance(company_id, uuid.UUID) else uuid.UUID(str(company_id))
+    comp_uuid = company_id
     sections = db.query(GeneratedSection).filter(
         GeneratedSection.company_id == comp_uuid
     ).all()
@@ -542,10 +542,10 @@ def health():
 
 
 @app.get("/api/readiness/{company_id}")
-def get_readiness(company_id: str, current_user: dict = Depends(get_current_user)):
+def get_readiness(company_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     db = SessionLocal()
     try:
-        require_company_access(current_user, company_id)
+        require_company_access(current_user, str(company_id))
         return compute_readiness(company_id, db)
     except HTTPException:
         raise
@@ -564,11 +564,11 @@ class VersionCreateRequest(BaseModel):
 
 @app.get("/api/sections/{company_id}/{section_name}/versions")
 def get_versions(
-    company_id: str,
+    company_id: uuid.UUID,
     section_name: str,
     current_user: dict = Depends(get_current_user),
 ):
-    require_company_access(current_user, company_id)
+    require_company_access(current_user, str(company_id))
     db = next(get_db())
     try:
         versions = db.query(SectionVersion).filter(
@@ -595,12 +595,12 @@ def get_versions(
 
 @app.post("/api/sections/{company_id}/{section_name}/versions")
 def save_version(
-    company_id: str,
+    company_id: uuid.UUID,
     section_name: str,
     req: VersionCreateRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    require_company_access(current_user, company_id)
+    require_company_access(current_user, str(company_id))
     db = next(get_db())
     try:
         if req.label == 'Auto-save':
@@ -663,16 +663,15 @@ class SetupRequest(BaseModel):
     litigations: str = ""
 
 @app.post("/api/companies/{company_id}/setup")
-def setup_company(company_id: str, request: SetupRequest, current_user: dict = Depends(get_current_user)):
+def setup_company(company_id: uuid.UUID, request: SetupRequest, current_user: dict = Depends(get_current_user)):
     """
     Takes the answers from the Nirmaan Landing interview and dynamically
     updates the company so the workspace reflects the user's actual inputs.
     """
     db = SessionLocal()
     try:
-        require_company_access(current_user, company_id)
-        comp_uuid = uuid.UUID(company_id)
-        company = db.query(Company).filter(Company.id == comp_uuid).first()
+        require_company_access(current_user, str(company_id))
+        company = db.query(Company).filter(Company.id == company_id).first()
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
 
@@ -757,7 +756,7 @@ class HitlFeedbackRequest(PydanticBaseModel):
 
 @app.get("/api/hitl/pending/{section_id}")
 def get_hitl_pending(
-    section_id: str,
+    section_id: uuid.UUID,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -767,8 +766,7 @@ def get_hitl_pending(
     db = SessionLocal()
     try:
         from src.agent.orchestrator import graph
-        sec_uuid = uuid.UUID(section_id)
-        section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+        section = db.query(GeneratedSection).filter(GeneratedSection.id == section_id).first()
         if not section:
             raise HTTPException(status_code=404, detail="Section not found")
         require_company_access(current_user, section.company_id)
@@ -792,7 +790,7 @@ def get_hitl_pending(
 
 @app.post("/api/hitl/submit/{section_id}")
 def submit_hitl_feedback(
-    section_id: str,
+    section_id: uuid.UUID,
     req: HitlFeedbackRequest,
     current_user: dict = Depends(get_current_user),
 ):
@@ -803,8 +801,7 @@ def submit_hitl_feedback(
     db = SessionLocal()
     try:
         from src.agent.orchestrator import graph
-        sec_uuid = uuid.UUID(section_id)
-        section = db.query(GeneratedSection).filter(GeneratedSection.id == sec_uuid).first()
+        section = db.query(GeneratedSection).filter(GeneratedSection.id == section_id).first()
         if not section:
             raise HTTPException(status_code=404, detail="Section not found")
         require_company_access(current_user, section.company_id)

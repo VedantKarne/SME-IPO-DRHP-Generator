@@ -44,6 +44,8 @@ class AgentState(TypedDict):
     # Bug 1 Fix: Store the LangGraph thread_id so the HITL resume endpoint can use it.
     langgraph_thread_id: str
     
+    stream_queue: Any
+    
     # Validation / Scoring
     completeness_score: float
     revisions: int
@@ -181,6 +183,10 @@ def draft_generation_node(state: AgentState) -> dict:
         {"role": "user", "content": f"""
 Please draft the '{state['current_section']}' section of the DRHP.
 
+IMPORTANT CONSTRAINTS:
+1. Ensure the final drafted text is concise, directly addresses the prompt, and remains under a strict character limit of approximately 3000-4000 characters (about 500-700 words).
+2. Do not write excessively long paragraphs. Be precise.
+
 REGULATORY CONTEXT:
 {state.get('regulatory_context', '')[:4000] if state.get('regulatory_context') else 'Not available for this section.'}
 
@@ -210,7 +216,16 @@ COMPANY FACTS:
     # source headers (a single regulatory citation can run to ~90 characters, and
     # a well-cited section carries dozens). A truncated draft is worse than a
     # short one: it ends mid-clause and the gap detector scores the fragment.
-    draft = client.generate(messages, max_tokens=1500)
+    q = state.get("stream_queue")
+    if q:
+        draft_generator = client.generate(messages, max_tokens=1500, stream=True)
+        full_draft = []
+        for chunk in draft_generator:
+            q.put({"type": "token", "content": chunk})
+            full_draft.append(chunk)
+        draft = "".join(full_draft)
+    else:
+        draft = client.generate(messages, max_tokens=1500)
     current_revisions = state.get("revisions", 0)
     
     return {"draft_text": draft, "revisions": current_revisions + 1}

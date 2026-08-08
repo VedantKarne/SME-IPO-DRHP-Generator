@@ -1,6 +1,7 @@
 import io
 import logging
 import os
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -14,12 +15,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/export", tags=["Export"])
 
 class ExportSectionRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     section_name: str
     content: str
 
 class ExportFullRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     # Demos and mid-drafting reviews need the whole document; a filing-ready
     # export should contain only reviewed sections.
     include_drafts: bool = True
@@ -30,7 +31,7 @@ def export_section(
     req: ExportSectionRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    require_company_access(current_user, req.company_id)
+    require_company_access(current_user, str(req.company_id))
 
     if fmt == "json":
         # This was an "autosave" endpoint that returned success without writing
@@ -114,7 +115,7 @@ def export_full(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    require_company_access(current_user, req.company_id)
+    require_company_access(current_user, str(req.company_id))
 
     if fmt not in ("docx", "pdf"):
         raise HTTPException(status_code=400, detail="Unsupported format")
@@ -154,7 +155,7 @@ def export_full(
         from src.extraction.schema import AuditLog
         db.add(AuditLog(
             event_type="drhp_exported",
-            company_id=_uuid.UUID(str(req.company_id)),
+            company_id=req.company_id,
             query=f"format={fmt} include_drafts={req.include_drafts}",
             source_file=os.path.basename(path),
             model_used="none",
@@ -163,7 +164,7 @@ def export_full(
     except Exception as audit_exc:
         logger.warning(f"Audit log write failed for export: {audit_exc}")
 
-    company = (result.get("company_name") or req.company_id).replace(" ", "_")
+    company = (result.get("company_name") or str(req.company_id)).replace(" ", "_")
     media = ("application/pdf" if fmt == "pdf"
              else "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     return Response(

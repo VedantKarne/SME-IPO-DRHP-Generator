@@ -79,16 +79,19 @@ class RateLimitAwareGroqClient:
         retry=retry_if_exception_type(RateLimitError),
         before_sleep=lambda retry_state: logger.warning(f"Groq Rate limit hit. Retrying in {retry_state.next_action.sleep}s...")
     )
-    def _groq_generate(self, messages: List[Dict[str, str]], max_tokens: int = 3000) -> str:
+    def _groq_generate(self, messages: List[Dict[str, str]], max_tokens: int = 3000, stream: bool = False):
         response = self.client.chat.completions.create(
             messages=messages,
             model=self.model,
             temperature=0.2, # Keep it low for legal drafting
             max_tokens=max_tokens,
+            stream=stream,
         )
+        if stream:
+            return response
         return response.choices[0].message.content
 
-    def generate(self, messages: List[Dict[str, str]], max_tokens: int = 3000) -> str:
+    def generate(self, messages: List[Dict[str, str]], max_tokens: int = 3000, stream: bool = False):
         """
         Draft with exponential backoff on rate limits, behind a circuit breaker.
 
@@ -98,19 +101,35 @@ class RateLimitAwareGroqClient:
         """
         self.breaker.before_call()
 
-        logger.info(f"Generating draft with {self.model} (Max Tokens: {max_tokens})")
+        logger.info(f"Generating draft with {self.model} (Max Tokens: {max_tokens}, Stream: {stream})")
         start_time = time.time()
         try:
-            result = self._groq_generate(messages, max_tokens)
+            result = self._groq_generate(messages, max_tokens, stream=stream)
         except Exception as e:
             self.breaker.record_failure()
             raise LLMUnavailable(f"LLM request failed: {e}") from e
+
+        if stream:
+            # When streaming, we can't easily record success at the end here without wrapping the generator,
+            # but we assume success if the initial call didn't fail.
+            self.breaker.record_success()
+            def generator_wrapper():
+                try:
+                    for chunk in result:
+                        content = chunk.choices[0].delta.content
+                        if content:
+                            yield content
+                finally:
+                    elapsed = time.time() - start_time
+                    self.last_latency_ms = int(elapsed * 1000)
+            return generator_wrapper()
 
         self.breaker.record_success()
         elapsed = time.time() - start_time
         logger.info(f"Draft generation completed in {elapsed:.2f} seconds.")
         self.last_latency_ms = int(elapsed * 1000)
         return result
+
 
 # Bug 3 Fix: Module-level singleton — instantiated once at import time,
 # shared across all LangGraph node calls and self-correction loops.
