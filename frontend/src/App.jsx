@@ -1,3 +1,17 @@
+/**
+ * App.jsx
+ *
+ * Root application router. Handles authentication bootstrap, session restore,
+ * and role-based routing.
+ *
+ * Role routing works by reading localStorage.getItem('nirmaan_role') after
+ * a successful login. This key is set in LoginSection.jsx when the user
+ * clicks a role card on the landing page.
+ *
+ * Roles handled:
+ *   'legal_advisor' → /legal/dashboard
+ *   'founder' / default → /dashboard (original Founder flow, unchanged)
+ */
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import LandingPage from './screens/landing/LandingPage';
@@ -13,6 +27,7 @@ import AppShell from './components/AppShell';
 import GlobalSidebar from './components/GlobalSidebar';
 import CanvasRoot from './canvas/CanvasRoot';
 import ProtectedRoute from './routes/ProtectedRoute';
+import LegalDashboard from './screens/legal/LegalDashboard';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
 
@@ -72,7 +87,18 @@ export default function App() {
       navigate('/onboarding');
       return;
     }
-    // Returning user — check if they have any uploaded documents.
+    // Read role persisted by LoginSection.jsx when the user clicked a role card.
+    const role = localStorage.getItem('nirmaan_role');
+
+    // Legal Advisor — route to the legal dashboard (new, isolated route).
+    if (role === 'legal_advisor') {
+      await bootstrap();
+      navigate('/legal/dashboard');
+      return;
+    }
+
+    // Founder / default — original routing logic, completely unchanged.
+    // Returning user - check if they have any uploaded documents.
     // If none, send them to Documents to start the upload flow;
     // otherwise send them straight to Dashboard.
     const data = await bootstrap();
@@ -99,6 +125,25 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Onboarding onComplete={handleOnboardingComplete} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ── Legal Advisor routes — isolated under /legal/* ─────────────────────
+           GlobalSidebar receives role="legal_advisor" so it renders NAV_LEGAL.
+           AppShell provides the main content area (no copilot for this role).
+           Sub-routes are intentionally minimal; more pages ship in Phase 2. */}
+      <Route
+        path="/legal/*"
+        element={
+          <ProtectedRoute>
+            <GlobalSidebar companyName={companyName} approvedCount={0} role="legal_advisor" />
+            <AppShell companyId={companyId} currentSection="" noCopilot>
+              <Routes>
+                <Route path="/" element={<Navigate to="/legal/dashboard" replace />} />
+                <Route path="/dashboard" element={<LegalDashboard />} />
+              </Routes>
+            </AppShell>
           </ProtectedRoute>
         }
       />

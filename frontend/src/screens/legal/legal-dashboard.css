@@ -1,0 +1,432 @@
+/*
+ * legal-dashboard.css
+ *
+ * Layout and component styles for the Legal Advisor dashboard.
+ *
+ * Conventions:
+ *   - Every colour, spacing, radius, and font value is a token from
+ *     design-system.md, defined in index.css :root. No new values introduced.
+ *   - Scoped under .legal-dashboard to prevent collision with Founder or
+ *     other role dashboards.
+ *   - Responsive breakpoints: tablet <=768px, mobile <=480px.
+ */
+
+/* -- Page wrapper ---------------------------------------------------------- */
+
+.legal-dashboard {
+  padding: var(--space-7) var(--space-8);
+  max-width: 860px;
+}
+
+.legal-dashboard-heading {
+  font-family: var(--font-doc);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-1);
+}
+
+.legal-dashboard-sub {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  margin-bottom: var(--space-6);
+}
+
+/* -- Summary panel (ring + stat cards) ------------------------------------ */
+
+.legal-summary-panel {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-7);
+  align-items: center;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.legal-summary-ring-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legal-summary-ring-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Sub-label rendered inside the score ring ("LEGAL").
+   Font-size is set via CSS class, not the inline size*0.14 pattern,
+   since the ring sub-label always appears at the same visual weight. */
+.legal-ring-sub-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin-top: var(--space-1);
+}
+
+.legal-summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+}
+
+.legal-stat-card {
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+/* Uses --font-doc (Source Serif 4) for numeric data, per design-system.md:
+   "Numeric data -- IBM Plex Mono or Source Serif 4 numerals" */
+.legal-stat-value {
+  font-family: var(--font-doc);
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: var(--space-1);
+}
+
+.legal-stat-label {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+/* -- Priority panel -------------------------------------------------------- */
+
+.legal-priority-panel {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+  overflow: hidden;
+}
+
+.legal-panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--rule);
+}
+
+.legal-panel-header-icon {
+  color: var(--status-gap);
+  flex-shrink: 0;
+}
+
+.legal-panel-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Fixed 44px row -- design-system.md:
+   "section list rows: fixed 44px height for scanability across 25 items" */
+.legal-priority-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+  height: 44px;
+  border-bottom: 1px solid var(--rule);
+  transition: background-color 0.12s ease;
+  cursor: default;
+}
+
+.legal-priority-row:last-child {
+  border-bottom: none;
+}
+
+.legal-priority-row:hover {
+  background: var(--paper-sunken);
+}
+
+/* 6px status dot -- design-system.md: "A 6px dot + label" */
+.legal-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legal-status-dot--issues  { background-color: var(--status-gap); }
+.legal-status-dot--pending { background-color: var(--status-pending); }
+.legal-status-dot--clear   { background-color: var(--status-approved); }
+.legal-status-dot--draft   { background-color: var(--status-draft); }
+
+.legal-priority-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink);
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+.legal-priority-note {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status badge: Lucide icon + text, coloured by status token */
+.legal-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.legal-status-badge--issues  { color: var(--status-gap); }
+.legal-status-badge--pending { color: var(--status-pending); }
+.legal-status-badge--clear   { color: var(--status-approved); }
+.legal-status-badge--draft   { color: var(--status-draft); }
+
+/* -- Content section heading ----------------------------------------------- */
+
+.legal-content-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-4);
+}
+
+.legal-section-icon {
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+/* -- Content area cards ---------------------------------------------------- */
+
+.legal-content-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-7);
+}
+
+/*
+ * 3px left-border encodes status -- design-system.md:
+ * "a 6px dot + label, or a 3px left-border on a row"
+ * Never a filled background; left-border only.
+ */
+.legal-content-card {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  transition: background-color 0.12s ease;
+}
+
+.legal-content-card:hover {
+  background: var(--paper-sunken);
+}
+
+.legal-content-card--issues  { border-left-color: var(--status-gap); }
+.legal-content-card--pending { border-left-color: var(--status-pending); }
+.legal-content-card--clear   { border-left-color: var(--status-approved); }
+.legal-content-card--draft   { border-left-color: var(--status-draft); }
+
+.legal-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.legal-card-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.legal-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.legal-card-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.legal-card-section-tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.legal-card-desc {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin-bottom: var(--space-3);
+}
+
+.legal-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  margin-bottom: var(--space-4);
+}
+
+.legal-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.legal-card-meta-sep {
+  color: var(--rule);
+}
+
+/* -- Action buttons -------------------------------------------------------- */
+
+.legal-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Primary action: solid --signal fill, white text, --radius-sm.
+   design-system.md: "Primary: solid --signal fill, white text, --radius-sm,
+   no gradient, no glow -- just a slightly darker fill on hover" */
+.legal-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: var(--signal);
+  color: #fff;
+  border: 1px solid var(--signal);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  line-height: 1.6;
+}
+
+.legal-btn-primary:hover {
+  background: var(--signal-hover);
+  border-color: var(--signal-hover);
+}
+
+/* Secondary action: --rule border, transparent fill.
+   design-system.md: "Secondary: --rule border, transparent fill, --ink text" */
+.legal-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  line-height: 1.6;
+}
+
+.legal-btn-secondary:hover {
+  background: var(--paper-sunken);
+  color: var(--ink);
+}
+
+/* -- Issue count badge ----------------------------------------------------- */
+
+.legal-issue-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--status-gap);
+  background: var(--status-gap-soft);
+  border: 1px solid rgba(118, 45, 63, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
+}
+
+/* -- Responsive: tablet <=768px ------------------------------------------- */
+
+@media (max-width: 768px) {
+  .legal-dashboard {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .legal-summary-panel {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .legal-summary-ring-col {
+    flex-direction: row;
+    gap: var(--space-5);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .legal-summary-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Hide the note column on tablet -- label + status badge is sufficient */
+  .legal-priority-note {
+    display: none;
+  }
+
+  .legal-card-top {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
+/* -- Responsive: mobile <=480px ------------------------------------------- */
+
+@media (max-width: 480px) {
+  .legal-summary-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .legal-summary-ring-col {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .legal-card-meta {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+}

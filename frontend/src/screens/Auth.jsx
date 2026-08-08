@@ -1,9 +1,35 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2, Zap, WifiOff } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
+
+/**
+ * makeMockToken(email, companyName)
+ *
+ * Builds a structurally valid JWT (header.payload.signature) entirely in the
+ * browser when the backend is unreachable. The token satisfies:
+ *   - decodeToken(): base64-decodes the middle segment into a JSON object
+ *   - isTokenExpired(): payload.exp is 30 days from now (well in the future)
+ *   - bootstrap() in App.jsx: company_id and company_name are present
+ *
+ * The signature segment is a static placeholder -- there is no secret key,
+ * so this token is intentionally NOT secure. It is only used as a session
+ * stand-in while the backend is offline (development / demo only).
+ */
+function makeMockToken(email, companyName) {
+  const header  = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify({
+    sub:          email,
+    company_id:   'mock-' + email.replace(/[^a-z0-9]/gi, '-'),
+    company_name: companyName || email.split('@')[0],
+    exp:          Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
+    iat:          Math.floor(Date.now() / 1000),
+  }));
+  const sig = btoa('offline-mock-signature');
+  return `${header}.${payload}.${sig}`;
+}
 
 export default function Auth({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,11 +42,14 @@ export default function Auth({ onAuthSuccess }) {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // True when the backend is unreachable and a mock session was created
+  const [offlineMode, setOfflineMode] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setOfflineMode(false);
     
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
@@ -44,7 +73,20 @@ export default function Auth({ onAuthSuccess }) {
       onAuthSuccess(!isLogin); // Pass true if it was a registration
       
     } catch (err) {
-      setError(err.message);
+      // TypeError = fetch itself failed = backend is down / unreachable.
+      // In that case, mint a mock token from the entered credentials so the
+      // user can still navigate the frontend without the backend running.
+      if (err instanceof TypeError) {
+        const name = isLogin
+          ? email.split('@')[0]          // derive a name from email on login
+          : (companyName || email.split('@')[0]); // use the typed company name on register
+        setToken(makeMockToken(email, name));
+        setOfflineMode(true);
+        onAuthSuccess(!isLogin);
+      } else {
+        // Real server error (wrong credentials, validation, etc.) -- show it.
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -56,6 +98,7 @@ export default function Auth({ onAuthSuccess }) {
     setPassword('demo123');
     setLoading(true);
     setError(null);
+    setOfflineMode(false);
 
     try {
       const res = await fetch(`${API}/api/auth/login`, {
@@ -72,7 +115,14 @@ export default function Auth({ onAuthSuccess }) {
       setToken(data.access_token);
       onAuthSuccess(false);
     } catch (err) {
-      setError(err.message);
+      if (err instanceof TypeError) {
+        // Backend unreachable -- create a mock demo session
+        setToken(makeMockToken('demo@nirmaan.ai', 'Nirmaan Technologies Ltd'));
+        setOfflineMode(true);
+        onAuthSuccess(false);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
