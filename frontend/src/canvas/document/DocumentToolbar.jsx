@@ -13,6 +13,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Sparkles, RotateCcw, Maximize2, Wand2, TrendingUp, Briefcase, BookOpen,
   FileText, Strikethrough, Quote, AlignLeft, AlignCenter, AlignRight, X, ArrowRight,
+  Lock,
 } from 'lucide-react';
 import * as canvasApi from '../services/canvasApi.js';
 import useCanvasStore from '../services/canvasStore.js';
@@ -87,6 +88,8 @@ export default function DocumentToolbar({
   copilotOpen,
   onToggleCopilot,
   showToast,
+  readOnly = false,
+  panelLabel = 'AI Assistant',
 }) {
   const [genOpen,       setGenOpen]       = useState(false);
   const [aiLoading,     setAiLoading]     = useState(null);
@@ -235,6 +238,51 @@ export default function DocumentToolbar({
   const aiLoadingLabel = aiLoading
     ? (AI_ACTIONS.find((a) => a.id === aiLoading)?.label ?? 'Working')
     : (promptBusy ? 'Applying' : null);
+
+  // ── Read-only render (founder/promoter role) ─────────────────────────
+  // Every button below mutates the document in some way (typing, AI
+  // rewrite/generate, formatting) except Print and Export, which stay
+  // available so a founder can still review and export the banker's draft.
+  if (readOnly) {
+    return (
+      <>
+        <div className="doc-toolbar" role="toolbar" aria-label="Document formatting toolbar">
+          <span className="dtb-readonly-label">
+            <Lock size={13} strokeWidth={2} aria-hidden="true" />
+            Read-only — drafted by your Merchant Banker
+          </span>
+
+          <div className="dtb-spacer" aria-hidden="true" />
+
+          <button
+            type="button"
+            className={`dtb-outline-btn${printPreviewOn ? ' dtb-outline-btn--active' : ''}`}
+            onClick={() => setPrintPreviewOn((v) => !v)}
+            aria-pressed={printPreviewOn}
+            title="Print Preview"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <polyline points="6 9 6 2 18 2 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <rect x="6" y="14" width="12" height="8" rx="1" stroke="currentColor" strokeWidth="2"/>
+            </svg>
+            Print
+          </button>
+
+          <ExportDropdown
+            editor={activeEditor}
+            companyId={companyId}
+            sectionName={activeSectionName}
+          />
+        </div>
+
+        {printPreviewOn && (
+          <PrintPreview sections={sections} onClose={() => setPrintPreviewOn(false)} />
+        )}
+      </>
+    );
+  }
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
@@ -429,10 +477,10 @@ export default function DocumentToolbar({
             className={`dtb-ai-assistant-btn${copilotOpen ? ' dtb-ai-assistant-btn--active' : ''}`}
             onClick={onToggleCopilot}
             aria-pressed={copilotOpen}
-            title="AI Assistant (⌘K)"
+            title={`${panelLabel} (⌘K)`}
           >
             <Sparkles size={13} strokeWidth={1.8} aria-hidden="true" />
-            AI Assistant
+            {panelLabel}
           </button>
         </div>
 

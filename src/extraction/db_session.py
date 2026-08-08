@@ -103,6 +103,30 @@ def seed_demo_user():
             user.company_id = company.id
             db.commit()
 
+        # Seed a merchant banker demo login (banker@nirmaan.ai / banker123) on
+        # the SAME company, so the banker reviews the same DRHP the founder
+        # demo prepares. Nothing in the frontend enforces role-based access
+        # yet beyond gating the Document Workspace's editability — see
+        # App.jsx's /workspace route.
+        banker_email = "banker@nirmaan.ai"
+        banker_pwd = "banker123"
+        banker_hashed_pwd = bcrypt.hashpw(banker_pwd.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        banker_user = db.query(CompanyUser).filter(CompanyUser.email == banker_email).first()
+        if not banker_user:
+            banker_user = CompanyUser(
+                company_id=company.id,
+                email=banker_email,
+                hashed_password=banker_hashed_pwd,
+                role="merchant_banker"
+            )
+            db.add(banker_user)
+            db.commit()
+        else:
+            banker_user.hashed_password = banker_hashed_pwd
+            banker_user.company_id = company.id
+            banker_user.role = "merchant_banker"
+            db.commit()
+
         # Seed 3 years of financials if not present
         existing_fins = db.query(FinancialStatement).filter(FinancialStatement.company_id == company.id).count()
         if existing_fins == 0:

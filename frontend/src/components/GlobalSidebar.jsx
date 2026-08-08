@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileEdit, Folder, CheckCircle2, UserCheck, BookOpen, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileEdit, Folder, CheckCircle2, User, LogOut } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 import useCanvasStore from '../canvas/services/canvasStore.js';
 
+// "Banker Review" and "Knowledge Base" moved to BankerSidebar.jsx — the
+// Merchant Banker role now has its own dedicated page set (see App.jsx's
+// role-based routing) rather than sharing the founder's nav.
 const NAV = [
   { path: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/workspace',       icon: FileEdit,        label: 'Document Workspace' },
   { path: '/documents',       icon: Folder,          label: 'Documents' },
   { path: '/eligibility',     icon: CheckCircle2,    label: 'Eligibility Engine' },
-  { path: '/review',          icon: UserCheck,       label: 'Banker Review' },
-  { path: '/knowledge-base',  icon: BookOpen,        label: 'Knowledge Base' },
   { path: '/profile',         icon: User,            label: 'Profile' },
 ];
 

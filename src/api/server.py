@@ -464,6 +464,48 @@ def run_consistency_checks(company_id: str, current_user: dict = Depends(get_cur
     finally:
         db.close()
 
+# ─────────────────────────────────────────────
+# ACTIVITY & AUDIT LOG — GET /api/audit/{company_id}
+# AuditLog rows are already written on section generation, approval, review/
+# comment, document upload and full-DRHP export (see locking_router.py,
+# document_upload_router.py, export_router.py and /api/agent/run below) —
+# nothing previously read them back. Read-only; no schema change.
+# ─────────────────────────────────────────────
+@app.get("/api/audit/{company_id}")
+def get_audit_log(company_id: str, current_user: dict = Depends(get_current_user)):
+    require_company_access(current_user, company_id)
+    db = SessionLocal()
+    try:
+        # Explicit UUID conversion before filtering — passing the raw string
+        # straight into .filter(AuditLog.company_id == company_id) is what
+        # causes the "'str' object has no attribute 'hex'" error seen
+        # elsewhere in this app (e.g. section_version autosave/history).
+        comp_uuid = uuid.UUID(str(company_id))
+        rows = (
+            db.query(AuditLog)
+            .filter(AuditLog.company_id == comp_uuid)
+            .order_by(AuditLog.timestamp.desc())
+            .limit(200)
+            .all()
+        )
+        return [
+            {
+                "id": str(r.id),
+                "event_type": r.event_type,
+                "section_name": r.section_name,
+                "query": r.query,
+                "source_file": r.source_file,
+                "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+            }
+            for r in rows
+        ]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid company_id format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Audit log fetch failed: {str(e)}")
+    finally:
+        db.close()
+
 
 # ─────────────────────────────────────────────
 # PRIORITY 3 — GET /api/readiness/{company_id}

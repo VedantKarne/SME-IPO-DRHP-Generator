@@ -472,3 +472,82 @@ export async function saveVersion(companyId, sectionName, entry) {
     })
   );
 }
+
+// ---------------------------------------------------------------------------
+// Merchant Banker review — src/api/locking_router.py (mounted at /api/sections)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reviewer notes left on a section (comment thread). Stored as ChatMessage
+ * rows with role='reviewer' — there is no separate comments table.
+ *
+ * @param {string} sectionId  GeneratedSection.id (a section's real DB row id,
+ *                             not its name — read it off the section object
+ *                             the sections list already returns as `id`)
+ * @returns {Promise<{ section_id: string, status: string, notes: Array }>}
+ * @throws {ApiError}
+ */
+export async function getSectionReviewNotes(sectionId) {
+  return request(`/api/sections/${encodeURIComponent(sectionId)}/review`);
+}
+
+/**
+ * Leave a reviewer note, optionally requesting changes (sets the section's
+ * status to 'revision_requested'). There is no assignee/priority field in
+ * the backend — only `note` and `request_changes` are persisted.
+ *
+ * @param {string} sectionId
+ * @param {string} note
+ * @param {boolean} [requestChanges=false]
+ * @throws {ApiError}
+ */
+export async function postSectionReview(sectionId, note, requestChanges = false) {
+  return request(
+    `/api/sections/${encodeURIComponent(sectionId)}/review`,
+    jsonBody({ note, request_changes: requestChanges })
+  );
+}
+
+/**
+ * Approve and lock a section. Sets is_locked=true, status='intermediary_certified',
+ * and writes an AuditLog row. Irreversible from the UI — there is no unlock endpoint.
+ *
+ * @param {string} sectionId
+ * @throws {ApiError}
+ */
+export async function approveSection(sectionId) {
+  return request(`/api/sections/${encodeURIComponent(sectionId)}/approve`, jsonBody({}));
+}
+
+// ---------------------------------------------------------------------------
+// Data dependency / impact map — src/api/impact_router.py
+// ---------------------------------------------------------------------------
+
+/**
+ * A static, deterministic lookup — not live regulation-change monitoring.
+ * Only 4 keys exist server-side: total_issue_size_lakhs, ebitda_lakhs,
+ * litigation, registered_office. Unknown keys return an empty list.
+ *
+ * @param {string} changedField
+ * @returns {Promise<{ changed_field: string, affected_sections: string[] }>}
+ * @throws {ApiError}
+ */
+export async function getImpact(changedField) {
+  return request(`/api/impact/${encodeURIComponent(changedField)}`);
+}
+
+// ---------------------------------------------------------------------------
+// Activity & Audit log — GET /api/audit/{company_id} (src/api/server.py)
+// ---------------------------------------------------------------------------
+
+/**
+ * Real AuditLog rows (generation, approval, review/comment, upload, export),
+ * newest first, capped at 200.
+ *
+ * @param {string} companyId
+ * @returns {Promise<Array<{ id, event_type, section_name, query, source_file, timestamp }>>}
+ * @throws {ApiError}
+ */
+export async function getAuditLog(companyId) {
+  return request(`/api/audit/${encodeURIComponent(companyId)}`);
+}

@@ -17,6 +17,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import useCanvasStore from '../services/canvasStore.js';
 import useToast, { ToastContainer } from '../toolbar/useToast.jsx';
 import CanvasAppBar     from './CanvasAppBar.jsx';
@@ -24,6 +25,7 @@ import DocumentSidebar  from './DocumentSidebar.jsx';
 import DocumentToolbar  from './DocumentToolbar.jsx';
 import DocumentCanvas   from './DocumentCanvas.jsx';
 import CopilotPanel     from './CopilotPanel.jsx';
+import BankerReviewPanel from './BankerReviewPanel.jsx';
 import HITLReviewPanel from '../hitl/HITLReviewPanel.jsx';
 
 const COPILOT_DEFAULT_W = 330;
@@ -37,7 +39,8 @@ const DOC_SIDEBAR_W = 224;
 // ---------------------------------------------------------------------------
 // CanvasLayout
 // ---------------------------------------------------------------------------
-export default function CanvasLayout({ companyId, companyName }) {
+export default function CanvasLayout({ companyId, companyName, readOnly = false, role = '', eligibility = null, consistency = null }) {
+  const isBanker = role === 'merchant_banker';
   const [copilotOpen,   setCopilotOpen]   = useState(true);
   const [copilotWidth,  setCopilotWidth]  = useState(COPILOT_DEFAULT_W);
   const [lastSaveLabel, setLastSaveLabel] = useState('Saved just now');
@@ -51,9 +54,37 @@ export default function CanvasLayout({ companyId, companyName }) {
   const editorRefs   = useRef({});
   const containerRef = useRef(null);
 
+  // Jump-to-section from the Review Queue: ReviewQueue.jsx navigates here
+  // with router state rather than a URL param, then this scrolls to the
+  // target section once its DOM node exists. Sections mount asynchronously
+  // (CanvasRoot seeds the store after its own bootstrap fetch resolves), so
+  // this retries for a couple seconds rather than assuming the node is
+  // already there on the first render.
+  const location = useLocation();
+  const jumpToSection = location.state?.jumpToSection;
+  useEffect(() => {
+    if (!jumpToSection) return;
+    const targetId = `section-${jumpToSection.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`;
+    let attempts = 0;
+    const tryScroll = () => {
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      attempts += 1;
+      if (attempts < 40) setTimeout(tryScroll, 100);
+    };
+    tryScroll();
+    // Clear the router state so a later in-app navigation to /workspace
+    // (e.g. the sidebar link) doesn't unexpectedly re-jump.
+    window.history.replaceState({}, '');
+  }, [jumpToSection]);
+
   const activeSectionIdx  = useCanvasStore((s) => s.activeSectionIdx);
   const sections          = useCanvasStore((s) => s.sections);
-  const activeSectionName = sections[activeSectionIdx]?.name ?? '';
+  const activeSection     = sections[activeSectionIdx] ?? null;
+  const activeSectionName = activeSection?.name ?? '';
   const activeEditor      = editorRefs.current[activeSectionName] ?? null;
 
   // The app's main nav (GlobalSidebar, rendered as a sibling outside this
@@ -139,6 +170,8 @@ export default function CanvasLayout({ companyId, companyName }) {
           copilotOpen={copilotOpen}
           onToggleCopilot={toggleCopilot}
           showToast={showToast}
+          readOnly={readOnly}
+          panelLabel={isBanker ? 'Review Panel' : 'AI Assistant'}
         />
         {/* Surfaces a paused LangGraph review. Renders nothing when there is
             nothing awaiting a decision. */}
@@ -149,10 +182,12 @@ export default function CanvasLayout({ companyId, companyName }) {
         />
         <DocumentCanvas
           companyId={companyId}
+          companyName={companyName}
           editorRefs={editorRefs}
           containerRef={containerRef}
           onAutosave={handleAutosave}
           showToast={showToast}
+          readOnly={readOnly}
         />
       </div>
 
@@ -167,14 +202,24 @@ export default function CanvasLayout({ companyId, companyName }) {
         />
       )}
 
-      {/* ── Right Copilot panel ── */}
-      <CopilotPanel
-        isOpen={copilotOpen}
-        onClose={toggleCopilot}
-        companyId={companyId}
-        activeSectionName={activeSectionName}
-        activeEditor={activeEditor}
-      />
+      {/* ── Right panel: Merchant Banker review, or the founder's IPO Copilot ── */}
+      {isBanker ? (
+        <BankerReviewPanel
+          isOpen={copilotOpen}
+          onClose={toggleCopilot}
+          section={activeSection}
+          eligibility={eligibility}
+          consistency={consistency}
+        />
+      ) : (
+        <CopilotPanel
+          isOpen={copilotOpen}
+          onClose={toggleCopilot}
+          companyId={companyId}
+          activeSectionName={activeSectionName}
+          activeEditor={activeEditor}
+        />
+      )}
 
       {/* ── Toast notifications ── */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

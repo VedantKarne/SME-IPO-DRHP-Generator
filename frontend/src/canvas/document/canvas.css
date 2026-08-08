@@ -449,6 +449,17 @@
 
 .dtb-spacer { flex: 1; min-width: 8px; }
 
+/* Founder/promoter read-only toolbar label */
+.dtb-readonly-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--doc-font-sans);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
 /* AI dropdown */
 .dtb-ai-wrap { position: relative; flex-shrink: 0; }
 
@@ -1051,6 +1062,66 @@
   flex: 1;
   min-height: 0;              /* critical: flex child must be allowed to shrink */
   overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BANKER REVIEW PANEL — BankerReviewPanel.jsx, occupies the same .cp-panel
+   slot as CopilotPanel for the merchant_banker role.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.brp-tab-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+
+.brp-empty {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.brp-ok-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.brp-issue-card {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--status-draft);
+  background: var(--status-draft-soft);
+}
+.brp-issue-card--critical {
+  border-left-color: var(--status-gap);
+  background: var(--status-gap-soft);
+}
+
+.brp-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  color: var(--status-gap);
+  background: var(--status-gap-soft);
+  border-radius: var(--radius-sm);
+}
+
+.brp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(28,27,25,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
 
 /* Suggestions */

@@ -18,7 +18,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, Lock } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -32,6 +32,7 @@ import useVersionStore from '../versions/versionStore.js';
 import { markdownToTipTap } from '../editor/markdownToTipTap.js';
 import * as canvasApi from '../services/canvasApi.js';
 import SelectionPopup from '../editor/SelectionPopup.jsx';
+import { isDemoCompany } from '../../utils/demoMode.js';
 
 // ---------------------------------------------------------------------------
 // Evidence badges — rendered from the section's REAL supporting_clause_ids,
@@ -80,13 +81,20 @@ function PageNumber({ index }) {
 // ---------------------------------------------------------------------------
 // SectionEditor — one TipTap per section, all on the same paper flow
 // ---------------------------------------------------------------------------
-function SectionEditor({ section, index, companyId, editorRefs, onAutosave, showToast }) {
+function SectionEditor({ section, index, companyId, editorRefs, onAutosave, showToast, readOnly }) {
   const upsertSection = useCanvasStore((s) => s.upsertSection);
   const addVersion    = useVersionStore((s) => s.addVersion);
   const autosaveTimer = useRef(null);
   const lastSaved     = useRef(null);
 
+  // Locked sections stay non-editable even for the merchant banker role
+  // (readOnly=false there) — "approved sections become protected against
+  // unauthorized modification" applies regardless of who's logged in, not
+  // just to the founder's globally read-only view.
+  const isEditable = !readOnly && !section.locked;
+
   const editor = useEditor({
+    editable: isEditable,
     extensions: [
       StarterKit,
       Underline,
@@ -178,6 +186,15 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
 
   useEffect(() => () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); }, []);
 
+  // TipTap's `editable` config option is only read once, at creation — it
+  // does not react to prop changes on its own. A section can transition from
+  // unlocked to locked mid-session (the banker just approved it in the
+  // review panel), so this keeps the live editor instance in sync rather
+  // than requiring a full remount to actually stop accepting keystrokes.
+  useEffect(() => {
+    editor?.setEditable(isEditable);
+  }, [editor, isEditable]);
+
   const statusDot  = getSectionStatusDot(section);
   const num        = String(index + 1).padStart(2, '0');
   const isEmpty    = !section.content && !section.draft_text && !section.markdown;
@@ -226,31 +243,52 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
           title={statusDot.label}
           aria-label={`Status: ${statusDot.label}`}
         />
-        <span className="doc-section__title" style={{ flexGrow: 1 }}>{section.name}</span>
+        <span className="doc-section__title">{section.name}</span>
+
+        {/* Provenance label — driven by real status/locked fields, not a
+            separate "who edited this" tracker (none exists in the schema). */}
+        {section.locked ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.68rem', fontWeight: 700, color: 'var(--status-approved)', flexShrink: 0 }}>
+            <Lock size={11} strokeWidth={2} /> APPROVED &amp; LOCKED
+          </span>
+        ) : section.draft_text ? (
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--ink-faint)', letterSpacing: '0.03em', flexShrink: 0 }}>
+            AI GENERATED
+          </span>
+        ) : null}
+
+        <span style={{ flexGrow: 1 }} />
 
         {/* Inline evidence badges — driven by real retrieved clause IDs */}
         <EvidenceBadges clauseIds={section.supporting_clause_ids} />
 
-        {/* Generate Button (Floating Right) */}
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={handleGenerate}
-          disabled={isGenerating}
-          style={{
-            marginLeft: 'auto',
-            padding: '4px 10px',
-            fontSize: '0.75rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'var(--glass-bg)',
-            borderColor: 'var(--glass-border)',
-            color: 'var(--text-secondary)'
-          }}
-        >
-          {isGenerating ? <Loader2 size={13} strokeWidth={2} className="spin" /> : <Sparkles size={13} strokeWidth={1.5} />}
-          {isGenerating ? "Generating..." : "Generate Draft"}
-        </button>
+        {/* Generate Button (Floating Right) — mutates content, so it has no
+            place in the founder's read-only view. Also hidden once locked:
+            /api/agent/run has no lock check server-side and would silently
+            overwrite + un-approve a certified section, which contradicts
+            "approved sections become protected against unauthorized
+            modification." Frontend-only mitigation — see PROJECT_CONTEXT.md. */}
+        {isEditable && (
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            style={{
+              marginLeft: 'auto',
+              padding: '4px 10px',
+              fontSize: '0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'var(--glass-bg)',
+              borderColor: 'var(--glass-border)',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            {isGenerating ? <Loader2 size={13} strokeWidth={2} className="spin" /> : <Sparkles size={13} strokeWidth={1.5} />}
+            {isGenerating ? "Generating..." : "Generate Draft"}
+          </button>
+        )}
       </div>
 
       {/* Generation failure — shown instead of silently substituting sample text */}
@@ -274,7 +312,7 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
         <EditorContent editor={editor} />
 
         {/* AI-first empty state (req 8) — shown before user has added content */}
-        {isEmpty && editor && (
+        {isEmpty && editor && isEditable && (
           <div className="doc-section__empty-state" aria-hidden="true">
             <Sparkles size={22} strokeWidth={1.5} className="doc-section__empty-icon" />
             <div className="doc-section__empty-heading">Start with AI</div>
@@ -283,13 +321,23 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
             </div>
           </div>
         )}
+        {isEmpty && editor && !isEditable && (
+          <div className="doc-section__empty-state" aria-hidden="true">
+            <div className="doc-section__empty-heading">Not yet drafted</div>
+            <div className="doc-section__empty-hint">
+              Your merchant banker hasn't drafted this section yet.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Page number (req 2) */}
       <PageNumber index={index} />
 
-      {/* Inline AI selection popup — ChatGPT Canvas style */}
-      {editor && (
+      {/* Inline AI selection popup — ChatGPT Canvas style. Mutates content on
+          selection, so it's a no-op surface whenever the editor itself isn't
+          editable (founder's read-only view, or a locked section). */}
+      {editor && isEditable && (
         <SelectionPopup
           editor={editor}
           companyId={companyId}
@@ -305,7 +353,7 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
 // ---------------------------------------------------------------------------
 // DocumentCanvas
 // ---------------------------------------------------------------------------
-export default function DocumentCanvas({ companyId, editorRefs, containerRef, onAutosave, showToast }) {
+export default function DocumentCanvas({ companyId, companyName, editorRefs, containerRef, onAutosave, showToast, readOnly }) {
   const sections            = useCanvasStore((s) => s.sections);
   const setActiveSectionIdx = useCanvasStore((s) => s.setActiveSectionIdx);
   const upsertSection       = useCanvasStore((s) => s.upsertSection);
@@ -365,17 +413,27 @@ export default function DocumentCanvas({ companyId, editorRefs, containerRef, on
         {/* Draft watermark (req 2) */}
         <div className="doc-watermark" aria-hidden="true">DRAFT</div>
 
-        {/* Cover block — top of page 1 */}
-        <div className="doc-paper__titleblock">
-          <div className="doc-paper__company-label">Draft Red Herring Prospectus</div>
-          <div className="doc-paper__company-name">Nirmaan Technologies Limited</div>
-          <div className="doc-paper__meta">
-            SEBI ICDR Regulations, 2018 · SME IPO · BSE SME Platform
+        {/* Cover block — top of page 1. This used to hardcode "Nirmaan
+            Technologies Limited" + a BRLM/Registrar pair for every company
+            regardless of who was actually logged in. The BRLM/Registrar
+            names shown here were also decorative flavor text — not read
+            from anywhere real, and out of sync with the demo company's own
+            seeded Cover Page content. Now gated to the demo company only
+            (using its real seeded BRLM/Registrar), with the real
+            companyName; every other company gets no fabricated cover block
+            here — their own Cover Page section supplies this once drafted. */}
+        {isDemoCompany(companyName) && (
+          <div className="doc-paper__titleblock">
+            <div className="doc-paper__company-label">Draft Red Herring Prospectus</div>
+            <div className="doc-paper__company-name">{companyName}</div>
+            <div className="doc-paper__meta">
+              SEBI ICDR Regulations, 2018 · SME IPO · NSE Emerge Platform
+            </div>
+            <div className="doc-paper__meta" style={{ marginTop: 6, fontSize: '8pt' }}>
+              BRLM: Quotient Capital Advisors LLP &nbsp;|&nbsp; Registrar: Meridian Registry Services Pvt. Ltd.
+            </div>
           </div>
-          <div className="doc-paper__meta" style={{ marginTop: 6, fontSize: '8pt' }}>
-            BRLM: IIFL Securities Limited &nbsp;|&nbsp; Registrar: Link Intime India Pvt. Ltd.
-          </div>
-        </div>
+        )}
 
         {/* Sections — rendered sequentially with page-break visuals between them */}
         {sections.map((section, idx) => (
@@ -387,6 +445,7 @@ export default function DocumentCanvas({ companyId, editorRefs, containerRef, on
             editorRefs={editorRefs}
             onAutosave={onAutosave}
             showToast={showToast}
+            readOnly={readOnly}
           />
         ))}
 

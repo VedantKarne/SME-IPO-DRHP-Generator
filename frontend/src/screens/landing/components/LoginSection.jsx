@@ -1,29 +1,8 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Briefcase } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginSection() {
   const navigate = useNavigate();
-  const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const id = setTimeout(() => setToast(null), 2600);
-    return () => clearTimeout(id);
-  }, [toast]);
-
-  const handleFounderClick = () => {
-    navigate('/auth');
-  };
-
-  const handleBankerClick = () => {
-    // TODO(Backend): CompanyUser.role already models 'merchant_banker' (see
-    // src/extraction/schema.py), but no banker-facing dashboard or review
-    // flow exists yet. Wire this to a real route once that flow ships —
-    // do not fake a redirect in the meantime.
-    setToast('Merchant Banker workspace is coming soon.');
-  };
 
   return (
     <section id="login" className="lv-grid-light bg-[#F1EEE6] border-t border-[#DEDAD0]">
@@ -38,7 +17,7 @@ export default function LoginSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl w-full mx-auto">
           <button
             type="button"
-            onClick={handleFounderClick}
+            onClick={() => navigate('/auth', { state: { role: 'founder' } })}
             className="text-center bg-white border border-[#DEDAD0] rounded-sm p-6 flex flex-col items-center gap-3 cursor-pointer transition-colors duration-150 hover:border-[#8A2E2E] hover:bg-[#F1EEE6]"
           >
             <Building2 size={24} strokeWidth={1.5} className="text-[#8A2E2E]" />
@@ -50,7 +29,7 @@ export default function LoginSection() {
 
           <button
             type="button"
-            onClick={handleBankerClick}
+            onClick={() => navigate('/auth', { state: { role: 'banker' } })}
             className="text-center bg-white border border-[#DEDAD0] rounded-sm p-6 flex flex-col items-center gap-3 cursor-pointer transition-colors duration-150 hover:border-[#8A2E2E] hover:bg-[#F1EEE6]"
           >
             <Briefcase size={24} strokeWidth={1.5} className="text-[#8A2E2E]" />
@@ -61,21 +40,6 @@ export default function LoginSection() {
           </button>
         </div>
       </div>
-
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 12, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 12, x: '-50%' }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="fixed left-1/2 bottom-8 bg-[#1C1B19] text-[#FAF8F3] font-sans text-sm px-5 py-3 rounded-sm z-50 whitespace-nowrap"
-            role="status"
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 }

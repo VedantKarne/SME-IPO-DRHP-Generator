@@ -9,6 +9,10 @@
  *   companyId   {string}
  *   sections    {object[]}  – pre-loaded section stubs from App.jsx (may be [])
  *   companyName {string}
+ *   readOnly    {boolean}   – true for the founder/promoter role: the draft is
+ *                             assembled by AI + the merchant banker, not typed
+ *                             by hand. Only 'merchant_banker' logins get the
+ *                             editable canvas — see App.jsx's /workspace route.
  */
 
 import { useEffect } from 'react';
@@ -23,6 +27,10 @@ export default function CanvasRoot({
   companyId   = '',
   sections: propSections = [],
   companyName = '',
+  readOnly    = false,
+  role        = '',
+  eligibility = null,
+  consistency = null,
 }) {
   const upsertSection = useCanvasStore((s) => s.upsertSection);
 
@@ -60,6 +68,10 @@ export default function CanvasRoot({
     <CanvasLayout
       companyId={companyId}
       companyName={companyName}
+      readOnly={readOnly}
+      role={role}
+      eligibility={eligibility}
+      consistency={consistency}
     />
   );
 }

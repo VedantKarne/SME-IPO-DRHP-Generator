@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Loader2, Zap } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Loader2, Zap, Briefcase } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
 
 export default function Auth({ onAuthSuccess }) {
+  // Which landing-page card was clicked ('founder' | 'banker'), so the Quick
+  // Demo Access section below shows only the matching button. Arriving here
+  // any other way (direct URL, browser back) carries no state — both demo
+  // buttons stay visible in that case rather than guessing a role.
+  const location = useLocation();
+  const landingRole = location.state?.role;
+  const showFounderDemo = landingRole !== 'banker';
+  const showBankerDemo = landingRole !== 'founder';
+
   const [isLogin, setIsLogin] = useState(true);
   
   // Form states
@@ -15,6 +24,7 @@ export default function Auth({ onAuthSuccess }) {
   const [cin, setCin] = useState('');
   
   const [loading, setLoading] = useState(false);
+  const [demoRole, setDemoRole] = useState(null); // 'founder' | 'banker' — which quick-access button is mid-request
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -50,18 +60,19 @@ export default function Auth({ onAuthSuccess }) {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (roleLabel, demoEmail, demoPassword) => {
     setIsLogin(true);
-    setEmail('demo@nirmaan.ai');
-    setPassword('demo123');
+    setEmail(demoEmail);
+    setPassword(demoPassword);
     setLoading(true);
+    setDemoRole(roleLabel);
     setError(null);
 
     try {
       const res = await fetch(`${API}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'demo@nirmaan.ai', password: 'demo123' })
+        body: JSON.stringify({ email: demoEmail, password: demoPassword })
       });
 
       const data = await res.json();
@@ -75,6 +86,7 @@ export default function Auth({ onAuthSuccess }) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setDemoRole(null);
     }
   };
 
@@ -161,35 +173,73 @@ export default function Auth({ onAuthSuccess }) {
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-soft)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.02em' }}>
               Evaluating for Hackathon Demo?
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleDemoLogin}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: 'var(--ink)',
-                borderColor: 'var(--rule)',
-                background: 'var(--paper-sunken)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              {loading ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (
-                <>
-                  <Zap size={15} color="var(--signal)" />
-                  <span>One-Click Demo Access</span>
-                </>
-              )}
-            </button>
-            <div style={{ fontSize: '11px', color: 'var(--ink-faint)', marginTop: '10px', fontFamily: 'var(--font-ui)' }}>
-              Default credentials: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>demo@nirmaan.ai</code> / <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>demo123</code>
-            </div>
+            {showFounderDemo && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleDemoLogin('founder', 'demo@nirmaan.ai', 'demo123')}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: 'var(--ink)',
+                    borderColor: 'var(--rule)',
+                    background: 'var(--paper-sunken)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {demoRole === 'founder' ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (
+                    <>
+                      <Zap size={15} color="var(--signal)" />
+                      <span>Founder Demo Access</span>
+                    </>
+                  )}
+                </button>
+                <div style={{ fontSize: '11px', color: 'var(--ink-faint)', margin: showBankerDemo ? '10px 0 16px' : '10px 0 0', fontFamily: 'var(--font-ui)' }}>
+                  Default credentials: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>demo@nirmaan.ai</code> / <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>demo123</code>
+                </div>
+              </>
+            )}
+
+            {showBankerDemo && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleDemoLogin('banker', 'banker@nirmaan.ai', 'banker123')}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: 'var(--ink)',
+                    borderColor: 'var(--rule)',
+                    background: 'var(--paper-sunken)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {demoRole === 'banker' ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (
+                    <>
+                      <Briefcase size={15} color="var(--signal)" />
+                      <span>Merchant Banker Demo Access</span>
+                    </>
+                  )}
+                </button>
+                <div style={{ fontSize: '11px', color: 'var(--ink-faint)', marginTop: '10px', fontFamily: 'var(--font-ui)' }}>
+                  Default credentials: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>banker@nirmaan.ai</code> / <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>banker123</code>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

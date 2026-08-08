@@ -3,10 +3,11 @@ import {
   FileBarChart, FileSignature, Factory, Leaf, ShieldCheck, Award, FileText,
   Scale, Building2, ScrollText, CheckCircle2, XCircle, Trash2, Paperclip,
   Bot, FileUp, FileScan, Tags, Calculator, Link2, Boxes, Database,
-  FileCheck2, Eye,
+  FileCheck2, Eye, SendHorizontal, MailCheck,
 } from 'lucide-react';
 import { getToken, decodeToken, authedFetch } from '../utils/auth';
 import { isDemoCompany } from '../utils/demoMode.js';
+import { isSentToBanker, markSentToBanker } from '../utils/bankerHandoff.js';
 
 const API_BASE = 'http://127.0.0.1:8000';
 
@@ -38,7 +39,7 @@ const INITIAL_CHECKLIST = [
   { icon: FileCheck2, label: 'Certificate of Incorporation', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/certificate-of-incorporation.pdf' },
 ];
 
-export default function Documents() {
+export default function Documents({ readOnly = false }) {
   // Get companyId directly from token
   const token = getToken();
   const decoded = token ? decodeToken(token) : null;
@@ -65,6 +66,15 @@ export default function Documents() {
   const [pollingActive, setPollingActive] = useState(false);
   const fileInputRef = useRef(null);
   const activeUploadRef = useRef(null);
+
+  const [sentToBanker, setSentToBanker] = useState(() => isSentToBanker(companyId));
+  const [showSentDialog, setShowSentDialog] = useState(false);
+
+  const handleSendToBanker = () => {
+    markSentToBanker(companyId);
+    setSentToBanker(true);
+    setShowSentDialog(true);
+  };
 
   const uploaded = checklist.filter(d => d.uploaded || d.status === 'done').length;
   const total = checklist.length;
@@ -261,7 +271,7 @@ export default function Documents() {
               <Eye size={14} strokeWidth={2} />
             </button>
           )}
-          {doc.uploadId && (
+          {doc.uploadId && !readOnly && (
             <button
               onClick={() => handleRemove(i)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
@@ -287,15 +297,20 @@ export default function Documents() {
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: 'var(--error)', fontWeight: 600 }}>
             <XCircle size={13} strokeWidth={2} /> Failed
           </span>
-          <button
-            onClick={() => handleRemove(i)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
-            title="Remove document"
-          >
-            <Trash2 size={14} strokeWidth={2} />
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => handleRemove(i)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
+              title="Remove document"
+            >
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          )}
         </div>
       );
+    }
+    if (readOnly) {
+      return <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Not uploaded</span>;
     }
     return (
       <button className="btn btn-secondary btn-sm" onClick={() => handleUploadClick(i)}>
@@ -306,25 +321,30 @@ export default function Documents() {
 
   return (
     <div className="fade-in">
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-        accept=".pdf,.xlsx,.xls,.docx,.doc"
-      />
+      {!readOnly && (
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+          accept=".pdf,.xlsx,.xls,.docx,.doc"
+        />
+      )}
 
       <h1 style={{ marginBottom: 4 }}>Document Intelligence</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: '0.875rem' }}>
-        AI dynamically determines required documents based on your company profile.
+        {readOnly
+          ? 'Documents uploaded by the issuer for this filing.'
+          : 'AI dynamically determines required documents based on your company profile.'}
       </p>
 
       {/* First-time nudge — purely informational, so it's styled as a neutral
           tip (ink-toned left rule, paper-raised surface) rather than the
           --signal/--status-gap red used below for documents that actually
           need action. Same red on both used to make the "go read this" note
-          and the "go do this" checklist cards visually indistinguishable. */}
-      {uploaded === 0 && (
+          and the "go do this" checklist cards visually indistinguishable.
+          Not relevant to a read-only viewer who can't upload anyway. */}
+      {!readOnly && uploaded === 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '14px 16px', marginBottom: 24,
@@ -399,6 +419,68 @@ export default function Documents() {
           );
         })}
       </div>
+
+      {/* Send to Merchant Banker — hands the uploaded documents off for
+          drafting. Once sent, the button is replaced by a small confirmation
+          container rather than staying clickable, since there's nothing left
+          to send until new documents are added. Founder-only action — the
+          banker viewing this same checklist read-only has nothing to send. */}
+      {!readOnly && (sentToBanker ? (
+        <div
+          className="card card-sm"
+          style={{
+            marginTop: 20, display: 'inline-flex', alignItems: 'center', gap: 10,
+            background: 'var(--success-dim)', borderColor: 'var(--success)',
+            padding: '10px 16px',
+          }}
+        >
+          <CheckCircle2 size={16} strokeWidth={2} color="var(--success)" />
+          <span style={{ fontSize: '0.85rem', color: 'var(--ink)', fontWeight: 500 }}>
+            Document sent to Merchant Banker
+          </span>
+        </div>
+      ) : (
+        <button
+          className="btn btn-primary"
+          onClick={handleSendToBanker}
+          disabled={uploaded === 0}
+          title={uploaded === 0 ? 'Upload at least one document first' : undefined}
+          style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <SendHorizontal size={15} strokeWidth={2} /> Send to Merchant Banker
+        </button>
+      ))}
+
+      {/* Send confirmation dialog */}
+      {!readOnly && showSentDialog && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Sent to Merchant Banker"
+          style={{
+            position: 'fixed', inset: 0, zIndex: 2000,
+            background: 'rgba(28,27,25,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowSentDialog(false); }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: 360, textAlign: 'center', padding: 32 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'var(--success-dim)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+            }}>
+              <MailCheck size={28} strokeWidth={1.75} color="var(--success)" />
+            </div>
+            <h3 style={{ margin: '0 0 6px', fontSize: '1rem' }}>Document sent to Merchant Banker</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Your merchant banker can now review your documents and draft your DRHP in the Document Workspace.
+            </p>
+            <button className="btn btn-primary" onClick={() => setShowSentDialog(false)}>Done</button>
+          </div>
+        </div>
+      )}
 
       {/* AI extraction info */}
       <div className="card" style={{ marginTop: 24, borderColor: 'var(--rule)', background: 'var(--accent-dim)' }}>
