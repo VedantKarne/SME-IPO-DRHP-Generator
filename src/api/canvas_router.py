@@ -14,19 +14,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/canvas", tags=["Canvas AI"])
 
 class RewriteRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     section_name: str
     selected_text: str
     action: str
 
 class PromptRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     section_name: str
     prompt: str
     full_text: str
 
 class InlineAIRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     section_name: str
     instruction: str
     context_text: str
@@ -40,7 +40,7 @@ def rewrite_text(
     """
     Rewrites a selected passage based on the predefined action (rewrite, expand, simplify, etc).
     """
-    require_company_access(current_user, req.company_id)
+    require_company_access(current_user, str(req.company_id))
 
     action_prompts = {
         "rewrite": "Please rewrite the following text for clarity and professional tone.",
@@ -84,7 +84,7 @@ def prompt_whole_doc(
     """
     Applies a custom user instruction to the entire section text and updates the database.
     """
-    require_company_access(current_user, req.company_id)
+    require_company_access(current_user, str(req.company_id))
 
     system_prompt = (
         "You are an expert corporate lawyer drafting a SEBI DRHP document. "
@@ -105,9 +105,8 @@ def prompt_whole_doc(
         new_text = client.generate(messages, max_tokens=4000)
         
         try:
-            comp_uuid = uuid.UUID(req.company_id)
             section = db.query(GeneratedSection).filter(
-                GeneratedSection.company_id == comp_uuid,
+                GeneratedSection.company_id == req.company_id,
                 GeneratedSection.section_name == req.section_name
             ).first()
             if section:
@@ -133,7 +132,7 @@ def inline_ai(
     """
     Executes an inline AI command at the cursor position based on context.
     """
-    require_company_access(current_user, req.company_id)
+    require_company_access(current_user, str(req.company_id))
 
     system_prompt = (
         "You are an expert corporate lawyer drafting a SEBI DRHP document. "

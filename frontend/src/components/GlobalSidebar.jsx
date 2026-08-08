@@ -1,6 +1,18 @@
+/**
+ * GlobalSidebar.jsx
+ *
+ * Application shell sidebar. Renders the primary navigation for all roles.
+ *
+ * Accepts a `role` prop (string) to switch between nav item arrays:
+ *   - Default (no prop / 'founder'): Founder nav (NAV) — unchanged
+ *   - 'legal_advisor': Legal Advisor nav (NAV_LEGAL)
+ *
+ * Adding a new role: define a NAV_<ROLE> array below, then add a branch
+ * in the `activeNav` selector inside GlobalSidebar. No other changes needed.
+ */
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileEdit, Folder, CheckCircle2, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileEdit, Folder, CheckCircle2, User, LogOut, UserCheck, BookOpen } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 import useCanvasStore from '../canvas/services/canvasStore.js';
@@ -16,7 +28,20 @@ const NAV = [
   { path: '/profile',         icon: User,            label: 'Profile' },
 ];
 
-export default function GlobalSidebar({ companyName, approvedCount }) {
+// ─── Legal Advisor navigation items ─────────────────────────────────────────
+// Only rendered when GlobalSidebar receives role="legal_advisor".
+// All paths are under /legal/ to keep legal routes isolated from Founder routes.
+const NAV_LEGAL = [
+  { path: '/legal/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/legal/documents',   icon: Folder,          label: 'Legal Documents' },
+  { path: '/legal/drhp',        icon: FileEdit,        label: 'DRHP Sections' },
+  { path: '/legal/compliance',  icon: CheckCircle2,    label: 'Compliance' },
+  { path: '/legal/review',      icon: UserCheck,       label: 'Review Queue' },
+  { path: '/legal/comments',    icon: BookOpen,        label: 'Comments' },
+  { path: '/legal/activity',    icon: User,            label: 'Activity' },
+];
+
+export default function GlobalSidebar({ companyName, approvedCount, role = 'founder' }) {
   const [isOpen, setIsOpen] = useState(false);
   // Real health, polled. The badge below used to be permanently green with no
   // underlying check, so an unreachable backend or an empty retrieval corpus
@@ -24,6 +49,10 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
   const [health, setHealth] = useState(null);
   const location = useLocation();
   const isWorkspace = location.pathname.startsWith('/workspace');
+
+  // Select nav items based on role. Default (Founder) is unchanged.
+  const isLegalAdvisor = role === 'legal_advisor';
+  const activeNav = isLegalAdvisor ? NAV_LEGAL : NAV;
 
   // The Sections panel (rendered inside the Workspace canvas, not here) takes
   // over as the primary side panel while in rail mode — see canvasStore.js.
@@ -66,7 +95,7 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         )}
 
         <nav className="sidebar-nav">
-          {NAV.map(item => {
+          {activeNav.map(item => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -90,6 +119,8 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
         <>
         <hr className="sidebar-divider" />
 
+        {/* Sections Complete progress bar — Founder role only */}
+        {!isLegalAdvisor && (
         <div className="sidebar-progress">
           <div className="progress-label">Sections Complete</div>
           <div>
@@ -100,6 +131,7 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
             <div className="progress-bar-fill" style={{ width: `${((approvedCount || 0) / 25) * 100}%` }} />
           </div>
         </div>
+        )}
 
         <div className="sidebar-status">
           <div

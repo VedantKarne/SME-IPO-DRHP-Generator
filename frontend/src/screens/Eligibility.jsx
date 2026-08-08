@@ -48,7 +48,7 @@ export default function Eligibility({ eligibility }) {
         {eligibility.checks.map((check, i) => (
           <div key={i} className="card card-sm fade-in" style={{
             borderColor: check.passed ? 'var(--success)' : 'var(--error)',
-            background: 'var(--glass-bg)'
+            background: check.passed ? 'var(--glass-bg)' : 'var(--error-dim)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
               <div style={{ flex: 1 }}>

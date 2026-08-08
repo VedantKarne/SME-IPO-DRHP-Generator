@@ -68,7 +68,7 @@ async function toApiError(res) {
   // Auth and forbidden errors must always show the user-friendly message — the
   // raw backend detail ("Invalid token", "Not authenticated", etc.) is an
   // implementation detail that is meaningless to the user.
-  const message = (kind === 'auth' || kind === 'forbidden')
+  const message = (kind === 'auth' || (kind === 'forbidden' && !detail))
     ? MESSAGE_BY_KIND[kind]
     : (detail || MESSAGE_BY_KIND[kind]);
   return new ApiError(message, {
@@ -286,6 +286,61 @@ export async function generateSection(companyId, sectionName) {
       section_name: sectionName,
     })
   );
+}
+
+/**
+ * Trigger the full LangGraph pipeline and stream the result using SSE.
+ *
+ * @param {string} companyId
+ * @param {string} sectionName
+ * @param {function} onEvent Callback for each event (type, payload)
+ */
+export async function generateSectionStream(companyId, sectionName, onEvent) {
+  const token = getToken();
+  if (!token || isTokenExpired(token)) {
+    throw new ApiError('Your session has expired. Please sign in again.', { status: 401, kind: 'auth' });
+  }
+
+  const response = await authedFetch(`${API_BASE}/api/agent/run`, {
+    method: 'POST',
+    body: JSON.stringify({ company_id: companyId, section_name: sectionName })
+  });
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    buffer += decoder.decode(value, { stream: true });
+    
+    // Process SSE lines
+    let lineEnd = buffer.indexOf('\n\n');
+    while (lineEnd !== -1) {
+      const chunk = buffer.slice(0, lineEnd);
+      buffer = buffer.slice(lineEnd + 2);
+      
+      if (chunk.startsWith('data: ')) {
+        const dataStr = chunk.slice(6);
+        try {
+          const data = JSON.parse(dataStr);
+          if (data.type === 'error') {
+            throw new Error(data.content);
+          }
+          onEvent(data.type, data.content || data.metadata);
+        } catch (e) {
+          console.error("Error parsing SSE data", e, chunk);
+        }
+      }
+      lineEnd = buffer.indexOf('\n\n');
+    }
+  }
 }
 
 /**

@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import uuid
+from typing import Optional
 
-from src.extraction.schema import GeneratedSection, ChatMessage, Company
+from src.extraction.schema import GeneratedSection, ChatMessage, Company, SectionVersion, AuditLog
 from src.agent.groq_client import get_groq_client, LLMUnavailable
 from src.api.server import get_db
 from src.api.auth_router import get_current_user, require_company_access
@@ -11,12 +12,12 @@ from src.api.auth_router import get_current_user, require_company_access
 router = APIRouter(prefix="/api/canvas", tags=["Chat Edit"])
 
 class ChatEditRequest(BaseModel):
-    company_id: str
+    company_id: uuid.UUID
     section_name: str
     prompt: str
 
 class ChatEditResponse(BaseModel):
-    section_id: str
+    section_id: uuid.UUID
     new_draft_text: str
 
 @router.post("/chat-edit", response_model=ChatEditResponse)
@@ -34,17 +35,12 @@ def chat_edit_section(
     """
     require_company_access(current_user, request.company_id)
 
-    try:
-        comp_uuid = uuid.UUID(request.company_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid company_id UUID format")
-        
-    company = db.query(Company).filter(Company.id == comp_uuid).first()
+    company = db.query(Company).filter(Company.id == request.company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
     section = db.query(GeneratedSection).filter(
-        GeneratedSection.company_id == comp_uuid,
+        GeneratedSection.company_id == request.company_id,
         GeneratedSection.section_name == request.section_name
     ).first()
     
@@ -87,6 +83,6 @@ def chat_edit_section(
     db.commit()
     
     return ChatEditResponse(
-        section_id=str(section.id),
+        section_id=section.id,
         new_draft_text=new_draft
     )

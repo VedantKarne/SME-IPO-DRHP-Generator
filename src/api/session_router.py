@@ -49,7 +49,7 @@ def restore_session(current_user: dict = Depends(get_current_user), db: Session 
         logging.getLogger(__name__).warning(f"Eligibility check failed: {e}")
         eligibility = None
     from src.api.server import get_company_sections
-    sections_data = get_company_sections(company_id_str, current_user)
+    sections_data = get_company_sections(company_id, current_user)
 
     # Run consistency checks to expose them on the Dashboard
     from src.agent.consistency_checker import run_all_checks_by_id

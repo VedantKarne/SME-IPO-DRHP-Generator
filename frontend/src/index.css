@@ -118,6 +118,11 @@ body {
   min-height: 100vh;
 }
 
+/* Roles that do not use the Copilot rail (e.g. Legal Advisor) */
+.shell--no-copilot {
+  grid-template-columns: var(--sidebar-w) 1fr;
+}
+
 .global-sidebar {
   position: fixed;
   top: 0;

@@ -13,7 +13,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Sparkles, RotateCcw, Maximize2, Wand2, TrendingUp, Briefcase, BookOpen,
   FileText, Strikethrough, Quote, AlignLeft, AlignCenter, AlignRight, X, ArrowRight,
-  Lock,
+  Lock, MessageSquare,
 } from 'lucide-react';
 import * as canvasApi from '../services/canvasApi.js';
 import useCanvasStore from '../services/canvasStore.js';
@@ -275,6 +275,20 @@ export default function DocumentToolbar({
             companyId={companyId}
             sectionName={activeSectionName}
           />
+
+          {/* ── Reopen Copilot — only shown when panel is closed ── */}
+          {!copilotOpen && (
+            <button
+              type="button"
+              className="dtb-outline-btn"
+              onClick={onToggleCopilot}
+              title={`Open ${panelLabel} (⌘K)`}
+              aria-label={`Open ${panelLabel}`}
+            >
+              <MessageSquare size={13} strokeWidth={1.8} aria-hidden="true" />
+              {panelLabel}
+            </button>
+          )}
         </div>
 
         {printPreviewOn && (
@@ -510,6 +524,20 @@ export default function DocumentToolbar({
           companyId={companyId}
           sectionName={activeSectionName}
         />
+
+        {/* ── Reopen Copilot — only shown when panel is closed ── */}
+        {!copilotOpen && (
+          <button
+            type="button"
+            className="dtb-outline-btn"
+            onClick={onToggleCopilot}
+            title={`Open ${panelLabel} (⌘K)`}
+            aria-label={`Open ${panelLabel}`}
+          >
+            <MessageSquare size={13} strokeWidth={1.8} aria-hidden="true" />
+            {panelLabel}
+          </button>
+        )}
 
         {/* ── ··· overflow ── */}
         <div className="dtb-overflow-wrap" ref={overflowMenuRef} style={{ position: 'relative' }}>

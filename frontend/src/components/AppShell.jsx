@@ -117,16 +117,12 @@ function CopilotRail({ companyId, currentSection }) {
   );
 }
 
-export default function AppShell({ children, companyId, currentSection }) {
+export default function AppShell({ children, companyId, currentSection, noCopilot = false }) {
   const location = useLocation();
-
   return (
-    <div className="shell">
-      {/* Main */}
+    <div className={noCopilot ? 'shell shell--no-copilot' : 'shell'}>
       <main className="shell-main">{children}</main>
-
-      {/* Copilot */}
-      <CopilotRail companyId={companyId} currentSection={currentSection} />
+      {!noCopilot && <CopilotRail companyId={companyId} currentSection={currentSection} />}
     </div>
   );
 }

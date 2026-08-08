@@ -206,16 +206,35 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
     setIsGenerating(true);
     setGenerateError(null);
     try {
-      const res = await canvasApi.generateSection(companyId, section.name);
-      if (res.draft_text && editorRefs?.current?.[section.name]) {
-        const content = markdownToTipTap(res.draft_text);
-        editorRefs.current[section.name].commands.setContent(content, false);
+      const editor = editorRefs?.current?.[section.name];
+      if (editor) {
+        editor.commands.setContent('', false);
+      }
+      let finalRes = null;
+      let accumulatedText = "";
+
+      await canvasApi.generateSectionStream(companyId, section.name, (type, payload) => {
+        if (type === 'token') {
+          accumulatedText += payload;
+          if (editor) {
+            // Re-render TipTap content continuously
+            const content = markdownToTipTap(accumulatedText);
+            editor.commands.setContent(content, false);
+          }
+        } else if (type === 'final') {
+          finalRes = payload;
+        }
+      });
+
+      if (finalRes && editor) {
+        const content = markdownToTipTap(finalRes.draft_text);
+        editor.commands.setContent(content, false);
         upsertSection({
           name: section.name,
-          draft_text: res.draft_text,
+          draft_text: finalRes.draft_text,
           content,
-          score: res.completeness_score,
-          supporting_clause_ids: res.supporting_clause_ids ?? section.supporting_clause_ids,
+          score: finalRes.completeness_score,
+          supporting_clause_ids: finalRes.supporting_clause_ids ?? section.supporting_clause_ids,
         });
       }
     } catch (e) {

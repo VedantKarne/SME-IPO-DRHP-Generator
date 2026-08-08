@@ -203,7 +203,7 @@ def _process_document_background(
         company_id_uuid = uuid.UUID(company_id_str)
 
         # Mark as processing
-        record = db.query(UploadedDocument).filter(UploadedDocument.id == uuid.UUID(upload_id)).first()
+        record = db.query(UploadedDocument).filter(UploadedDocument.id == upload_id).first()
         if record:
             record.status = "processing"
             db.commit()
@@ -313,7 +313,7 @@ def _process_document_background(
         logger.error(f"Background processing failed for '{filename}': {e}")
         db.rollback()
         try:
-            record = db.query(UploadedDocument).filter(UploadedDocument.id == uuid.UUID(upload_id)).first()
+            record = db.query(UploadedDocument).filter(UploadedDocument.id == upload_id).first()
             if record:
                 record.status = "error"
                 record.error_message = str(e)[:500]
@@ -328,7 +328,7 @@ def _process_document_background(
 
 @router.post("/upload/{company_id}", response_model=UploadResponse, status_code=202)
 async def upload_document(
-    company_id: str,
+    company_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     doc_type: str = Form(default="other"),
@@ -344,12 +344,7 @@ async def upload_document(
     if str(current_user["company_id"]) != company_id:
         raise HTTPException(status_code=403, detail="Not authorized for this company")
     # Validate company
-    try:
-        company_uuid = uuid.UUID(company_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid company_id format")
-
-    company = db.query(Company).filter(Company.id == company_uuid).first()
+    company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -363,7 +358,7 @@ async def upload_document(
         )
 
     # Save file to disk
-    dest_dir = os.path.join(CLIENT_DOCS_DIR, company_id)
+    dest_dir = os.path.join(CLIENT_DOCS_DIR, str(company_id))
     os.makedirs(dest_dir, exist_ok=True)
     dest_path = os.path.join(dest_dir, filename)
 
@@ -409,7 +404,7 @@ async def upload_document(
 
     # Create upload record
     upload_record = UploadedDocument(
-        company_id=company_uuid,
+        company_id=company_id,
         filename=filename,
         doc_type=doc_type,
         status="pending",
@@ -423,7 +418,7 @@ async def upload_document(
     try:
         audit = AuditLog(
             event_type="document_upload",
-            company_id=company_uuid,
+            company_id=company_id,
             source_file=filename,
             model_used="none",
         )
@@ -441,7 +436,7 @@ async def upload_document(
         _process_document_background,
         file_path=dest_path,
         upload_id=upload_id,
-        company_id_str=company_id,
+        company_id_str=str(company_id),
         company_name=company.name,
         filename=filename,
     )
@@ -456,7 +451,7 @@ async def upload_document(
 
 @router.get("/status/{company_id}", response_model=List[DocumentStatusItem])
 def get_document_status(
-    company_id: str, 
+    company_id: uuid.UUID, 
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -467,14 +462,9 @@ def get_document_status(
     # Verify authorization
     if str(current_user["company_id"]) != company_id:
         raise HTTPException(status_code=403, detail="Not authorized for this company")
-    try:
-        company_uuid = uuid.UUID(company_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid company_id format")
-
     records = (
         db.query(UploadedDocument)
-        .filter(UploadedDocument.company_id == company_uuid)
+        .filter(UploadedDocument.company_id == company_id)
         .order_by(UploadedDocument.uploaded_at.desc())
         .all()
     )
@@ -494,7 +484,7 @@ def get_document_status(
 
 @router.delete("/{upload_id}", status_code=200)
 def delete_document(
-    upload_id: str,
+    upload_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -502,12 +492,7 @@ def delete_document(
     Deletes an uploaded document, its physical file, associated vector chunks,
     and any auto-extracted data (e.g. financials).
     """
-    try:
-        upload_uuid = uuid.UUID(upload_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid upload_id format")
-
-    record = db.query(UploadedDocument).filter(UploadedDocument.id == upload_uuid).first()
+    record = db.query(UploadedDocument).filter(UploadedDocument.id == upload_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Document not found")
         
