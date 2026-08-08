@@ -379,11 +379,7 @@ export default function Documents() {
                 : doc.status === 'error'
                 ? 'var(--error)'
                 : doc.required ? 'var(--status-gap)' : 'var(--glass-border)',
-              background: doc.uploaded || doc.status === 'done'
-                ? 'var(--success-dim)'
-                : doc.status === 'error'
-                ? 'var(--error-dim)'
-                : 'var(--glass-bg)',
+              background: 'var(--glass-bg)',
             }}
           >
             <DocIcon size={20} strokeWidth={1.75} color="var(--text-secondary)" style={{ flexShrink: 0 }} />

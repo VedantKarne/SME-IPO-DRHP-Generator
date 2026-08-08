@@ -33,17 +33,17 @@ export default function LandingHero() {
             <div className="flex items-center gap-4 mt-8 flex-wrap">
               <button
                 type="button"
-                onClick={() => scrollToSection('features')}
+                onClick={() => scrollToSection('login')}
                 className="px-5 py-3 bg-[#8A2E2E] hover:bg-[#742525] text-white font-sans font-semibold text-sm rounded-sm transition-colors duration-150 flex items-center gap-2 cursor-pointer border border-transparent"
               >
-                Explore Features ↓
+                Quick Login →
               </button>
               <button
                 type="button"
-                onClick={() => scrollToSection('login')}
+                onClick={() => scrollToSection('features')}
                 className="px-5 py-3 bg-transparent hover:bg-[#F1EEE6] text-[#1C1B19] border border-[#DEDAD0] font-sans font-semibold text-sm rounded-sm transition-colors duration-150 flex items-center gap-2 cursor-pointer"
               >
-                Quick Login →
+                Explore Features ↓
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2, Zap } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
@@ -83,10 +84,10 @@ export default function Auth({ onAuthSuccess }) {
       <div className="landing-grid" />
 
       <div className="auth-wrapper">
-        <div className="landing-logo" style={{ marginBottom: '2.5rem' }}>
-          <img src="/nirmaan-mark.svg" alt="" className="landing-logo-mark" />
+        <Link to="/" className="landing-logo" style={{ marginBottom: '2.5rem', textDecoration: 'none', cursor: 'pointer' }}>
+          <img src="/nirmaan-mark.svg" alt="Nirmaan AI Logo" className="landing-logo-mark" />
           <div className="landing-logo-text">Nirmaan AI</div>
-        </div>
+        </Link>
 
         <div className="auth-card fade-in">
           <div className="auth-tabs">

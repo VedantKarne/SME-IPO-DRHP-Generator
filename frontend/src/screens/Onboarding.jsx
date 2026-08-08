@@ -303,7 +303,7 @@ export default function Onboarding({ onComplete }) {
                 )}
 
                 {msg.type === 'eligibility' && (
-                  <div style={{ padding: '14px 16px', background: 'var(--success-dim)', border: '1px solid var(--success)', borderRadius: 'var(--radius-lg)' }}>
+                  <div style={{ padding: '14px 16px', background: 'var(--glass-bg)', border: '1px solid var(--success)', borderRadius: 'var(--radius-lg)' }}>
                     {msg.error ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--warning)', fontWeight: 600 }}>
                         <AlertTriangle size={14} strokeWidth={2} /> Eligibility check {msg.error}. It will run again once your

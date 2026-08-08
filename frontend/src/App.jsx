@@ -46,7 +46,7 @@ export default function App() {
     try {
       const token = getToken();
       if (!token || isTokenExpired(token)) {
-        return;
+        return null;
       }
 
       const { company_id, company_name } = decodeToken(token);
@@ -60,13 +60,24 @@ export default function App() {
         setEligibility(data.eligibility || null);
         setReadiness(data.readiness || null);
         setConsistency(data.consistency || null);
+        return data;
       }
     } catch (e) { console.error('Bootstrap error:', e); }
+    return null;
   };
 
-  const handleAuthSuccess = (isNewRegistration) => {
-    bootstrap();
-    navigate(isNewRegistration ? '/onboarding' : '/dashboard');
+  const handleAuthSuccess = async (isNewRegistration) => {
+    if (isNewRegistration) {
+      bootstrap();
+      navigate('/onboarding');
+      return;
+    }
+    // Returning user — check if they have any uploaded documents.
+    // If none, send them to Documents to start the upload flow;
+    // otherwise send them straight to Dashboard.
+    const data = await bootstrap();
+    const hasDocuments = (data?.uploaded_documents?.length ?? 0) > 0;
+    navigate(hasDocuments ? '/dashboard' : '/documents');
   };
 
   const handleOnboardingComplete = () => {

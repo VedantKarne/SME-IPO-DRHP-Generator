@@ -17,7 +17,7 @@ export default function Eligibility({ eligibility }) {
       {/* Overall verdict */}
       <div className="card" style={{
         marginBottom: 20,
-        background: eligibility.eligible ? 'var(--success-dim)' : 'var(--error-dim)',
+        background: eligibility.eligible ? 'var(--glass-bg)' : 'var(--glass-bg)',
         borderColor: eligibility.eligible ? 'var(--success)' : 'var(--error)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -48,7 +48,7 @@ export default function Eligibility({ eligibility }) {
         {eligibility.checks.map((check, i) => (
           <div key={i} className="card card-sm fade-in" style={{
             borderColor: check.passed ? 'var(--success)' : 'var(--error)',
-            background: check.passed ? 'var(--success-dim)' : 'var(--error-dim)'
+            background: 'var(--glass-bg)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
               <div style={{ flex: 1 }}>

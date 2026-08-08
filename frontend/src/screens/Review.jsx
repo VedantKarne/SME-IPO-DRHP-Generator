@@ -85,11 +85,11 @@ export default function Review({ sections, setSections, companyId }) {
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--warning)' }}>{pending.length}</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Awaiting Your Review</div>
         </div>
-        <div className="card card-sm" style={{ borderColor: 'var(--error)', background: 'var(--error-dim)' }}>
+        <div className="card card-sm" style={{ borderColor: 'var(--error)', background: 'var(--glass-bg)' }}>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--error)' }}>{returned.length}</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Returned to Issuer</div>
         </div>
-        <div className="card card-sm" style={{ borderColor: 'var(--success)', background: 'var(--success-dim)' }}>
+        <div className="card card-sm" style={{ borderColor: 'var(--success)', background: 'var(--glass-bg)' }}>
           <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--success)' }}>{approved.length}</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Certified & Locked</div>
         </div>
