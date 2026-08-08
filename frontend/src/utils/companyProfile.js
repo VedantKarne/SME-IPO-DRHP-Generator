@@ -14,6 +14,8 @@
  * through the two functions below, so that would be a small, contained change.
  */
 
+import { isDemoCompany } from './demoMode.js';
+
 const STORAGE_PREFIX = 'nirmaan_profile_';
 
 // ---------------------------------------------------------------------------
@@ -163,8 +165,6 @@ const REQUIRED_KEYS = PROFILE_QUESTIONS.filter((q) => q.required).map((q) => q.k
 // Prefill from that real seeded data instead of leaving it blank. Fields
 // with no real backend equivalent (incorporation_date, employee_count,
 // ipo_timeline) are left unanswered rather than guessed.
-const DEMO_COMPANY_NAME = 'Nirmaan Technologies Ltd';
-
 const DEMO_PROFILE_DEFAULTS = {
   legal_name: 'Nirmaan Technologies Ltd',
   org_type: 'Private Limited Company',
@@ -194,7 +194,7 @@ export function getCompanyProfile(companyId, companyName) {
   } catch {
     saved = {};
   }
-  if (companyName === DEMO_COMPANY_NAME) {
+  if (isDemoCompany(companyName)) {
     return { ...DEMO_PROFILE_DEFAULTS, ...saved };
   }
   return saved;

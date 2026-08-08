@@ -2001,51 +2001,7 @@ body.authoring-mode .shell-main {
    CANVAS APP BAR — full-width top navbar
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Brand block */
-.canvas-appbar__brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-shrink: 0;
-  margin-right: 24px;
-}
-
-.canvas-appbar__logo {
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.canvas-appbar__brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  line-height: 1.1;
-}
-
-.canvas-appbar__brand-name {
-  font-family: var(--doc-font-sans);
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-}
-
-.canvas-appbar__brand-sub {
-  font-family: var(--doc-font-sans);
-  font-size: 0.6rem;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-/* Center: company + badges */
+/* Center: company */
 .canvas-appbar__center {
   display: flex;
   align-items: center;
@@ -2079,12 +2035,6 @@ body.authoring-mode .shell-main {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 260px;
-}
-
-.canvas-appbar__sep {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 .canvas-appbar__badge {

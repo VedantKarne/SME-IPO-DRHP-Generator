@@ -73,20 +73,7 @@ export default function CanvasAppBar({
 
   return (
     <header className="canvas-appbar" role="banner" aria-label="Application header">
-      {/* ── Left: Brand ───────────────────────────────────────────────── */}
-      <div className="canvas-appbar__brand">
-        <div className="canvas-appbar__logo" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1L14.9 13H1.1L8 1Z" fill="var(--ink)" fillOpacity="0.9"/>
-          </svg>
-        </div>
-        <div className="canvas-appbar__brand-text">
-          <span className="canvas-appbar__brand-name">NIRMAAN AI</span>
-          <span className="canvas-appbar__brand-sub">SME IPO DRHP Generator</span>
-        </div>
-      </div>
-
-      {/* ── Center: Company + doc type ────────────────────────────────── */}
+      {/* ── Left: Company + doc type ──────────────────────────────────── */}
       <div className="canvas-appbar__center">
         <button type="button" className="canvas-appbar__company-btn" aria-label="Switch company">
           <span className="canvas-appbar__company-name">{displayName}</span>
@@ -94,15 +81,14 @@ export default function CanvasAppBar({
             <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-
-        <span className="canvas-appbar__sep" aria-hidden="true">•</span>
-
-        <span className="canvas-appbar__badge canvas-appbar__badge--doc">DRHP</span>
-        <span className="canvas-appbar__badge canvas-appbar__badge--exchange">BSE SME</span>
       </div>
 
-      {/* ── Right: Readiness + Save + Version + Avatar ────────────────── */}
+      {/* ── Right: Doc badges + Readiness + Save + Version + Avatar ────── */}
       <div className="canvas-appbar__right">
+        {/* Doc type badges */}
+        <span className="canvas-appbar__badge canvas-appbar__badge--doc">DRHP</span>
+        <span className="canvas-appbar__badge canvas-appbar__badge--exchange">BSE SME</span>
+
         {/* Readiness indicator */}
         <div className="canvas-appbar__readiness" title={`Readiness: ${readinessPct}%`}>
           <ReadinessRing pct={readinessPct} />

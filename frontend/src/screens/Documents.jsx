@@ -2,32 +2,65 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   FileBarChart, FileSignature, Factory, Leaf, ShieldCheck, Award, FileText,
   Scale, Building2, ScrollText, CheckCircle2, XCircle, Trash2, Paperclip,
-  AlertTriangle, Bot, FileUp,
+  Bot, FileUp, FileScan, Tags, Calculator, Link2, Boxes, Database,
+  FileCheck2, Eye,
 } from 'lucide-react';
 import { getToken, decodeToken, authedFetch } from '../utils/auth';
+import { isDemoCompany } from '../utils/demoMode.js';
 
 const API_BASE = 'http://127.0.0.1:8000';
 
+const PIPELINE_STEPS = [
+  { icon: FileScan,  phase: 'Parse',        heading: 'PDF → Text + Tables', src: 'pdf_parser.py' },
+  { icon: Tags,      phase: 'Classify',     heading: 'Section Mapping',     src: 'client_data_chunker.py' },
+  { icon: Calculator, phase: 'Extract KPIs', heading: 'Revenue, PAT, NW',    src: 'Groq LLM' },
+  { icon: Link2,     phase: 'Enrich',       heading: 'Breadcrumbs Added',   src: 'context_enricher.py' },
+  { icon: Boxes,     phase: 'Embed',        heading: 'BGE-M3 Vectors',      src: 'Vector Store' },
+  { icon: Database,  phase: 'Index',        heading: 'Searchable in RAG',   src: 'ChromaDB' },
+];
+
+// demoFile: sample PDF served as a static frontend asset (frontend/public/
+// demo-documents/) for the seeded demo account only — see isDemoCompany
+// below. Real accounts never see this field populated on upload; there is
+// no backend "view raw file" endpoint, so it's out of scope to wire this up
+// for real uploads in this pass.
 const INITIAL_CHECKLIST = [
-  { icon: FileBarChart, label: 'Audited Financial Statements (FY2022–24)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: FileSignature, label: 'Board Resolution for IPO', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: Factory, label: 'Factory Licence / Registration', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: Leaf, label: 'Pollution Certificate', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: ShieldCheck, label: 'Factory Insurance Policy', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: Award, label: 'Trademark Certificates', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: FileText, label: 'Vendor & Customer Contracts (material)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: Scale, label: 'Litigation / Legal Notices', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: Building2, label: 'GST Registration Certificate', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
-  { icon: ScrollText, label: 'Memorandum & Articles of Association', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null },
+  { icon: FileBarChart, label: 'Audited Financial Statements (FY2022–24)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/audited-financial-statements.pdf' },
+  { icon: FileSignature, label: 'Board Resolution for IPO', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/board-resolution.pdf' },
+  { icon: Factory, label: 'Factory Licence / Registration', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/factory-licence.pdf' },
+  { icon: Leaf, label: 'Pollution Certificate', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/pollution-certificate.pdf' },
+  { icon: ShieldCheck, label: 'Factory Insurance Policy', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/factory-insurance.pdf' },
+  { icon: Award, label: 'Trademark Certificates', required: false, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/trademark-certificates.pdf' },
+  { icon: FileText, label: 'Vendor & Customer Contracts (material)', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/vendor-customer-contracts.pdf' },
+  { icon: Scale, label: 'Litigation / Legal Notices', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/litigation-notices.pdf' },
+  { icon: Building2, label: 'GST Registration Certificate', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/gst-registration.pdf' },
+  { icon: ScrollText, label: 'Memorandum & Articles of Association', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/moa-aoa.pdf' },
+  { icon: FileCheck2, label: 'Certificate of Incorporation', required: true, uploaded: false, filename: null, status: null, uploadId: null, extractedKpis: null, demoFile: '/demo-documents/certificate-of-incorporation.pdf' },
 ];
 
 export default function Documents() {
-  const [checklist, setChecklist] = useState(INITIAL_CHECKLIST);
-  const [uploadingIdx, setUploadingIdx] = useState(null);
-
   // Get companyId directly from token
   const token = getToken();
-  const companyId = token ? decodeToken(token)?.company_id : null;
+  const decoded = token ? decodeToken(token) : null;
+  const companyId = decoded?.company_id ?? null;
+  const isDemo = isDemoCompany(decoded?.company_name ?? null);
+
+  // For the seeded demo account, the checklist starts pre-filled with the
+  // sample PDFs so the page demonstrates a fully-prepared filing without
+  // requiring an actual upload. reconcileWithBackend (below) still runs
+  // afterwards and will only overwrite a slot if a real backend record
+  // exists for it, so this never fights genuine uploads.
+  const [checklist, setChecklist] = useState(() =>
+    isDemo
+      ? INITIAL_CHECKLIST.map((doc) => ({
+          ...doc,
+          uploaded: true,
+          status: 'done',
+          filename: doc.demoFile.split('/').pop(),
+        }))
+      : INITIAL_CHECKLIST
+  );
+  const [uploadingIdx, setUploadingIdx] = useState(null);
 
   const [pollingActive, setPollingActive] = useState(false);
   const fileInputRef = useRef(null);
@@ -219,13 +252,24 @@ export default function Documents() {
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className="badge badge-success"><CheckCircle2 size={12} strokeWidth={2} /> Extracted</span>
-          <button
-            onClick={() => handleRemove(i)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
-            title="Remove document"
-          >
-            <Trash2 size={14} strokeWidth={2} />
-          </button>
+          {doc.demoFile && (
+            <button
+              onClick={() => window.open(doc.demoFile, '_blank', 'noopener,noreferrer')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 4, display: 'flex' }}
+              title="View document"
+            >
+              <Eye size={14} strokeWidth={2} />
+            </button>
+          )}
+          {doc.uploadId && (
+            <button
+              onClick={() => handleRemove(i)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}
+              title="Remove document"
+            >
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          )}
         </div>
       );
     }
@@ -275,17 +319,21 @@ export default function Documents() {
         AI dynamically determines required documents based on your company profile.
       </p>
 
-      {/* First-time nudge — Dashboard readiness/eligibility has nothing to
-          compute until at least one document is on file. */}
+      {/* First-time nudge — purely informational, so it's styled as a neutral
+          tip (ink-toned left rule, paper-raised surface) rather than the
+          --signal/--status-gap red used below for documents that actually
+          need action. Same red on both used to make the "go read this" note
+          and the "go do this" checklist cards visually indistinguishable. */}
       {uploaded === 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '14px 16px', marginBottom: 24,
-          background: 'var(--accent-dim)', border: '1px solid var(--signal)',
+          background: 'var(--paper-raised)', border: '1px solid var(--rule)',
+          borderLeft: '3px solid var(--ink-faint)',
           borderRadius: 'var(--radius-md)',
         }}>
-          <FileUp size={20} strokeWidth={1.75} color="var(--signal)" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: '0.875rem', color: 'var(--ink)' }}>
+          <FileUp size={20} strokeWidth={1.75} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
             Upload documents to start IPO generation.
           </span>
         </div>
@@ -312,6 +360,11 @@ export default function Documents() {
       </div>
 
       {/* Checklist */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+          <span style={{ color: 'var(--signal)' }}>*</span> Required
+        </span>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {checklist.map((doc, i) => {
           const DocIcon = doc.icon;
@@ -335,14 +388,15 @@ export default function Documents() {
           >
             <DocIcon size={20} strokeWidth={1.75} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>{doc.label}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {doc.filename
-                  ? <span style={{ color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 4 }}><Paperclip size={11} strokeWidth={2} /> {doc.filename}</span>
-                  : doc.required
-                    ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><AlertTriangle size={11} strokeWidth={2} /> Required</span>
-                    : 'Optional'}
+              <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                {doc.label}
+                {doc.required && <span style={{ color: 'var(--signal)' }}> *</span>}
               </div>
+              {doc.filename && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--accent)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Paperclip size={11} strokeWidth={2} /> {doc.filename}
+                </div>
+              )}
             </div>
             {getStatusBadge(doc, i)}
           </div>
@@ -358,19 +412,17 @@ export default function Documents() {
         <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
           When you upload a financial statement, Nirmaan AI runs the full ingestion pipeline:
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-          {[
-            { label: 'Parse', value: 'PDF → Text + Tables', src: 'pdf_parser.py' },
-            { label: 'Classify', value: 'Section Mapping', src: 'client_data_chunker.py' },
-            { label: 'Extract KPIs', value: 'Revenue, PAT, NW', src: 'Groq LLM' },
-            { label: 'Enrich', value: 'Breadcrumbs Added', src: 'context_enricher.py' },
-            { label: 'Embed', value: 'BGE-M3 Vectors', src: 'Vector Store' },
-            { label: 'Index', value: 'Searchable in RAG', src: 'ChromaDB' },
-          ].map(({ label, value, src }) => (
-            <div key={label} style={{ padding: '10px 12px', background: 'var(--paper-raised)', border: '1px solid var(--rule)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--accent)', marginTop: 2 }}>via: {src}</div>
+        <div className="pipeline-row">
+          {PIPELINE_STEPS.map(({ icon: StepIcon, phase, heading, src }) => (
+            <div className="pipeline-step" key={phase}>
+              <div className="pipeline-circle">
+                <StepIcon size={17} strokeWidth={1.75} />
+              </div>
+              <div className="pipeline-step-text">
+                <div className="pipeline-phase">{phase}</div>
+                <div className="pipeline-heading">{heading}</div>
+                <div className="pipeline-desc">via: {src}</div>
+              </div>
             </div>
           ))}
         </div>
