@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import useCanvasStore from '../services/canvasStore.js';
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,8 @@ function slugify(name) {
 export default function DocumentSidebar({ containerRef }) {
   const sections         = useCanvasStore((s) => s.sections);
   const activeSectionIdx = useCanvasStore((s) => s.activeSectionIdx);
+  const navRailCollapsed = useCanvasStore((s) => s.navRailCollapsed);
+  const setNavRailCollapsed = useCanvasStore((s) => s.setNavRailCollapsed);
   const [collapsed, setCollapsed] = useState(true);
 
   const activeItemRef = useRef(null);
@@ -71,8 +74,24 @@ export default function DocumentSidebar({ containerRef }) {
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  // This panel is the Workspace's alternative to the app's main nav — only
+  // one of the two is ever shown at once (see canvasStore.js navRailCollapsed).
+  // Must come after every hook above so hook call order stays consistent
+  // across renders regardless of which branch this takes.
+  if (!navRailCollapsed) return null;
+
   return (
     <aside className="doc-sidebar" aria-label="Document sections">
+      {/* ── Back to main nav ── */}
+      <button
+        type="button"
+        className="doc-sidebar__back"
+        onClick={() => setNavRailCollapsed(false)}
+      >
+        <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
+        Document Workspace
+      </button>
+
       {/* ── SECTIONS label ── */}
       <div className="doc-sidebar__heading" aria-hidden="true">SECTIONS</div>
 

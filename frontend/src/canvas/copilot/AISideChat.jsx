@@ -186,7 +186,7 @@ export default function AISideChat({ companyId, sectionName }) {
     >
       {/* Header */}
       <header style={styles.header}>
-        <div style={styles.headerIcon} aria-hidden="true">N</div>
+        <img src="/nirmaan-mark.svg" alt="" style={styles.headerIcon} />
         <div>
           <div style={styles.headerTitle}>AI Copilot</div>
           {sectionName && (
@@ -315,18 +315,10 @@ const styles = {
     flexShrink: 0,
   },
   headerIcon: {
-    width: '30px',
+    width: '26px',
     height: '30px',
-    borderRadius: 'var(--radius-sm)',
-    background: 'transparent',
-    border: '1px solid var(--ink)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: 'var(--font-doc)',
-    fontSize: '0.8rem',
-    color: 'var(--ink)',
     flexShrink: 0,
+    display: 'block',
   },
   headerTitle: {
     fontSize: '0.875rem',

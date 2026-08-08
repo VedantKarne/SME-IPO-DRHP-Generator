@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileEdit, Folder, CheckCircle2, UserCheck, BookOpen } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
+import useCanvasStore from '../canvas/services/canvasStore.js';
 
 const NAV = [
   { path: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard' },
@@ -22,6 +23,12 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
   const location = useLocation();
   const isWorkspace = location.pathname.startsWith('/workspace');
 
+  // The Sections panel (rendered inside the Workspace canvas, not here) takes
+  // over as the primary side panel while in rail mode — see canvasStore.js.
+  const navRailCollapsed = useCanvasStore((s) => s.navRailCollapsed);
+  const setNavRailCollapsed = useCanvasStore((s) => s.setNavRailCollapsed);
+  const railMode = isWorkspace && navRailCollapsed;
+
   useEffect(() => { setIsOpen(false); }, [location.pathname]);
 
   useEffect(() => {
@@ -40,21 +47,29 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
     return () => { cancelled = true; clearInterval(timer); };
   }, []);
 
-  const sidebarClass = 'global-sidebar--static';
+  const sidebarClass = `global-sidebar--static${railMode ? ' global-sidebar--rail' : ''}`;
 
   return (
     <>
       <aside className={`shell-sidebar global-sidebar ${sidebarClass}`}>
-        <div className="sidebar-brand" style={{ justifyContent: 'space-between', marginBottom: '32px' }}>
+        <div className="sidebar-brand" style={{ justifyContent: railMode ? 'center' : 'space-between', marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="sidebar-brand-logo">N</div>
-            <div className="sidebar-brand-name">Nirmaan</div>
+            <img src="/nirmaan-mark-dark.svg" alt="Nirmaan" className="sidebar-brand-logo" />
+            {!railMode && <div className="sidebar-brand-name">Nirmaan</div>}
           </div>
         </div>
 
-        {companyName && (
+        {!railMode && companyName && (
           <div className="sidebar-company">
-            {companyName}
+            <Link
+              to="/profile"
+              title="View company profile"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--sidebar-signal)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'inherit'; }}
+            >
+              {companyName}
+            </Link>
             <button
               onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
               style={{ display: 'block', marginTop: '8px', background: 'none', border: 'none', color: 'var(--sidebar-ink-soft)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline' }}
@@ -72,16 +87,20 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
                 key={item.path}
                 to={item.path}
                 className={`nav-item ${isActive ? 'active' : ''}`}
+                title={railMode ? item.label : undefined}
+                onClick={item.path === '/workspace' ? () => setNavRailCollapsed(true) : undefined}
               >
                 <span className="nav-icon">
                   <item.icon size={18} strokeWidth={1.5} color={isActive ? 'var(--sidebar-signal)' : 'var(--sidebar-ink-soft)'} />
                 </span>
-                {item.label}
+                {!railMode && item.label}
               </Link>
             );
           })}
         </nav>
 
+        {!railMode && (
+        <>
         <hr className="sidebar-divider" />
 
         <div className="sidebar-progress">
@@ -125,6 +144,8 @@ export default function GlobalSidebar({ companyName, approvedCount }) {
             </div>
           </div>
         </div>
+        </>
+        )}
       </aside>
     </>
   );

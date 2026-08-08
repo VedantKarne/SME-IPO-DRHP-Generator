@@ -145,16 +145,9 @@
 }
 
 .lv-wordmark-mark {
-  width: 28px;
+  width: 24px;
   height: 28px;
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-doc);
-  font-weight: 600;
-  font-size: var(--text-sm);
+  display: block;
 }
 
 .lv-nav {

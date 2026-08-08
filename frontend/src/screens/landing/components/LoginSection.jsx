@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Briefcase } from 'lucide-react';
+import { Building2, Briefcase, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { startDemoMode } from '../../../utils/demoMode';
 
 export default function LoginSection() {
   const navigate = useNavigate();
@@ -23,6 +24,14 @@ export default function LoginSection() {
     // flow exists yet. Wire this to a real route once that flow ships —
     // do not fake a redirect in the meantime.
     setToast('Merchant Banker workspace is coming soon.');
+  };
+
+  const handleDemoClick = () => {
+    // No real signup — see utils/demoMode.js. Lands on the same questionnaire
+    // a real founder sees, with an extra "Continue with sample data" option
+    // that skips straight to a fully-populated demo workspace.
+    startDemoMode();
+    navigate('/onboarding');
   };
 
   return (
@@ -60,6 +69,15 @@ export default function LoginSection() {
             </p>
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={handleDemoClick}
+          className="mt-6 inline-flex items-center gap-2 font-sans text-sm text-[#5C5A54] hover:text-[#8A2E2E] transition-colors duration-150 cursor-pointer bg-transparent border-none p-0"
+        >
+          <Sparkles size={14} strokeWidth={1.75} />
+          Explore with sample data — no signup required
+        </button>
       </div>
 
       <AnimatePresence>

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, CheckCircle2, Loader2, ArrowUp, ArrowRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
 import { authedFetch, decodeToken, getToken } from '../utils/auth';
 import { FinancialsForm, DirectorsForm, OfferForm } from './onboardingForms.jsx';
+import { saveCompanyProfile, PROFILE_QUESTIONS } from '../utils/companyProfile.js';
+import ProfileQuestionInput, { SampleDataChip } from '../components/ProfileQuestionInput.jsx';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -9,15 +11,16 @@ const API = 'http://127.0.0.1:8000';
 const currentFY = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
 const FISCAL_YEARS = [currentFY - 2, currentFY - 1, currentFY];
 
-// The interview keeps its conversational opening, then switches to structured
-// forms for the tabular data. Three years of financials and a board of directors
-// cannot be captured reliably as chat answers, and previously they were not
-// captured at all — financial_statement, director_kmp and offer_details each
-// held zero rows, so generation had no company facts to draft from.
+// The company profile step (org type, industry, business model, size, IPO
+// plans) is asked one question at a time in the chat itself — see
+// askProfileQuestion below and components/ProfileQuestionInput.jsx.
+// The tabular steps that follow (three years of financials, a board of
+// directors, offer terms) stay as structured form cards: that data doesn't
+// fit a chat exchange, and previously it wasn't captured at all —
+// financial_statement, director_kmp and offer_details each held zero rows,
+// so generation had no company facts to draft from.
 const INTERVIEW_SCRIPT = [
-  { ai: "Hi! I'm Nirmaan AI. I'll help you prepare your SME IPO — one step at a time.\n\nFirst, what is your company's name?" },
-  { ai: "Got it. And what does your company do?" },
-  { ai: "How many years has your company been operating?" },
+  { ai: "Hi! I'm Nirmaan AI. I'll help you prepare your SME IPO — one step at a time.\n\nFirst, let's set up your company profile.", action: 'form_profile' },
   { ai: "Thanks. Now the parts that need exact figures — these feed your eligibility assessment and the drafted sections directly.", action: 'form_financials' },
   { ai: "Next, your board and key managerial personnel.", action: 'form_directors' },
   { ai: "Last one — the offer you're planning.", action: 'form_offer' },
@@ -25,16 +28,18 @@ const INTERVIEW_SCRIPT = [
   { ai: "That's everything I need to start. Setting up your workspace…" },
 ];
 
-export default function Onboarding({ onComplete }) {
-  const [step, setStep] = useState(0);
+export default function Onboarding({ onComplete, onUseSampleData }) {
   const [messages, setMessages] = useState([]);
-  const [inputVal, setInputVal] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [done, setDone] = useState(false);
-  const [userAnswers, setUserAnswers] = useState([]);
   const messagesEndRef = useRef(null);
   const hasInit = useRef(false);
+  // Accumulated across the 11 profile questions as they're answered. A ref,
+  // not state — it's only ever read once, at the end, to persist the whole
+  // set in one call; each individual answer is already visible as its own
+  // chat bubble the moment it's given.
+  const profileAnswersRef = useRef({});
 
   useEffect(() => {
     if (hasInit.current) return;
@@ -46,9 +51,24 @@ export default function Onboarding({ onComplete }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const showAIMessage = (scriptIndex, currentAnswers = userAnswers) => {
+  const showAIMessage = (scriptIndex) => {
     const entry = INTERVIEW_SCRIPT[scriptIndex];
     if (!entry) return;
+
+    // The profile step is a real back-and-forth: one question, one answer,
+    // repeated — not a card dropped into the transcript.
+    if (entry.action === 'form_profile') {
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        setMessages(prev => [
+          ...prev,
+          ...(entry.ai ? [{ type: 'ai', text: entry.ai }] : []),
+        ]);
+        askProfileQuestion(0, scriptIndex);
+      }, 500);
+      return;
+    }
 
     // Structured capture steps render a form card instead of asking for text.
     if (entry.action && entry.action.startsWith('form_')) {
@@ -88,7 +108,7 @@ export default function Onboarding({ onComplete }) {
         }
         setIsChecking(false);
         setMessages(prev => [...prev, { type: 'eligibility', report, error }]);
-        setTimeout(() => showAIMessage(scriptIndex + 1, currentAnswers), 600);
+        setTimeout(() => showAIMessage(scriptIndex + 1), 600);
       })();
       return;
     }
@@ -106,6 +126,46 @@ export default function Onboarding({ onComplete }) {
         }, 800);
       }
     }, Math.min(delay, 1800));
+  };
+
+  /** Ask PROFILE_QUESTIONS[qIdx], or wrap up the profile step if it's past the end. */
+  const askProfileQuestion = (qIdx, scriptIndex) => {
+    const question = PROFILE_QUESTIONS[qIdx];
+    if (!question) {
+      // Mock persistence — see utils/companyProfile.js for why (no backend
+      // schema exists for these fields yet). This is what makes the survey
+      // resumable from the Profile page if a user skips it here.
+      saveCompanyProfile(companyId(), profileAnswersRef.current);
+      setTimeout(() => showAIMessage(scriptIndex + 1), 400);
+      return;
+    }
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      setMessages(prev => [
+        ...prev,
+        { type: 'ai', text: question.label },
+        { type: 'profile_active', questionIdx: qIdx, scriptIndex },
+      ]);
+    }, 500);
+  };
+
+  const handleProfileAnswer = (qIdx, scriptIndex, value) => {
+    const question = PROFILE_QUESTIONS[qIdx];
+    profileAnswersRef.current = { ...profileAnswersRef.current, [question.key]: value };
+    setMessages(prev => [
+      ...prev.filter(m => !(m.type === 'profile_active' && m.questionIdx === qIdx)),
+      { type: 'user', text: Array.isArray(value) ? value.join(', ') : value },
+    ]);
+    askProfileQuestion(qIdx + 1, scriptIndex);
+  };
+
+  const handleProfileSkip = (qIdx, scriptIndex) => {
+    setMessages(prev => [
+      ...prev.filter(m => !(m.type === 'profile_active' && m.questionIdx === qIdx)),
+      { type: 'user', text: 'Skipped' },
+    ]);
+    askProfileQuestion(qIdx + 1, scriptIndex);
   };
 
   const companyId = () => {
@@ -133,7 +193,6 @@ export default function Onboarding({ onComplete }) {
       { type: 'user', text: summary },
     ]);
     const next = scriptIndex + 1;
-    setStep(next);
     setTimeout(() => showAIMessage(next), 400);
   };
 
@@ -163,47 +222,6 @@ export default function Onboarding({ onComplete }) {
     },
   };
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!inputVal.trim() || isTyping || isChecking) return;
-
-    const userMsg = inputVal.trim();
-    setInputVal('');
-    setMessages(prev => [...prev, { type: 'user', text: userMsg }]);
-
-    const newAnswers = [...userAnswers, userMsg];
-    setUserAnswers(newAnswers);
-
-    const nextStep = step + 1;
-    setStep(nextStep);
-
-    // The three free-text answers are complete at this point, so persist the
-    // company name and context before the structured steps begin — the
-    // eligibility check later in the script reads from the database.
-    if (newAnswers.length === 3) {
-      const [name, industry, years] = newAnswers;
-      postWizard(`/api/companies/${companyId()}/setup`, {
-        name: name || 'SME Company',
-        industry: industry || '',
-        years: years || '',
-      }).catch(err => console.error('Company setup failed:', err));
-    }
-
-    if (nextStep >= INTERVIEW_SCRIPT.length) {
-      setTimeout(() => {
-        setDone(true);
-        setTimeout(onComplete, 800);
-      }, 500);
-    } else {
-      setTimeout(() => showAIMessage(nextStep, newAnswers), 400);
-    }
-  };
-
-  // A form card takes over input while it is on screen; the text box would
-  // otherwise sit there inviting an answer that goes nowhere.
-  const awaitingForm = messages.some(m => m.type === 'form');
-  const inputDisabled = isTyping || isChecking || done || awaitingForm;
-
   return (
     <div className="landing">
       <div className="landing-bg" />
@@ -211,7 +229,7 @@ export default function Onboarding({ onComplete }) {
 
       <div className="landing-content">
         <div className="landing-logo">
-          <div className="landing-logo-mark">N</div>
+          <img src="/nirmaan-mark.svg" alt="" className="landing-logo-mark" />
           <div className="landing-logo-text">Nirmaan AI</div>
         </div>
         <p className="landing-tagline">
@@ -220,7 +238,7 @@ export default function Onboarding({ onComplete }) {
 
         <div className="interview-window" style={{ width: '100%' }}>
           <div className="interview-header">
-            <div className="interview-avatar">N</div>
+            <img src="/nirmaan-mark.svg" alt="" className="interview-avatar" />
             <div>
               <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Nirmaan AI</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>IPO Preparation Assistant</div>
@@ -236,13 +254,22 @@ export default function Onboarding({ onComplete }) {
               <div key={i} className="fade-in">
                 {msg.type === 'ai' && (
                   <div className="interview-msg-ai">
-                    <div className="interview-avatar" style={{ width: 28, height: 28, fontSize: '0.7rem', flexShrink: 0, marginTop: 2 }}>N</div>
+                    <img src="/nirmaan-mark.svg" alt="" className="interview-avatar" style={{ width: 24, height: 28, flexShrink: 0, marginTop: 2 }} />
                     <div className="interview-msg-ai-bubble" style={{ whiteSpace: 'pre-line' }}>{msg.text}</div>
                   </div>
                 )}
                 {msg.type === 'user' && (
                   <div className="interview-msg-user-bubble">{msg.text}</div>
                 )}
+                {msg.type === 'profile_active' && (
+                  <ProfileQuestionInput
+                    question={PROFILE_QUESTIONS[msg.questionIdx]}
+                    onSubmit={(value) => handleProfileAnswer(msg.questionIdx, msg.scriptIndex, value)}
+                    onSkip={() => handleProfileSkip(msg.questionIdx, msg.scriptIndex)}
+                    extraAction={msg.questionIdx === 0 && onUseSampleData ? <SampleDataChip onClick={onUseSampleData} /> : undefined}
+                  />
+                )}
+
                 {msg.type === 'form' && (
                   <>
                     {msg.form === 'form_financials' && (
@@ -326,7 +353,7 @@ export default function Onboarding({ onComplete }) {
             {/* Typing indicator */}
             {(isTyping || isChecking) && (
               <div className="interview-msg-ai fade-in">
-                <div className="interview-avatar" style={{ width: 28, height: 28, fontSize: '0.7rem', flexShrink: 0 }}>N</div>
+                <img src="/nirmaan-mark.svg" alt="" className="interview-avatar" style={{ width: 24, height: 28, flexShrink: 0 }} />
                 {isChecking ? (
                   <div className="interview-msg-ai-bubble" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                     <Loader2 size={15} strokeWidth={2} className="spin" />
@@ -343,31 +370,18 @@ export default function Onboarding({ onComplete }) {
             )}
             <div ref={messagesEndRef} />
           </div>
-
-          <div className="interview-input-area">
-            <form onSubmit={handleSend} style={{ display: 'flex', gap: 10, width: '100%' }}>
-              <input
-                value={inputVal}
-                onChange={e => setInputVal(e.target.value)}
-                placeholder={done ? 'Setting up your workspace...' : awaitingForm ? 'Complete the form above to continue…' : 'Type your answer...'}
-                disabled={inputDisabled}
-                style={{ flex: 1 }}
-                autoFocus
-              />
-              <button type="submit" className="btn btn-primary" disabled={inputDisabled || !inputVal.trim()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ArrowUp size={16} strokeWidth={2.5} />
-              </button>
-            </form>
-          </div>
         </div>
 
-        {/* Skip link */}
-        <button
-          onClick={onComplete}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
-        >
-          Skip to demo workspace <ArrowRight size={12} strokeWidth={2} />
-        </button>
+        {/* Skip link — bypasses whatever's left of onboarding; a real user's
+            profile just stays incomplete, resumable later from /profile. */}
+        {!done && (
+          <button
+            onClick={onComplete}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+          >
+            Skip to workspace <ArrowRight size={12} strokeWidth={2} />
+          </button>
+        )}
       </div>
     </div>
   );

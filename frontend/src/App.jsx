@@ -6,6 +6,7 @@ import Eligibility from './screens/Eligibility';
 import Review from './screens/Review';
 import Documents from './screens/Documents';
 import KnowledgeBase from './screens/KnowledgeBase';
+import Profile from './screens/Profile';
 import Auth from './screens/Auth';
 import Onboarding from './screens/Onboarding';
 import AppShell from './components/AppShell';
@@ -14,6 +15,8 @@ import CanvasRoot from './canvas/CanvasRoot';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
+import { isDemoMode, startDemoMode } from './utils/demoMode';
+import { DEMO_SECTIONS, DEMO_ELIGIBILITY, DEMO_READINESS, DEMO_CONSISTENCY } from './data/demoSeed.js';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -52,6 +55,19 @@ export default function App() {
       setCompanyId(company_id);
       setCompanyName(company_name);
 
+      // Demo mode has no real backend company behind it — see utils/demoMode.js
+      // and data/demoSeed.js. This also covers a page refresh while in demo
+      // mode: the fake token survives in localStorage, so state repopulates
+      // from the same seed instead of hitting /api/session/restore with a
+      // company_id the backend has never heard of.
+      if (isDemoMode()) {
+        setSections(DEMO_SECTIONS);
+        setEligibility(DEMO_ELIGIBILITY);
+        setReadiness(DEMO_READINESS);
+        setConsistency(DEMO_CONSISTENCY);
+        return;
+      }
+
       const r = await authedFetch(`${API}/api/session/restore`);
       if (r.ok) {
         const data = await r.json();
@@ -70,6 +86,16 @@ export default function App() {
 
   const handleOnboardingComplete = () => {
     bootstrap();
+    // The Dashboard's readiness/eligibility data is only meaningful once
+    // documents are on file, so a freshly onboarded (real) company lands on
+    // Documents first — see the first-upload banner there.
+    navigate('/documents');
+  };
+
+  /** "Continue with sample data" — see the profile chat step in Onboarding.jsx. */
+  const handleUseSampleData = () => {
+    startDemoMode();
+    bootstrap();
     navigate('/dashboard');
   };
 
@@ -83,7 +109,10 @@ export default function App() {
         path="/onboarding"
         element={
           <ProtectedRoute>
-            <Onboarding onComplete={handleOnboardingComplete} />
+            <Onboarding
+              onComplete={handleOnboardingComplete}
+              onUseSampleData={isDemoMode() ? handleUseSampleData : undefined}
+            />
           </ProtectedRoute>
         }
       />
@@ -136,6 +165,7 @@ export default function App() {
                 />
                 <Route path="/documents" element={<Documents />} />
                 <Route path="/knowledge-base" element={<KnowledgeBase />} />
+                <Route path="/profile" element={<Profile companyName={companyName} />} />
               </Routes>
             </AppShell>
           </ProtectedRoute>

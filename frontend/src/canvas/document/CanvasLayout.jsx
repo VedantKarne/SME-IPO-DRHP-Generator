@@ -30,6 +30,10 @@ const COPILOT_DEFAULT_W = 330;
 const COPILOT_MIN_W     = 260;
 const COPILOT_MAX_W     = 520;
 
+// Must match --doc-sidebar-w's default in canvas.css — reused here so the
+// Sections column can be collapsed to 0 without touching that base value.
+const DOC_SIDEBAR_W = 224;
+
 // ---------------------------------------------------------------------------
 // CanvasLayout
 // ---------------------------------------------------------------------------
@@ -51,6 +55,13 @@ export default function CanvasLayout({ companyId, companyName }) {
   const sections          = useCanvasStore((s) => s.sections);
   const activeSectionName = sections[activeSectionIdx]?.name ?? '';
   const activeEditor      = editorRefs.current[activeSectionName] ?? null;
+
+  // The app's main nav (GlobalSidebar, rendered as a sibling outside this
+  // tree — see App.jsx) and the Sections panel below are mutually exclusive:
+  // whichever isn't showing frees its width for the document itself.
+  const navRailCollapsed = useCanvasStore((s) => s.navRailCollapsed);
+  const sidebarWEffective = navRailCollapsed ? 'var(--sidebar-w-rail)' : 'var(--sidebar-w)';
+  const docSidebarW       = navRailCollapsed ? `${DOC_SIDEBAR_W}px` : '0px';
 
   // Toast system
   const { toasts, showToast, dismissToast } = useToast();
@@ -102,7 +113,11 @@ export default function CanvasLayout({ companyId, companyName }) {
   return (
     <div
       className={`canvas-layout${copilotOpen ? ' canvas-layout--copilot-open' : ' canvas-layout--copilot-closed'}`}
-      style={{ '--doc-copilot-w': copilotColW }}
+      style={{
+        '--doc-copilot-w': copilotColW,
+        '--sidebar-w-effective': sidebarWEffective,
+        '--doc-sidebar-w': docSidebarW,
+      }}
     >
       {/* ── Full-width AppBar — spans all columns ── */}
       <CanvasAppBar

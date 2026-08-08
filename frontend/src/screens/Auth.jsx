@@ -56,7 +56,7 @@ export default function Auth({ onAuthSuccess }) {
 
       <div className="auth-wrapper">
         <div className="landing-logo" style={{ marginBottom: '2.5rem' }}>
-          <div className="landing-logo-mark">N</div>
+          <img src="/nirmaan-mark.svg" alt="" className="landing-logo-mark" />
           <div className="landing-logo-text">Nirmaan AI</div>
         </div>
 

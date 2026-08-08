@@ -18,9 +18,12 @@ export default function LandingHeader() {
     <header className="lv-header">
       <div className="lv-header-inner">
         <div className="lv-wordmark">
-          <motion.span className="lv-wordmark-mark" style={{ scale: markScale }}>
-            N
-          </motion.span>
+          <motion.img
+            src="/nirmaan-mark.svg"
+            alt=""
+            className="lv-wordmark-mark"
+            style={{ scale: markScale }}
+          />
           Nirmaan AI
         </div>
         <nav className="lv-nav">

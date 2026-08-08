@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   FileBarChart, FileSignature, Factory, Leaf, ShieldCheck, Award, FileText,
   Scale, Building2, ScrollText, CheckCircle2, XCircle, Trash2, Paperclip,
-  AlertTriangle, Bot,
+  AlertTriangle, Bot, FileUp,
 } from 'lucide-react';
 import { getToken, decodeToken, authedFetch } from '../utils/auth';
 
@@ -274,6 +274,22 @@ export default function Documents() {
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: '0.875rem' }}>
         AI dynamically determines required documents based on your company profile.
       </p>
+
+      {/* First-time nudge — Dashboard readiness/eligibility has nothing to
+          compute until at least one document is on file. */}
+      {uploaded === 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '14px 16px', marginBottom: 24,
+          background: 'var(--accent-dim)', border: '1px solid var(--signal)',
+          borderRadius: 'var(--radius-md)',
+        }}>
+          <FileUp size={20} strokeWidth={1.75} color="var(--signal)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '0.875rem', color: 'var(--ink)' }}>
+            Upload documents to start IPO generation.
+          </span>
+        </div>
+      )}
 
       {/* Upload progress */}
       <div className="card" style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 24 }}>

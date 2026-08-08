@@ -56,6 +56,15 @@ const useCanvasStore = create((set) => ({
    */
   offlineNotified: false,
 
+  /**
+   * Whether the app's main nav (GlobalSidebar) is collapsed to an icon-only
+   * rail in favour of showing the Sections panel. Read by both GlobalSidebar
+   * (which isn't a descendant of CanvasLayout — they're routed as siblings)
+   * and CanvasLayout, so it lives here rather than as local component state.
+   * Defaults true: arriving at /workspace should always start in rail mode.
+   */
+  navRailCollapsed: true,
+
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   /**
@@ -65,6 +74,13 @@ const useCanvasStore = create((set) => ({
    * @param {number} idx – target section index (0–24)
    */
   setActiveSectionIdx: (idx) => set({ activeSectionIdx: idx }),
+
+  /**
+   * setNavRailCollapsed(collapsed)
+   * true  → main nav is an icon-only rail, Sections panel is visible.
+   * false → main nav is fully expanded, Sections panel is hidden.
+   */
+  setNavRailCollapsed: (collapsed) => set({ navRailCollapsed: collapsed }),
 
   /**
    * upsertSection(sectionData)

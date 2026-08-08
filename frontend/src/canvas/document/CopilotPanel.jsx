@@ -184,7 +184,7 @@ export default function CopilotPanel({
       {/* ── Header ── */}
       <div className="cp-header">
         <div className="cp-header__left">
-          <div className="cp-avatar" aria-hidden="true">N</div>
+          <img src="/nirmaan-mark.svg" alt="" className="cp-avatar" />
           <span className="cp-title">IPO COPILOT</span>
         </div>
         <button

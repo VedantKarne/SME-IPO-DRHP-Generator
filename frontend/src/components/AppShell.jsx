@@ -51,7 +51,7 @@ function CopilotRail({ companyId, currentSection }) {
   return (
     <aside className="shell-copilot">
       <div className="copilot-header">
-        <div style={{ width: 32, height: 32, background: 'transparent', border: '1px solid var(--ink)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-doc)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', flexShrink: 0 }}>N</div>
+        <img src="/nirmaan-mark.svg" alt="" style={{ width: 28, height: 32, flexShrink: 0 }} />
         <div>
           <div className="copilot-title">IPO Copilot</div>
           <div className="copilot-subtitle">Regulatory AI assistant</div>
