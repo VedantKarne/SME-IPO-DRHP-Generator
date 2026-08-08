@@ -88,7 +88,6 @@ export default function DocumentToolbar({
   onToggleCopilot,
   showToast,
 }) {
-  const [aiOpen,        setAiOpen]        = useState(false);
   const [genOpen,       setGenOpen]       = useState(false);
   const [aiLoading,     setAiLoading]     = useState(null);
   const [promptText,    setPromptText]    = useState('');
@@ -109,33 +108,21 @@ export default function DocumentToolbar({
   const sections            = useCanvasStore((s) => s.sections);
   const ed = activeEditor;
 
-  // ── Keyboard: ⌘K opens AI dropdown, Escape closes everything ──────────
+  // ── Keyboard: ⌘K toggles Copilot, Escape closes everything ──────────
   useEffect(() => {
     function onKey(e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setAiOpen((v) => !v);
-        setTimeout(() => promptRef.current?.focus(), 80);
+        onToggleCopilot?.();
       }
       if (e.key === 'Escape') {
-        setAiOpen(false);
         setGenOpen(false);
         setPrintPreviewOn(false);
       }
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
-  // Close AI menu on outside click
-  useEffect(() => {
-    if (!aiOpen) return;
-    function onDown(e) {
-      if (aiMenuRef.current && !aiMenuRef.current.contains(e.target)) setAiOpen(false);
-    }
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [aiOpen]);
+  }, [onToggleCopilot]);
 
   // Close Generate menu on outside click
   useEffect(() => {
@@ -170,7 +157,6 @@ export default function DocumentToolbar({
   // ── AI action handler ────────────────────────────────────────────────
   const handleAIAction = useCallback(async (actionId) => {
     if (!ed || aiLoading) return;
-    setAiOpen(false);
     setAiLoading(actionId);
     const actionLabel = AI_ACTIONS.find((a) => a.id === actionId)?.label ?? actionId;
     try {
@@ -440,59 +426,14 @@ export default function DocumentToolbar({
         <div className="dtb-ai-wrap" ref={aiMenuRef}>
           <button
             type="button"
-            className={`dtb-ai-assistant-btn${(aiLoading || promptBusy) ? ' dtb-ai-assistant-btn--loading' : ''}`}
-            onClick={() => setAiOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={aiOpen}
-            disabled={!!(aiLoading || promptBusy)}
+            className={`dtb-ai-assistant-btn${copilotOpen ? ' dtb-ai-assistant-btn--active' : ''}`}
+            onClick={onToggleCopilot}
+            aria-pressed={copilotOpen}
             title="AI Assistant (⌘K)"
           >
-            {(aiLoading || promptBusy) ? (
-              <span className="dtb-spinner" aria-hidden="true" />
-            ) : (
-              <Sparkles size={13} strokeWidth={1.8} aria-hidden="true" />
-            )}
+            <Sparkles size={13} strokeWidth={1.8} aria-hidden="true" />
             AI Assistant
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
           </button>
-
-          {aiLoadingLabel && <AITypingIndicator label={aiLoadingLabel} />}
-
-          {aiOpen && (
-            <ul className="dtb-ai-menu" role="menu" aria-label="AI actions">
-              {AI_ACTIONS.map(({ id, icon: ActionIcon, label }) => (
-                <li key={id} role="none">
-                  <button type="button" role="menuitem" className="dtb-ai-menu__item"
-                    onClick={() => handleAIAction(id)}>
-                    <span className="dtb-ai-menu__icon" aria-hidden="true"><ActionIcon size={13} strokeWidth={2} /></span>
-                    {label}
-                  </button>
-                </li>
-              ))}
-              <li role="separator" className="dtb-ai-menu__sep" />
-              <li role="none">
-                <form className="dtb-ai-menu__prompt" onSubmit={handlePromptSubmit} aria-label="Custom AI instruction">
-                  <input
-                    ref={promptRef}
-                    type="text"
-                    value={promptText}
-                    onChange={(e) => setPromptText(e.target.value)}
-                    placeholder="Custom instruction…"
-                    disabled={promptBusy}
-                    className="dtb-ai-prompt-input"
-                    aria-label="Custom AI instruction"
-                    autoComplete="off"
-                  />
-                  <button type="submit" className="dtb-ai-prompt-send"
-                    disabled={promptBusy || !promptText.trim()} aria-label="Apply">
-                    {promptBusy ? <span className="dtb-spinner" aria-hidden="true" /> : <ArrowRight size={14} strokeWidth={2} />}
-                  </button>
-                </form>
-              </li>
-            </ul>
-          )}
         </div>
 
         {/* Spacer pushes right-side controls to the right */}

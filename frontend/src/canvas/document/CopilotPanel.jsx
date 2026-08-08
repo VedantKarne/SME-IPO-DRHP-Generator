@@ -173,13 +173,17 @@ export default function CopilotPanel({
     }
   };
 
-  if (!isOpen) return null;
-
   // Short display name for the context box
   const displaySection = activeSectionName || 'Cover Page & General Information';
 
   return (
-    <aside className="cp-panel" aria-label="IPO Copilot">
+    <aside className={`cp-panel ${isOpen ? 'cp-panel--open' : 'cp-panel--closed'}`} aria-label="IPO Copilot" style={{
+      visibility: isOpen ? 'visible' : 'hidden',
+      opacity: isOpen ? 1 : 0,
+      transform: isOpen ? 'translateX(0)' : 'translateX(20px)',
+      transition: 'opacity 0.22s ease, transform 0.22s ease, visibility 0.22s',
+      overflow: 'hidden',
+    }}>
 
       {/* ── Header ── */}
       <div className="cp-header">
