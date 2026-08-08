@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Zap } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
@@ -42,6 +42,34 @@ export default function Auth({ onAuthSuccess }) {
       setToken(data.access_token);
       onAuthSuccess(!isLogin); // Pass true if it was a registration
       
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setIsLogin(true);
+    setEmail('demo@nirmaan.ai');
+    setPassword('demo123');
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'demo@nirmaan.ai', password: 'demo123' })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || 'Demo login failed');
+      }
+
+      setToken(data.access_token);
+      onAuthSuccess(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -126,6 +154,42 @@ export default function Auth({ onAuthSuccess }) {
               {loading ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (isLogin ? 'Log In to Workspace' : 'Create Company Account')}
             </button>
           </form>
+
+          {/* Quick Demo Access for Hackathon Reviewers & Judges */}
+          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--rule)', textAlign: 'center' }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-soft)', marginBottom: '12px', fontWeight: 500, letterSpacing: '0.02em' }}>
+              Evaluating for Hackathon Demo?
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleDemoLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: 'var(--ink)',
+                borderColor: 'var(--rule)',
+                background: 'var(--paper-sunken)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              {loading ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (
+                <>
+                  <Zap size={15} color="var(--signal)" />
+                  <span>One-Click Demo Access</span>
+                </>
+              )}
+            </button>
+            <div style={{ fontSize: '11px', color: 'var(--ink-faint)', marginTop: '10px', fontFamily: 'var(--font-ui)' }}>
+              Default credentials: <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>demo@nirmaan.ai</code> / <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-soft)', background: 'var(--paper-sunken)', padding: '2px 6px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--rule)' }}>demo123</code>
+            </div>
+          </div>
         </div>
       </div>
     </div>
