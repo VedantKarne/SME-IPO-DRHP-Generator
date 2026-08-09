@@ -41,6 +41,8 @@ import FinanceFinancialData from './screens/finance/FinanceFinancialData';
 import FinanceSections from './screens/finance/FinanceSections';
 import FinanceReviewQueuePage from './screens/finance/FinanceReviewQueuePage';
 import FinanceComingSoon from './screens/finance/components/FinanceComingSoon';
+import TeamInvitations from './screens/TeamInvitations';
+import UserInvitations from './screens/UserInvitations';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
 import { getPostLoginRoute } from './utils/roleRouting';
@@ -83,12 +85,16 @@ export default function App() {
         return null;
       }
 
-      const { company_id, company_name, role: userRole } = decodeToken(token);
-      setCompanyId(company_id);
-      setCompanyName(company_name);
+      const { company_id: default_company_id, company_name: default_company_name, role: userRole } = decodeToken(token);
+      
+      const active_company_id = localStorage.getItem('nirmaan_company_id') || default_company_id;
+      const active_company_name = localStorage.getItem('nirmaan_company_name') || default_company_name;
+
+      setCompanyId(active_company_id);
+      setCompanyName(active_company_name);
       setRole(userRole || '');
 
-      const r = await authedFetch(`${API}/api/session/restore`);
+      const r = await authedFetch(`${API}/api/session/restore?company_id=${active_company_id}`);
       if (r.ok) {
         const data = await r.json();
         setSections(data.sections || []);
@@ -325,8 +331,12 @@ export default function App() {
                       element={<Eligibility eligibility={eligibility} />}
                     />
                     <Route path="/profile" element={<Profile companyName={companyName} />} />
+                    <Route path="/team" element={<TeamInvitations />} />
                   </>
                 )}
+                
+                {/* Available for any role */}
+                <Route path="/invitations" element={<UserInvitations />} />
 
                 {/* A role's own sidebar only ever links to its own routes, but a
                     stale bookmark or hand-typed URL for the other role's pages

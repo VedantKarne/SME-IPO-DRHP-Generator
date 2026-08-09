@@ -776,6 +776,9 @@ app.include_router(copilot_router)
 app.include_router(canvas_router)
 app.include_router(export_router)
 
+from src.api.project_router import router as project_router
+app.include_router(project_router)
+
 from src.api.document_upload_router import router as document_upload_router
 app.include_router(document_upload_router)
 

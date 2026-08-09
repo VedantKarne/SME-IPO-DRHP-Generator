@@ -10,7 +10,9 @@ import uuid
 from dotenv import load_dotenv
 
 from src.extraction.db_session import SessionLocal
-from src.extraction.schema import Company, CompanyUser
+from src.extraction.schema import Company, CompanyUser, ProjectMember
+import random
+import string
 
 router = APIRouter()
 
@@ -52,17 +54,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-def require_company_access(current_user: dict, company_id) -> str:
+def require_company_access(current_user: dict, company_id, db: Session = None) -> str:
     """
-    Assert the authenticated caller owns `company_id`, and return it as a string.
-
-    Authentication alone is not enough for this application: a token is scoped
-    to one company, and every company's DRHP is confidential to it. Without
-    this check any logged-in user could read or mutate another company's
-    sections, drafts, approvals and exports.
-
-    Raises 403 on mismatch. Mirrors the check already used in
-    document_upload_router.
+    Assert the authenticated caller owns `company_id`, or is a member of the project.
+    Returns it as a string.
     """
     import uuid
     try:
@@ -72,6 +67,23 @@ def require_company_access(current_user: dict, company_id) -> str:
         raise HTTPException(status_code=403, detail="Invalid company ID format")
 
     if req_comp_uuid != user_comp_uuid:
+        close_db = False
+        if db is None:
+            db = SessionLocal()
+            close_db = True
+            
+        try:
+            is_member = db.query(ProjectMember).filter(
+                ProjectMember.user_id == uuid.UUID(str(current_user.get("sub"))),
+                ProjectMember.company_id == req_comp_uuid,
+                ProjectMember.status == 'active'
+            ).first()
+            if is_member:
+                return str(req_comp_uuid)
+        finally:
+            if close_db:
+                db.close()
+                
         raise HTTPException(status_code=403, detail="Not authorized for this company")
     return str(req_comp_uuid)
 
@@ -133,11 +145,19 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
     # Create User
     hashed_pwd = bcrypt.hashpw(request.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     assigned_role = request.role if request.role in SELF_REGISTERABLE_ROLES else "promoter"
+    
+    # Generate unique Nirmaan ID
+    prefix = "".join([word[0].upper() for word in assigned_role.split('_')][:2])
+    if not prefix: prefix = "PR"
+    suffix = ''.join(random.choices(string.digits, k=5))
+    nirmaan_id = f"{prefix}-{suffix}"
+    
     user = CompanyUser(
         company_id=company.id,
         email=request.email,
         hashed_password=hashed_pwd,
-        role=assigned_role
+        role=assigned_role,
+        nirmaan_id=nirmaan_id
     )
     db.add(user)
     db.commit()
@@ -180,3 +200,23 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     )
     
     return {"access_token": token, "token_type": "bearer"}
+
+@router.get("/api/auth/me")
+def get_me(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+        
+    import uuid
+    user = db.query(CompanyUser).filter(CompanyUser.id == uuid.UUID(str(user_id))).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "nirmaan_id": user.nirmaan_id,
+        "role": user.role,
+        "company_id": str(user.company_id),
+        "company_name": user.company.name if user.company else None
+    }

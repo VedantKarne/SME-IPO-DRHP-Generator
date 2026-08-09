@@ -48,6 +48,9 @@ def run_migrations():
         "ALTER TABLE readiness_score ADD COLUMN legal_score INTEGER",
         "ALTER TABLE readiness_score ADD COLUMN risk_score INTEGER",
         "ALTER TABLE readiness_score ADD COLUMN next_action TEXT",
+        # company_user: nirmaan_id added later
+        "ALTER TABLE company_user ADD COLUMN nirmaan_id VARCHAR(20)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_company_user_nirmaan_id ON company_user (nirmaan_id)",
     ]
     for sql in migrations:
         try:
@@ -93,7 +96,8 @@ def seed_demo_user():
                 company_id=company.id,
                 email=demo_email,
                 hashed_password=hashed_pwd,
-                role="promoter"
+                role="promoter",
+                nirmaan_id="DEMO-10001"
             )
             db.add(user)
             db.commit()
@@ -101,6 +105,8 @@ def seed_demo_user():
             # Ensure password is standard demo123
             user.hashed_password = hashed_pwd
             user.company_id = company.id
+            if not user.nirmaan_id:
+                user.nirmaan_id = "DEMO-10001"
             db.commit()
 
         # Seed a merchant banker demo login (banker@nirmaan.ai / banker123) on
@@ -117,7 +123,8 @@ def seed_demo_user():
                 company_id=company.id,
                 email=banker_email,
                 hashed_password=banker_hashed_pwd,
-                role="merchant_banker"
+                role="merchant_banker",
+                nirmaan_id="MB-10482"
             )
             db.add(banker_user)
             db.commit()
@@ -125,6 +132,8 @@ def seed_demo_user():
             banker_user.hashed_password = banker_hashed_pwd
             banker_user.company_id = company.id
             banker_user.role = "merchant_banker"
+            if not banker_user.nirmaan_id:
+                banker_user.nirmaan_id = "MB-10482"
             db.commit()
 
         # Seed 3 years of financials if not present

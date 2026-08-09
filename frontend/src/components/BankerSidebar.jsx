@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ListChecks, FileEdit, ShieldCheck, ClipboardList,
-  BadgeCheck, Activity, Folder, BookOpen, LogOut,
+  BadgeCheck, Activity, Folder, BookOpen, LogOut, Mail,
 } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
@@ -19,6 +19,7 @@ const NAV = [
   { path: '/banker/activity',      icon: Activity,         label: 'Activity & Audit' },
   { path: '/documents',            icon: Folder,           label: 'Documents' },
   { path: '/knowledge-base',       icon: BookOpen,         label: 'Knowledge Base' },
+  { path: '/invitations',          icon: Mail,             label: 'My Invitations' },
 ];
 
 export default function BankerSidebar({ companyName, sections = [] }) {

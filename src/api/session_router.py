@@ -16,9 +16,15 @@ def get_db():
 from src.api.auth_router import get_current_user
 
 
+from typing import Optional
+
 @router.get("/api/session/restore")
-def restore_session(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    company_id_str = current_user.get("company_id")
+def restore_session(company_id: Optional[str] = None, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    company_id_str = company_id or current_user.get("company_id")
+    
+    # Ensure they have access to this company
+    from src.api.auth_router import require_company_access
+    require_company_access(current_user, company_id_str, db)
     import uuid
     try:
         company_id = uuid.UUID(company_id_str)

@@ -32,6 +32,7 @@ class CompanyUser(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    nirmaan_id = Column(String(20), unique=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(30), default='promoter')  # 'promoter' | 'merchant_banker' | 'admin'
@@ -40,6 +41,44 @@ class CompanyUser(Base):
     is_active = Column(Boolean, default=True)
     
     company = relationship("Company", back_populates="users")
+    
+    memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
+    invitations_received = relationship("ProjectInvitation", foreign_keys="[ProjectInvitation.invited_user_id]", back_populates="invited_user", cascade="all, delete-orphan")
+    invitations_sent = relationship("ProjectInvitation", foreign_keys="[ProjectInvitation.invited_by]", back_populates="inviter", cascade="all, delete-orphan")
+
+
+class ProjectMember(Base):
+    __tablename__ = 'project_member'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    user_id = Column(UUID(as_uuid=True), ForeignKey('company_user.id', ondelete='CASCADE'))
+    role = Column(String(50))
+    permission = Column(String(50))
+    status = Column(String(20), default='active')
+    created_at = Column(DateTime, server_default=func.now())
+    
+    company = relationship("Company")
+    user = relationship("CompanyUser", back_populates="memberships")
+
+
+class ProjectInvitation(Base):
+    __tablename__ = 'project_invitation'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id = Column(UUID(as_uuid=True), ForeignKey('company.id', ondelete='CASCADE'))
+    invited_user_id = Column(UUID(as_uuid=True), ForeignKey('company_user.id', ondelete='CASCADE'))
+    invited_by = Column(UUID(as_uuid=True), ForeignKey('company_user.id', ondelete='SET NULL'))
+    role = Column(String(50))
+    permission = Column(String(50))
+    status = Column(String(20), default='pending')
+    created_at = Column(DateTime, server_default=func.now())
+    expires_at = Column(DateTime, nullable=True)
+    accepted_at = Column(DateTime, nullable=True)
+    
+    company = relationship("Company")
+    invited_user = relationship("CompanyUser", foreign_keys=[invited_user_id], back_populates="invitations_received")
+    inviter = relationship("CompanyUser", foreign_keys=[invited_by], back_populates="invitations_sent")
 
 
 class ReadinessScore(Base):

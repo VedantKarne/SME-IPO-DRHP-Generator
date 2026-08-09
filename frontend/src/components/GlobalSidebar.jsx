@@ -12,7 +12,7 @@
  */
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileEdit, Folder, CheckCircle2, User, LogOut, UserCheck, BookOpen } from 'lucide-react';
+import { LayoutDashboard, FileEdit, Folder, CheckCircle2, User, LogOut, UserCheck, BookOpen, Users, Mail } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 import useCanvasStore from '../canvas/services/canvasStore.js';
@@ -26,6 +26,7 @@ const NAV = [
   { path: '/documents',       icon: Folder,          label: 'Documents' },
   { path: '/eligibility',     icon: CheckCircle2,    label: 'Eligibility Engine' },
   { path: '/profile',         icon: User,            label: 'Profile' },
+  { path: '/team',            icon: Users,           label: 'IPO Team' },
 ];
 
 // ─── Legal Advisor navigation items ─────────────────────────────────────────
@@ -39,6 +40,7 @@ const NAV_LEGAL = [
   { path: '/legal/review',      icon: UserCheck,       label: 'Review Queue' },
   { path: '/legal/comments',    icon: BookOpen,        label: 'Comments' },
   { path: '/legal/activity',    icon: User,            label: 'Activity' },
+  { path: '/invitations',       icon: Mail,            label: 'My Invitations' },
 ];
 
 export default function GlobalSidebar({ companyName, approvedCount, role = 'founder' }) {
