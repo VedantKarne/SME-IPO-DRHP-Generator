@@ -7,7 +7,7 @@
 //                       surface `toastMessage` instead of faking a redirect
 //                       (see the Merchant Banker entry, which established
 //                       this pattern first).
-import { Building2, Briefcase, Calculator, Shield } from 'lucide-react';
+import { Building2, Briefcase, Calculator, Shield, Scale } from 'lucide-react';
 
 export const ROLE_OPTIONS = [
   {
@@ -23,6 +23,14 @@ export const ROLE_OPTIONS = [
     icon: Briefcase,
     title: 'Merchant Banker',
     description: "Review and sign off on a company's disclosure draft.",
+    action: 'navigate',
+    to: '/auth',
+  },
+  {
+    id: 'legal_advisor',
+    icon: Scale,
+    title: 'Legal Advisor',
+    description: 'Ensure compliance, verify legal documents, and sign off on disclosures.',
     action: 'navigate',
     to: '/auth',
   },
