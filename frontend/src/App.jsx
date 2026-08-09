@@ -102,7 +102,7 @@ export default function App() {
     return null;
   };
 
-  const handleAuthSuccess = async (isNewRegistration, role) => {
+  const handleAuthSuccess = async (isNewRegistration, roleArg) => {
     // Roles with their own dashboard (currently just Finance/CA) skip the
     // founder-oriented onboarding/documents flow entirely — see
     // utils/roleRouting.js. Every other role (including no role, e.g. a
@@ -117,7 +117,7 @@ export default function App() {
     // none of which map to a route below, so this changes nothing for them.
     const token = getToken();
     const jwtRole = token ? decodeToken(token)?.role : null;
-    const effectiveRole = jwtRole || role;
+    const effectiveRole = jwtRole || roleArg;
     const roleRoute = getPostLoginRoute(effectiveRole);
     if (roleRoute) {
       bootstrap();
@@ -131,10 +131,10 @@ export default function App() {
       return;
     }
     // Read role persisted by LoginSection.jsx when the user clicked a role card.
-    const role = localStorage.getItem('nirmaan_role');
+    const savedRole = localStorage.getItem('nirmaan_role');
 
     // Legal Advisor — route to the legal dashboard (new, isolated route).
-    if (role === 'legal_advisor') {
+    if (savedRole === 'legal_advisor') {
       await bootstrap();
       navigate('/legal/dashboard');
       return;
@@ -145,9 +145,7 @@ export default function App() {
     // If none, send them to Documents to start the upload flow;
     // otherwise send them straight to Dashboard.
     const data = await bootstrap();
-    const token = getToken();
-    const userRole = token ? decodeToken(token)?.role : null;
-    if (userRole === 'merchant_banker') {
+    if (jwtRole === 'merchant_banker') {
       navigate('/banker/overview');
       return;
     }
