@@ -24,18 +24,6 @@
 
 ---
 
-## 🖼️ Platform Preview
-
-| Landing — Nirmaan Interview | IPO Readiness Dashboard |
-|:---:|:---:|
-| ![Landing](images/Chatbot_images/Chatbot_1.png) | ![Dashboard](images/Workspace_images/Dashboard.png) |
-
-| Document Workspace — 25-Section Editor | Gap Detection & Evidence Mapping |
-|:---:|:---:|
-| ![Workspace](images/Workspace_images/Document_Workspace_2.png) | ![Gaps](images/Workspace_images/Document_Workspace_1.png) |
-
----
-
 ## 🌟 What Makes This a Production-Grade Platform
 
 Nirmaan AI is a precision-engineered, multi-layer regulatory AI system that solves the fundamental challenges that break standard LLM pipelines in the legal and compliance domain:
