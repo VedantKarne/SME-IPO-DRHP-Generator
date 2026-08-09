@@ -114,7 +114,7 @@ class RegisterRequest(BaseModel):
     # self-registerable here — unchanged from current behavior.
     role: Optional[str] = None
 
-SELF_REGISTERABLE_ROLES = {"finance_ca"}
+SELF_REGISTERABLE_ROLES = {"finance_ca", "admin"}
 
 class LoginRequest(BaseModel):
     email: str

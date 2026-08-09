@@ -79,3 +79,31 @@ def require_not_locked(section) -> None:
                 "Merchant Banker; Finance/CA cannot modify it."
             ),
         )
+
+
+def require_admin(current_user: dict) -> None:
+    """Raise 403 unless the authenticated user's JWT role is 'admin'."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="This action is only available to the System Admin role.",
+        )
+
+
+def require_not_admin_restricted_action(current_user: dict, action_name: str = "this action") -> None:
+    """Raise 403 if System Admin attempts a restricted DRHP section action.
+
+    Admin CANNOT: edit DRHP content, approve sections, override legal decisions,
+    or change company information. Enforced centrally so restricted actions are
+    strictly blocked at API level.
+    """
+    if current_user.get("role") == "admin":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"System Admin is restricted from performing {action_name}. "
+                "Admins can manage platform access, users, projects, and rules, "
+                "but cannot edit DRHP content, approve sections, or alter company data."
+            ),
+        )
+

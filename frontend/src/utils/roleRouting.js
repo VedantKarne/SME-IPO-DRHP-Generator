@@ -11,6 +11,7 @@
 // null, which tells the caller to keep using its existing default routing.
 const ROLE_DASHBOARD_ROUTES = {
   finance_ca: '/finance-dashboard',
+  admin: '/admin/overview',
 };
 
 export function getPostLoginRoute(role) {
