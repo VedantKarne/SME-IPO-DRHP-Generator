@@ -40,7 +40,7 @@ const NAV_LEGAL = [
   { path: '/legal/review',      icon: UserCheck,       label: 'Review Queue' },
   { path: '/legal/comments',    icon: BookOpen,        label: 'Comments' },
   { path: '/legal/activity',    icon: User,            label: 'Activity' },
-  { path: '/invitations',       icon: Mail,            label: 'My Invitations' },
+  { path: '/legal/invitations', icon: Mail,            label: 'My Invitations' },
 ];
 
 export default function GlobalSidebar({ companyName, approvedCount, role = 'founder' }) {

@@ -23,12 +23,8 @@ export const ROLE_OPTIONS = [
     icon: Briefcase,
     title: 'Merchant Banker',
     description: "Review and sign off on a company's disclosure draft.",
-    action: 'toast',
-    // TODO(Backend): CompanyUser.role already models 'merchant_banker' (see
-    // src/extraction/schema.py), but no banker-facing dashboard or review
-    // flow exists yet. Wire this to a real route once that flow ships —
-    // do not fake a redirect in the meantime.
-    toastMessage: 'Merchant Banker workspace is coming soon.',
+    action: 'navigate',
+    to: '/auth',
   },
   {
     id: 'finance_ca',

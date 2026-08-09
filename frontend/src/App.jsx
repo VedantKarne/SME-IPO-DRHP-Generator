@@ -196,6 +196,7 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/legal/dashboard" replace />} />
                 <Route path="/dashboard" element={<LegalDashboard />} />
+                <Route path="/invitations" element={<UserInvitations />} />
               </Routes>
             </AppShell>
           </ProtectedRoute>
