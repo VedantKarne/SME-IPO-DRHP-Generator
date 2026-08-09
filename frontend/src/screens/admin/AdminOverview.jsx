@@ -48,7 +48,7 @@ export default function AdminOverview() {
             <p className="admin-panel-subtitle">{ADMIN_USERS_SUMMARY.subtitle}</p>
           </div>
           <div className="admin-panel-list">
-            {ADMIN_USERS_SUMMAIY.roleBreakdown.map((item, idx) => (
+            {ADMIN_USERS_SUMMARY.roleBreakdown.map((item, idx) => (
               <div key={idx} className="admin-panel-row">
                 <span className="admin-row-name">{item.role}</span>
                 <span className="admin-row-count">{item.count}</span>
@@ -60,8 +60,8 @@ export default function AdminOverview() {
         {/* Panel 2: Projects Overview */}
         <div className="admin-panel-card">
           <div className="admin-panel-header">
-            <h2 className="admin-panel-title">{ADMIN_PROJECTS_SUMMAIY.title}</h2>
-            <p className="admin-panel-subtitle">{ADMIN_PROJECTS_SUMMAIY.subtitle}</p>
+            <h2 className="admin-panel-title">{ADMIN_PROJECTS_SUMMARY.title}</h2>
+            <p className="admin-panel-subtitle">{ADMIN_PROJECTS_SUMMARY.subtitle}</p>
           </div>
           <div className="admin-panel-list">
             {ADMIN_PROJECTS_SUMMARY.stageBreakdown.map((item, idx) => (
