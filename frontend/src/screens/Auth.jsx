@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, Zap, Briefcase, Scale } from 'lucide-react';
+import { Loader2, Zap, Briefcase, Scale, ArrowLeft } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
@@ -148,6 +148,36 @@ export default function Auth({ onAuthSuccess }) {
     <div className="landing">
       <div className="landing-bg" />
       <div className="landing-grid" />
+
+      <Link 
+        to="/" 
+        style={{
+          position: 'absolute',
+          top: '2.5rem',
+          left: '2.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: 'var(--ink-soft)',
+          textDecoration: 'none',
+          fontWeight: 500,
+          fontSize: '0.875rem',
+          transition: 'all 0.2s ease',
+          zIndex: 10,
+          fontFamily: 'var(--font-sans, inherit)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = 'var(--ink)';
+          e.currentTarget.style.transform = 'translateX(-4px)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = 'var(--ink-soft)';
+          e.currentTarget.style.transform = 'translateX(0)';
+        }}
+      >
+        <ArrowLeft size={16} />
+        Back to Home
+      </Link>
 
       <div className="auth-wrapper">
         <Link to="/" className="landing-logo" style={{ marginBottom: '2.5rem', textDecoration: 'none', cursor: 'pointer' }}>
