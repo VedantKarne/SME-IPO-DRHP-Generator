@@ -113,3 +113,31 @@ behavior) was left as-is.
 A local `.env` (JWT_SECRET_KEY only, LLM keys blank) was created to boot
 the backend for testing this step's endpoints. It's already covered by
 `.gitignore` (`.env`, `.env.*`) and was never a code change.
+
+## System Admin Console — Data & Backend Model Log
+
+### 1. Users Management (`frontend/src/screens/admin/AdminUsers.jsx` & `src/api/admin_router.py`)
+- **Backend Model**: Wired to real `CompanyUser` database table via `GET /api/admin/users`, `POST /api/admin/users`, `PATCH /api/admin/users/{user_id}`, `DELETE /api/admin/users/{user_id}`.
+- **Fallback Mock Data**: `FALLBACK_USERS` in `frontend/src/screens/admin/api.js` provides 8 realistic user records covering all 5 system roles (`promoter`, `finance_ca`, `merchant_banker`, `legal_advisor`, `admin`) when backend is offline.
+- **Real-Data Swap Point**: Automatic. `fetchAdminUsers()` queries `/api/admin/users`; if DB has records, real users display.
+
+### 2. Roles & Permissions (`frontend/src/screens/admin/AdminRoles.jsx` & `frontend/src/permissions/financeRolePermissions.js`)
+- **Centralized Integration**: 100% real. Summaries are pulled directly from `getAllRolePermissionSummaries()` in `financeRolePermissions.js` and enforced server-side in `src/api/finance_permissions.py`.
+- **No Mock Drift**: Role capabilities (CAN) and restrictions (CANNOT) are single-sourced from the centralized permissions module so UI and server gates never drift out of sync.
+
+### 3. Projects Management (`frontend/src/screens/admin/AdminProjects.jsx` & `src/api/admin_router.py`)
+- **Backend Model**: Wired to `Company` and `CompanyUser` database models via `GET /api/admin/projects`.
+- **Fallback Mock Data**: `FALLBACK_PROJECTS` in `frontend/src/screens/admin/api.js` provides 4 company project filings across drafting stages (`TechServ Solutions Ltd`, `Apex Healthcare Ltd`, `GreenEnergy Infra Pvt Ltd`, `Zenith Logistics Ltd`).
+- **Real-Data Swap Point**: `list_admin_projects()` populates from `db.query(Company)`.
+
+### 4. Audit Logs (`frontend/src/screens/admin/AdminAuditLogs.jsx` & `src/api/admin_router.py`)
+- **Backend Model**: Wired to real `AuditLog` database table via `GET /api/admin/audit-logs`.
+- **Fallback Mock Data**: `FALLBACK_AUDIT_LOGS` in `frontend/src/screens/admin/api.js` logs 5 real activity events (`financial_correction`, `section_approved`, `ai_draft`, `document_upload`, `legal_review`).
+- **Real-Data Swap Point**: `list_admin_audit_logs()` queries `AuditLog` ordered by timestamp descending.
+
+### 5. System Monitoring (`frontend/src/screens/admin/AdminMonitoring.jsx` & `src/api/admin_router.py`)
+- **Backend Endpoint**: `GET /api/admin/monitoring` returns live server status, SQLite DB health, ChromaDB collection status, BGE-M3 embedder state, and latency in milliseconds.
+
+### 6. Regulatory Rules (`frontend/src/screens/admin/AdminRules.jsx` & `src/api/admin_router.py`)
+- **Backend Endpoint**: `GET /api/admin/rules` returns SEBI ICDR 2018 rulesets index (Reg 229(2)(a), Reg 229(1)(b), Reg 229(3), Reg 229(1)(c), Mar 2025 Circular). Read-only for Admin per SEBI statutory compliance boundaries.
+

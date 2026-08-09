@@ -7,7 +7,7 @@
 //                       surface `toastMessage` instead of faking a redirect
 //                       (see the Merchant Banker entry, which established
 //                       this pattern first).
-import { Building2, Briefcase, Calculator } from 'lucide-react';
+import { Building2, Briefcase, Calculator, Shield } from 'lucide-react';
 
 export const ROLE_OPTIONS = [
   {
@@ -24,10 +24,6 @@ export const ROLE_OPTIONS = [
     title: 'Merchant Banker',
     description: "Review and sign off on a company's disclosure draft.",
     action: 'toast',
-    // TODO(Backend): CompanyUser.role already models 'merchant_banker' (see
-    // src/extraction/schema.py), but no banker-facing dashboard or review
-    // flow exists yet. Wire this to a real route once that flow ships —
-    // do not fake a redirect in the meantime.
     toastMessage: 'Merchant Banker workspace is coming soon.',
   },
   {
@@ -37,10 +33,13 @@ export const ROLE_OPTIONS = [
     description: 'Verify financial disclosures and certify statutory figures.',
     action: 'navigate',
     to: '/auth',
-    // TODO(Backend): CompanyUser.role has no 'ca' / 'finance' value yet
-    // (see src/extraction/schema.py) — sign-in still creates/authenticates
-    // a normal CompanyUser. The 'finance_ca' role id below only carries
-    // through the frontend (see utils/roleRouting.js) to route the user to
-    // /finance-dashboard after login; it isn't persisted server-side yet.
+  },
+  {
+    id: 'admin',
+    icon: Shield,
+    title: 'System Admin',
+    description: 'Manage system users, project permissions, regulatory rules, and audit logs.',
+    action: 'navigate',
+    to: '/auth',
   },
 ];

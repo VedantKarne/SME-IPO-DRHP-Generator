@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Loader2, Zap, Briefcase, Scale, ArrowLeft } from 'lucide-react';
+import { Loader2, Zap, Briefcase, Scale, ArrowLeft, Shield } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
@@ -18,12 +18,13 @@ const API = 'http://127.0.0.1:8000';
  * so this token is intentionally NOT secure. It is only used as a session
  * stand-in while the backend is offline (development / demo only).
  */
-function makeMockToken(email, companyName) {
+function makeMockToken(email, companyName, role = 'promoter') {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = btoa(JSON.stringify({
     sub: email,
     company_id: 'mock-' + email.replace(/[^a-z0-9]/gi, '-'),
     company_name: companyName || email.split('@')[0],
+    role: role,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30, // 30 days
     iat: Math.floor(Date.now() / 1000),
   }));
@@ -38,6 +39,7 @@ export default function Auth({ onAuthSuccess }) {
   const showFounderDemo = !landingRole || landingRole === 'founder';
   const showBankerDemo  = !landingRole || landingRole === 'merchant_banker';
   const showLegalDemo   = !landingRole || landingRole === 'legal_advisor';
+  const showAdminDemo   = !landingRole || landingRole === 'admin';
 
   const [isLogin, setIsLogin] = useState(true);
 
@@ -65,7 +67,7 @@ export default function Auth({ onAuthSuccess }) {
         ? { email, password }
         : {
             email, password, company_name: companyName, cin,
-            ...(selectedRole === 'finance_ca' ? { role: 'finance_ca' } : {}),
+            ...(selectedRole ? { role: selectedRole } : {}),
           };
 
       const res = await fetch(`${API}${endpoint}`, {
@@ -91,9 +93,9 @@ export default function Auth({ onAuthSuccess }) {
         const name = isLogin
           ? email.split('@')[0]          // derive a name from email on login
           : (companyName || email.split('@')[0]); // use the typed company name on register
-        setToken(makeMockToken(email, name));
+        setToken(makeMockToken(email, name, selectedRole || 'promoter'));
         setOfflineMode(true);
-        onAuthSuccess(!isLogin);
+        onAuthSuccess(!isLogin, selectedRole);
       } else {
         // Real server error (wrong credentials, validation, etc.) -- show it.
         setError(err.message);
@@ -113,7 +115,7 @@ export default function Auth({ onAuthSuccess }) {
     setOfflineMode(false);
 
     // Persist the role so App.jsx routes correctly after demo login
-    const roleMap = { founder: 'founder', banker: 'merchant_banker', legal: 'legal_advisor' };
+    const roleMap = { founder: 'founder', banker: 'merchant_banker', legal: 'legal_advisor', admin: 'admin' };
     if (roleMap[roleLabel]) localStorage.setItem('nirmaan_role', roleMap[roleLabel]);
 
     try {
@@ -129,16 +131,15 @@ export default function Auth({ onAuthSuccess }) {
       }
 
       setToken(data.access_token);
-      // Demo access always signs into the seeded founder demo account,
-      // regardless of which role card was selected — no role forwarded.
-      onAuthSuccess(false);
+      onAuthSuccess(false, roleMap[roleLabel]);
     } catch (err) {
-      if (err instanceof TypeError || roleLabel === 'legal') {
-        // Backend unreachable OR legal account doesn't exist in backend yet —
-        // create a mock demo session so the role can still be previewed.
-        setToken(makeMockToken('legal@nirmaan.ai', 'Legal Advisor Demo'));
+      if (err instanceof TypeError || roleLabel === 'legal' || roleLabel === 'admin') {
+        const rName = roleMap[roleLabel] || 'promoter';
+        const dEmail = roleLabel === 'admin' ? 'admin@nirmaan.ai' : roleLabel === 'legal' ? 'legal@nirmaan.ai' : demoEmail;
+        const dName = roleLabel === 'admin' ? 'System Administrator' : roleLabel === 'legal' ? 'Legal Advisor Demo' : 'TechServ Solutions Ltd';
+        setToken(makeMockToken(dEmail, dName, rName));
         setOfflineMode(true);
-        onAuthSuccess(false);
+        onAuthSuccess(false, rName);
       } else {
         setError(err.message);
       }
@@ -355,6 +356,38 @@ export default function Auth({ onAuthSuccess }) {
                     <>
                       <Scale size={15} color="var(--signal)" />
                       <span>Legal Advisor Demo Access</span>
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+
+            {showAdminDemo && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => handleDemoLogin('admin', 'admin@nirmaan.ai', 'admin123')}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: 'var(--ink)',
+                    borderColor: 'var(--rule)',
+                    background: 'var(--paper-sunken)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginTop: '12px'
+                  }}
+                >
+                  {demoRole === 'admin' ? <Loader2 size={16} strokeWidth={2} className="spin" /> : (
+                    <>
+                      <Shield size={15} color="var(--signal)" />
+                      <span>System Admin Demo Access</span>
                     </>
                   )}
                 </button>

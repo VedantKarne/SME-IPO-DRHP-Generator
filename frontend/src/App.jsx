@@ -41,6 +41,15 @@ import FinanceFinancialData from './screens/finance/FinanceFinancialData';
 import FinanceSections from './screens/finance/FinanceSections';
 import FinanceReviewQueuePage from './screens/finance/FinanceReviewQueuePage';
 import FinanceComingSoon from './screens/finance/components/FinanceComingSoon';
+import AdminSidebar from './screens/admin/components/AdminSidebar';
+import AdminOverview from './screens/admin/AdminOverview';
+import AdminUsers from './screens/admin/AdminUsers';
+import AdminRoles from './screens/admin/AdminRoles';
+import AdminProjects from './screens/admin/AdminProjects';
+import AdminAuditLogs from './screens/admin/AdminAuditLogs';
+import AdminMonitoring from './screens/admin/AdminMonitoring';
+import AdminRules from './screens/admin/AdminRules';
+import './screens/admin/admin.css';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
 import { getPostLoginRoute } from './utils/roleRouting';
@@ -211,6 +220,35 @@ export default function App() {
               eligibility={eligibility}
               consistency={consistency}
             />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute>
+            <div className="admin-shell-container">
+              <AdminSidebar />
+              <main className="admin-shell-main">
+                <header className="admin-header">
+                  <div className="admin-header-title">System Admin Console</div>
+                  <div className="admin-header-status">
+                    <span className="admin-status-dot"></span>
+                    <span>System Operational</span>
+                  </div>
+                </header>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/admin/overview" replace />} />
+                  <Route path="/overview" element={<AdminOverview />} />
+                  <Route path="/users" element={<AdminUsers />} />
+                  <Route path="/roles" element={<AdminRoles />} />
+                  <Route path="/projects" element={<AdminProjects />} />
+                  <Route path="/audit-logs" element={<AdminAuditLogs />} />
+                  <Route path="/monitoring" element={<AdminMonitoring />} />
+                  <Route path="/rules" element={<AdminRules />} />
+                </Routes>
+              </main>
+            </div>
           </ProtectedRoute>
         }
       />
