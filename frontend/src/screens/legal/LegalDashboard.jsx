@@ -26,6 +26,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   AlertTriangle,
@@ -37,14 +38,17 @@ import {
   User,
   AlertCircle,
   Clock,
+  ArrowRight,
+  Upload,
+  Send,
 } from 'lucide-react';
 import './legal-dashboard.css';
 import {
-  LEGAL_READINESS_SCORE,
-  LEGAL_SUMMARY_STATS,
-  LEGAL_PRIORITY_ITEMS,
-  LEGAL_CONTENT_AREAS,
-} from './legalMockData';
+  fetchDashboardSummary,
+  fetchLegalFlags,
+  fetchRecentActivity,
+} from './legalApi';
+import { LEGAL_CONTENT_AREAS } from './legalMockData';
 
 // ---------------------------------------------------------------------------
 // Score Ring
@@ -145,10 +149,10 @@ function StatusBadge({ status }) {
 // ---------------------------------------------------------------------------
 // Content area card
 // One card per legal DRHP area. 3px left-border encodes status.
-// One primary button (Approve) per card; three secondary buttons.
-// Buttons are UI-only -- no onClick handlers in this phase.
+// Approve / Request Changes / Add Comment → navigate to /legal/drhp
+// View Evidence → navigate to /legal/documents
 // ---------------------------------------------------------------------------
-function LegalContentCard({ area }) {
+function LegalContentCard({ area, onNavigate }) {
   return (
     <article
       className={`legal-content-card legal-content-card--${area.status}`}
@@ -186,13 +190,14 @@ function LegalContentCard({ area }) {
         </span>
       </div>
 
-      {/* Action buttons -- UI controls only, no functional logic this phase */}
+      {/* Action buttons — navigate to DRHP Sections page where full actions are available */}
       <div className="legal-card-actions">
         <button
           id={`legal-approve-${area.id}`}
           type="button"
           className="legal-btn-primary"
           aria-label={`Approve ${area.title}`}
+          onClick={() => onNavigate('/legal/drhp')}
         >
           <CheckCircle2 size={12} strokeWidth={2} />
           Approve
@@ -202,6 +207,7 @@ function LegalContentCard({ area }) {
           type="button"
           className="legal-btn-secondary"
           aria-label={`Request changes for ${area.title}`}
+          onClick={() => onNavigate('/legal/drhp')}
         >
           <FileEdit size={12} strokeWidth={1.5} />
           Request Changes
@@ -211,6 +217,7 @@ function LegalContentCard({ area }) {
           type="button"
           className="legal-btn-secondary"
           aria-label={`Add comment to ${area.title}`}
+          onClick={() => onNavigate('/legal/drhp')}
         >
           <MessageSquare size={12} strokeWidth={1.5} />
           Add Comment
@@ -220,6 +227,7 @@ function LegalContentCard({ area }) {
           type="button"
           className="legal-btn-secondary"
           aria-label={`View evidence for ${area.title}`}
+          onClick={() => onNavigate('/legal/documents')}
         >
           <Eye size={12} strokeWidth={1.5} />
           View Evidence
@@ -230,9 +238,58 @@ function LegalContentCard({ area }) {
 }
 
 // ---------------------------------------------------------------------------
+// Recent activity dot
+// ---------------------------------------------------------------------------
+const ACTIVITY_DOT_CLS = {
+  section_approved:   'legal-recent-type-dot--section_approved',
+  changes_requested:  'legal-recent-type-dot--changes_requested',
+  document_uploaded:  'legal-recent-type-dot--document_uploaded',
+  ai_flag_raised:     'legal-recent-type-dot--ai_flag_raised',
+  comment_added:      'legal-recent-type-dot--comment_added',
+  clarification_sent: 'legal-recent-type-dot--clarification_sent',
+};
+
+const ACTIVITY_VERB = {
+  section_approved:   'approved',
+  changes_requested:  'requested changes on',
+  document_uploaded:  'uploaded a document for',
+  ai_flag_raised:     '(AI) flagged issue on',
+  comment_added:      'commented on',
+  clarification_sent: 'sent clarification for',
+};
+
+function fmtRelTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 export default function LegalDashboard() {
+  const navigate = useNavigate();
+
+  const [score, setScore]         = useState(0);
+  const [stats, setStats]         = useState([]);
+  const [flags, setFlags]         = useState([]);
+  const [activity, setActivity]   = useState([]);
+
+  useEffect(() => {
+    // Fetch from legalApi — tries real backend first, falls back to mock.
+    fetchDashboardSummary().then((d) => {
+      setScore(d.readinessScore);
+      setStats([
+        { label: 'Sections Reviewed', value: d.sectionsReviewed },
+        { label: 'Pending Review',    value: d.pendingReview },
+        { label: 'Issues Found',      value: d.issuesFound },
+      ]);
+    });
+    fetchLegalFlags().then(setFlags);
+    fetchRecentActivity(4).then(setActivity);
+  }, []);
+
   return (
     <div className="legal-dashboard fade-in">
 
@@ -245,11 +302,11 @@ export default function LegalDashboard() {
       {/* 1. Summary panel ------------------------------------------------- */}
       <div className="legal-summary-panel">
         <div className="legal-summary-ring-col">
-          <LegalScoreRing score={LEGAL_READINESS_SCORE} />
+          <LegalScoreRing score={score} />
           <span className="legal-summary-ring-label">Legal Readiness</span>
         </div>
         <div className="legal-summary-stats">
-          {LEGAL_SUMMARY_STATS.map((stat) => (
+          {stats.map((stat) => (
             <div key={stat.label} className="legal-stat-card">
               <div className="legal-stat-value">{stat.value}</div>
               <div className="legal-stat-label">{stat.label}</div>
@@ -263,11 +320,20 @@ export default function LegalDashboard() {
         <div className="legal-panel-header">
           <AlertTriangle size={14} strokeWidth={1.75} className="legal-panel-header-icon" />
           <span className="legal-panel-title">Priority Areas</span>
+          <button
+            id="dashboard-view-review-queue"
+            type="button"
+            className="legal-btn-secondary"
+            style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)' }}
+            onClick={() => navigate('/legal/review')}
+          >
+            View Queue <ArrowRight size={11} strokeWidth={2} />
+          </button>
         </div>
-        {LEGAL_PRIORITY_ITEMS.map((item) => {
+        {flags.map((item) => {
           const meta = STATUS_META[item.status] ?? STATUS_META.pending;
           return (
-            <div key={item.id} className="legal-priority-row">
+            <div key={item.id} className="legal-priority-row" role="listitem">
               <span className={`legal-status-dot ${meta.dotClass}`} aria-hidden="true" />
               <span className="legal-priority-label">{item.label}</span>
               <span className="legal-priority-note">{item.note}</span>
@@ -284,9 +350,41 @@ export default function LegalDashboard() {
       </div>
       <div className="legal-content-grid">
         {LEGAL_CONTENT_AREAS.map((area) => (
-          <LegalContentCard key={area.id} area={area} />
+          <LegalContentCard key={area.id} area={area} onNavigate={navigate} />
         ))}
       </div>
+
+      {/* 4. Recent activity ---------------------------------------------- */}
+      {activity.length > 0 && (
+        <div className="legal-recent-panel">
+          <div className="legal-panel-header">
+            <Clock size={13} strokeWidth={1.75} style={{ color: 'var(--ink-soft)', flexShrink: 0 }} />
+            <span className="legal-panel-title">Recent Activity</span>
+            <button
+              id="dashboard-view-all-activity"
+              type="button"
+              className="legal-btn-secondary"
+              style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)' }}
+              onClick={() => navigate('/legal/activity')}
+            >
+              View All <ArrowRight size={11} strokeWidth={2} />
+            </button>
+          </div>
+          {activity.map((entry) => (
+            <div key={entry.id} className="legal-recent-row">
+              <span
+                className={`legal-recent-type-dot ${ACTIVITY_DOT_CLS[entry.actionType] ?? ''}`}
+                aria-hidden="true"
+              />
+              <span className="legal-recent-actor">{entry.actor}</span>
+              <span className="legal-recent-action-text">
+                {ACTIVITY_VERB[entry.actionType] ?? entry.actionType} <strong>{entry.target}</strong>
+              </span>
+              <span className="legal-recent-time">{fmtRelTime(entry.timestamp)}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

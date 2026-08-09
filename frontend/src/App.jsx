@@ -34,6 +34,12 @@ import Evidence from './screens/banker/Evidence';
 import Approvals from './screens/banker/Approvals';
 import Activity from './screens/banker/Activity';
 import LegalDashboard from './screens/legal/LegalDashboard';
+import LegalDocuments from './screens/legal/LegalDocuments';
+import LegalSections from './screens/legal/LegalSections';
+import LegalCompliance from './screens/legal/LegalCompliance';
+import LegalReviewQueue from './screens/legal/LegalReviewQueue';
+import LegalComments from './screens/legal/LegalComments';
+import LegalActivity from './screens/legal/LegalActivity';
 import FinanceSidebar from './screens/finance/components/FinanceSidebar';
 import FinanceDashboard from './screens/finance/FinanceDashboard';
 import FinanceDocuments from './screens/finance/FinanceDocuments';
@@ -95,7 +101,7 @@ export default function App() {
       }
 
       const { company_id: default_company_id, company_name: default_company_name, role: userRole } = decodeToken(token);
-      
+
       const active_company_id = localStorage.getItem('nirmaan_company_id') || default_company_id;
       const active_company_name = localStorage.getItem('nirmaan_company_name') || default_company_name;
 
@@ -195,7 +201,7 @@ export default function App() {
       {/* ── Legal Advisor routes — isolated under /legal/* ─────────────────────
            GlobalSidebar receives role="legal_advisor" so it renders NAV_LEGAL.
            AppShell provides the main content area (no copilot for this role).
-           Sub-routes are intentionally minimal; more pages ship in Phase 2. */}
+           All 7 sub-pages shipped in Phase 2. Do NOT add non-legal routes here. */}
       <Route
         path="/legal/*"
         element={
@@ -205,6 +211,12 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/legal/dashboard" replace />} />
                 <Route path="/dashboard" element={<LegalDashboard />} />
+                <Route path="/documents" element={<LegalDocuments />} />
+                <Route path="/drhp" element={<LegalSections />} />
+                <Route path="/compliance" element={<LegalCompliance />} />
+                <Route path="/review" element={<LegalReviewQueue />} />
+                <Route path="/comments" element={<LegalComments />} />
+                <Route path="/activity" element={<LegalActivity />} />
                 <Route path="/invitations" element={<UserInvitations />} />
               </Routes>
             </AppShell>
@@ -373,7 +385,7 @@ export default function App() {
                     <Route path="/team" element={<TeamInvitations />} />
                   </>
                 )}
-                
+
                 {/* Available for any role */}
                 <Route path="/invitations" element={<UserInvitations />} />
 

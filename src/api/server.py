@@ -785,6 +785,9 @@ app.include_router(document_upload_router)
 from src.api.admin_router import router as admin_router
 app.include_router(admin_router)
 
+from src.api.legal_review_router import router as legal_review_router
+app.include_router(legal_review_router)
+
 from src.api.finance_router import router as finance_router
 app.include_router(finance_router)
 
