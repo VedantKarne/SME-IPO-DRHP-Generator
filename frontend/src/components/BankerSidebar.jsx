@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ListChecks, FileEdit, ShieldCheck, ClipboardList,
-  BadgeCheck, Activity, Folder, BookOpen, LogOut, Mail, FileText
+  BadgeCheck, Activity, Folder, BookOpen, LogOut, Mail, FileText, User
 } from 'lucide-react';
-import { clearToken } from '../utils/auth';
+import { clearToken, decodeToken, getToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
 import useCanvasStore from '../canvas/services/canvasStore.js';
 import { needsReview } from '../utils/reviewStatus.js';
@@ -86,20 +86,36 @@ export default function BankerSidebar({ companyName, sections = [] }) {
       </nav>
 
       <div className="sidebar-footer">
-        {!railMode && (
-          <>
-            <hr className="sidebar-divider" />
-            <div className="sidebar-company">
-              {companyName || 'Company'}
-              <div style={{ marginTop: 2, fontSize: '0.65rem', letterSpacing: '0.06em' }}>SME IPO · Merchant Banker</div>
+        <Link
+          to="/profile"
+          className="nav-item"
+          title={railMode ? 'User Profile' : undefined}
+          style={{ marginTop: railMode ? '0' : '16px', marginBottom: '8px' }}
+        >
+          <span className="nav-icon">
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--sidebar-signal)',
+              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600
+            }}>
+              {decodeToken(getToken())?.email ? decodeToken(getToken()).email.substring(0, 2).toUpperCase() : <User size={14} />}
             </div>
-          </>
-        )}
+          </span>
+          {!railMode && (
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--sidebar-ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {decodeToken(getToken())?.company_name || 'My Profile'}
+              </span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--sidebar-ink-soft)' }}>
+                ID: {decodeToken(getToken())?.nirmaan_id || 'N/A'}
+              </span>
+            </div>
+          )}
+        </Link>
 
         <button
           className="nav-item sidebar-logout"
           title={railMode ? 'Log out' : undefined}
-          onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
+          onClick={() => { clearToken(); localStorage.removeItem('nirmaan_role'); broadcastUpdate('LOGOUT'); window.location.href = '/auth'; }}
         >
           <span className="nav-icon">
             <LogOut size={18} strokeWidth={1.5} color="var(--sidebar-ink-soft)" />

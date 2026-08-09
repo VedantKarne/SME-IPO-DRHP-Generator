@@ -11,9 +11,9 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Wallet, Folder, FileText, FileCheck2,
-  ClipboardCheck, MessageSquare, Activity, LogOut,
+  ClipboardCheck, MessageSquare, Activity, LogOut, User,
 } from 'lucide-react';
-import { clearToken } from '../../../utils/auth';
+import { clearToken, decodeToken, getToken } from '../../../utils/auth';
 import { broadcastUpdate } from '../../../utils/tabSync';
 
 const NAV = [
@@ -64,10 +64,31 @@ export default function FinanceSidebar({ companyName }) {
       </nav>
 
       <div className="sidebar-footer">
-        <hr className="sidebar-divider" />
+        <Link
+          to="/profile"
+          className="nav-item"
+          style={{ marginBottom: '8px' }}
+        >
+          <span className="nav-icon">
+            <div style={{
+              width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--sidebar-signal)',
+              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600
+            }}>
+              {decodeToken(getToken())?.email ? decodeToken(getToken()).email.substring(0, 2).toUpperCase() : <User size={14} />}
+            </div>
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.875rem', color: 'var(--sidebar-ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {decodeToken(getToken())?.company_name || 'My Profile'}
+            </span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--sidebar-ink-soft)' }}>
+              ID: {decodeToken(getToken())?.nirmaan_id || 'N/A'}
+            </span>
+          </div>
+        </Link>
         <button
           className="nav-item sidebar-logout"
-          onClick={() => { clearToken(); broadcastUpdate('LOGOUT'); window.location.reload(); }}
+          onClick={() => { clearToken(); localStorage.removeItem('nirmaan_role'); broadcastUpdate('LOGOUT'); window.location.href = '/auth'; }}
         >
           <span className="nav-icon">
             <LogOut size={18} strokeWidth={1.5} color="var(--sidebar-ink-soft)" />

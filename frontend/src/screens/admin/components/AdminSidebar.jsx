@@ -9,9 +9,9 @@
  * separate from the document IPO workspace sidebar used by other roles.
  */
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, LogOut } from 'lucide-react';
+import { Shield, LogOut, User } from 'lucide-react';
 import { ADMIN_NAV_ITEMS } from '../config/adminNavConfig';
-import { clearToken } from '../../../utils/auth';
+import { clearToken, decodeToken, getToken } from '../../../utils/auth';
 
 export default function AdminSidebar() {
   const location = useLocation();
@@ -20,7 +20,7 @@ export default function AdminSidebar() {
   const handleLogout = () => {
     clearToken();
     localStorage.removeItem('nirmaan_role');
-    navigate('/auth');
+    window.location.href = '/auth';
   };
 
   return (
@@ -56,10 +56,22 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="admin-sidebar-footer">
-        <div className="admin-user-info">
-          <span className="admin-user-name">System Administrator</span>
-          <span className="admin-user-role">admin@nirmaan.ai</span>
-        </div>
+        <Link to="/profile" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflow: 'hidden' }}>
+          <div style={{
+            width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--status-approved)',
+            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0
+          }}>
+            {decodeToken(getToken())?.email ? decodeToken(getToken()).email.substring(0, 2).toUpperCase() : <User size={14} />}
+          </div>
+          <div className="admin-user-info">
+            <span className="admin-user-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {decodeToken(getToken())?.company_name || 'System Admin'}
+            </span>
+            <span className="admin-user-role" style={{ fontSize: '0.65rem' }}>
+              ID: {decodeToken(getToken())?.nirmaan_id || 'N/A'}
+            </span>
+          </div>
+        </Link>
         <button
           type="button"
           onClick={handleLogout}

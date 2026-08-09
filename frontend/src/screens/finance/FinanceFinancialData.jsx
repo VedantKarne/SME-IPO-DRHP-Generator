@@ -80,7 +80,7 @@ function StatementRow({ companyId, statement, canCorrect, canVerify, onChanged }
   };
 
   return (
-    <div className="card finance-fy-card">
+    <div className="finance-card finance-fy-card">
       <div className="finance-fy-header">
         <div>
           <div className="finance-fy-year">FY{statement.fiscal_year}</div>
@@ -114,21 +114,24 @@ function StatementRow({ companyId, statement, canCorrect, canVerify, onChanged }
       {error && <div className="canvas-error" role="alert" style={{ marginTop: 10 }}>{error}</div>}
 
       <div className="finance-fy-grid">
-        {FIELDS.map(({ key, label }) => (
-          <div key={key} className="finance-fy-field">
-            <div className="finance-fy-field-label">{label}</div>
-            {editing ? (
-              <input
-                type="number" value={draft[key] ?? ''}
-                onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
-              />
-            ) : (
-              <div className="finance-fy-field-value">
-                {statement[key] != null ? statement[key].toLocaleString('en-IN') : '—'}
-              </div>
-            )}
-          </div>
-        ))}
+          {FIELDS.map(({ key, label }) => (
+            <div key={key} className="finance-fy-field">
+              <div className="finance-fy-field-label">{label}</div>
+              {editing ? (
+                <input
+                  type="number"
+                  className="input-text"
+                  style={{ width: '100%', padding: '8px' }}
+                  value={draft[key] ?? ''}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                />
+              ) : (
+                <div className="finance-fy-field-value">
+                  {statement[key] != null ? Number(statement[key]).toLocaleString() : '—'}
+                </div>
+              )}
+            </div>
+          ))}
       </div>
 
       {status?.corrections?.length > 0 && (
@@ -166,11 +169,11 @@ export default function FinanceFinancialData({ companyId }) {
   };
 
   return (
-    <div className="fade-in">
-      <div className="dashboard-greeting">Financial Data</div>
-      <div className="dashboard-company">Extracted KPIs by fiscal year</div>
-
-      {loading ? (
+    <div className="finance-page">
+      <header className="finance-header">
+        <h1 className="finance-title">Financial Data</h1>
+        <p className="finance-subtitle">Review, correct, and certify the raw financial extractions before drafting.</p>
+      </header>{loading ? (
         <p style={{ color: 'var(--ink-faint)' }}>Loading…</p>
       ) : statements.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: 48 }}>

@@ -10,7 +10,7 @@ export default function FinancialReviewSummary({ summary }) {
   const { financial_readiness, documents_verified, documents_total, sections_pending, issues_found } = summary;
 
   return (
-    <div className="card" style={{ marginBottom: 24 }}>
+    <div className="finance-card" style={{ marginBottom: 24 }}>
       <div className="readiness-hero">
         <ScoreRing score={financial_readiness} />
         <div>

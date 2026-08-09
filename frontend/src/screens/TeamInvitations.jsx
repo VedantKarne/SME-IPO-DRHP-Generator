@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, UserPlus, Trash2, CheckCircle2, Clock, X, Search, Briefcase, Scale, Shield, Building2, Check } from 'lucide-react';
-import { authedFetch } from '../utils/auth';
+import { authedFetch, getToken, decodeToken } from '../utils/auth';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -14,8 +14,9 @@ export default function TeamInvitations() {
   const [myInvitations, setMyInvitations] = useState([]);
   const [loadingMyInvs, setLoadingMyInvs] = useState(false);
 
-  // Current project context
-  const companyId = localStorage.getItem('nirmaan_company_id'); // We'll need a way to get the active project ID
+  const decodedToken = decodeToken(getToken());
+  const storedCompanyId = localStorage.getItem('nirmaan_company_id');
+  const companyId = (storedCompanyId && storedCompanyId !== 'null' && storedCompanyId !== 'undefined') ? storedCompanyId : decodedToken?.company_id;
 
   useEffect(() => {
     fetchTeam();
@@ -400,7 +401,7 @@ function InviteModal({ onClose, companyId, onSuccess }) {
               </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                <button className="btn btn-secondary" onClick={() => setStep(1)} style={{ padding: '10px 20px' }}>Back</button>
+                <button className="btn btn-secondary" onClick={() => { setStep(1); setError(''); }} style={{ padding: '10px 20px' }}>Back</button>
                 <button className="btn btn-primary" onClick={handleSend} disabled={sending} style={{ padding: '10px 20px' }}>
                   {sending ? 'Sending...' : 'Send Invitation'}
                 </button>

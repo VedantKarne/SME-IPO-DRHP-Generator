@@ -74,35 +74,34 @@ export default function FinanceDocuments({ companyId }) {
   };
 
   return (
-    <div className="fade-in">
-      <div className="dashboard-greeting">Documents</div>
-      <div className="dashboard-company">Financial statements & supporting evidence</div>
-
-      {canUpload && (
-        <>
-          <input
-            type="file" ref={fileInputRef} style={{ display: 'none' }}
-            onChange={handleFileChange} accept=".pdf,.xlsx,.xls,.docx,.doc"
-          />
-          <button
-            className="btn btn-primary" style={{ marginBottom: 20 }}
-            onClick={() => fileInputRef.current?.click()} disabled={uploading}
-          >
-            {uploading ? 'Uploading…' : 'Upload Financial Document'}
-          </button>
-        </>
-      )}
+    <div className="finance-page">
+      <header className="finance-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 className="finance-title">Documents</h1>
+            <p className="finance-subtitle">Upload and manage source documents for financial review.</p>
+          </div>
+          {canUpload && (
+            <div>
+              <input type="file" id="fin-upload" accept="application/pdf,.xlsx,.xls,.csv" onChange={handleFileChange} ref={fileInputRef} style={{ display: 'none' }} disabled={uploading} />
+              <label htmlFor="fin-upload" className="btn btn-primary" style={{ cursor: uploading ? 'wait' : 'pointer' }}>
+                {uploading ? 'Uploading…' : 'Upload Document'}
+              </label>
+            </div>
+          )}
+        </div>
+      </header>
 
       {error && <div className="canvas-error" role="alert" style={{ marginBottom: 16 }}>{error}</div>}
 
       {docs.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 48 }}>
+        <div className="finance-card" style={{ textAlign: 'center', padding: 48 }}>
           <p style={{ color: 'var(--ink-faint)' }}>No financial documents uploaded yet.</p>
         </div>
       ) : (
-        <div className="finance-doc-list">
+        <div className="finance-queue">
           {docs.map((doc) => (
-            <div key={doc.upload_id} className="card card-sm finance-doc-row">
+            <div key={doc.upload_id} className="finance-queue-row">
               <FileBarChart size={20} strokeWidth={1.75} color="var(--ink-soft)" className="finance-doc-icon" />
               <div className="finance-doc-info">
                 <div className="finance-doc-name">{doc.filename}</div>

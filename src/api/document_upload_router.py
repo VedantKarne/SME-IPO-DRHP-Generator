@@ -342,7 +342,7 @@ async def upload_document(
     Returns immediately with 202 Accepted.
     """
     # Verify authorization
-    if str(current_user["company_id"]) != company_id:
+    if str(current_user["company_id"]) != str(company_id):
         raise HTTPException(status_code=403, detail="Not authorized for this company")
     # Validate company
     company = db.query(Company).filter(Company.id == company_id).first()
@@ -461,7 +461,7 @@ def get_document_status(
     Poll this endpoint after upload to track progress.
     """
     # Verify authorization
-    if str(current_user["company_id"]) != company_id:
+    if str(current_user["company_id"]) != str(company_id):
         raise HTTPException(status_code=403, detail="Not authorized for this company")
     records = (
         db.query(UploadedDocument)

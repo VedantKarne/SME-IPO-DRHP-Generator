@@ -169,7 +169,9 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             "sub": str(user.id),
             "company_id": str(company.id),
             "company_name": company.name,
-            "role": user.role
+            "role": user.role,
+            "email": user.email,
+            "nirmaan_id": user.nirmaan_id
         },
         expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     )
@@ -194,7 +196,9 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             "sub": str(user.id),
             "company_id": str(company.id),
             "company_name": company.name,
-            "role": user.role
+            "role": user.role,
+            "email": user.email,
+            "nirmaan_id": user.nirmaan_id
         },
         expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     )

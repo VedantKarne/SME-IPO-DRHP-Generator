@@ -38,9 +38,11 @@ export default function FinanceDashboard({ companyName, sections = [], readiness
   }));
 
   return (
-    <div className="fade-in">
-      <div className="dashboard-greeting">Financial Review</div>
-      <div className="dashboard-company">{companyName || 'Finance / CA Workspace'}</div>
+    <div className="finance-page">
+      <header className="finance-header">
+        <h1 className="finance-title">Financial Review</h1>
+        <p className="finance-subtitle">{companyName || 'Finance / CA Workspace'}</p>
+      </header>
 
       <FinancialReviewSummary summary={summary} />
       <FinancialReviewQueue items={queueItems} onAction={() => navigate('/finance-dashboard/review-queue')} />

@@ -52,7 +52,7 @@ function SectionCard({ role, section, onApproved }) {
   };
 
   return (
-    <div className="card" style={{ marginBottom: 14 }}>
+    <div className="finance-card" style={{ marginBottom: 20 }}>
       <div className="finance-section-head">
         <div>
           <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--ink)' }}>{section.name}</h3>
@@ -120,12 +120,14 @@ export default function FinanceSections({ sections = [], setSections }) {
   };
 
   return (
-    <div className="fade-in">
-      <div className="dashboard-greeting">DRHP Sections</div>
-      <div className="dashboard-company">Financial-related sections only</div>
+    <div className="finance-page">
+      <header className="finance-header">
+        <h1 className="finance-title">DRHP Sections</h1>
+        <p className="finance-subtitle">Review, comment on, and certify financial sections of the DRHP.</p>
+      </header>
 
       {financialSections.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 48 }}>
+        <div className="finance-card" style={{ textAlign: 'center', padding: 48 }}>
           <p style={{ color: 'var(--ink-faint)' }}>No financial sections drafted yet.</p>
         </div>
       ) : (

@@ -21,9 +21,11 @@ export default function FinanceReviewQueuePage({ sections = [] }) {
   }));
 
   return (
-    <div className="fade-in">
-      <div className="dashboard-greeting">Review Queue</div>
-      <div className="dashboard-company">All financial areas awaiting Finance/CA review</div>
+    <div className="finance-page">
+      <header className="finance-header">
+        <h1 className="finance-title">Review Queue</h1>
+        <p className="finance-subtitle">All financial areas awaiting Finance/CA review</p>
+      </header>
       <FinancialReviewQueue
         items={items}
         title="Financial Review Queue"

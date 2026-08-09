@@ -47,7 +47,9 @@ import FinanceDocuments from './screens/finance/FinanceDocuments';
 import FinanceFinancialData from './screens/finance/FinanceFinancialData';
 import FinanceSections from './screens/finance/FinanceSections';
 import FinanceReviewQueuePage from './screens/finance/FinanceReviewQueuePage';
-import FinanceComingSoon from './screens/finance/components/FinanceComingSoon';
+import FinanceEvidence from './screens/finance/FinanceEvidence';
+import FinanceComments from './screens/finance/FinanceComments';
+import FinanceActivity from './screens/finance/FinanceActivity';
 import TeamInvitations from './screens/TeamInvitations';
 import UserInvitations from './screens/UserInvitations';
 import AdminSidebar from './screens/admin/components/AdminSidebar';
@@ -58,6 +60,7 @@ import AdminProjects from './screens/admin/AdminProjects';
 import AdminAuditLogs from './screens/admin/AdminAuditLogs';
 import AdminMonitoring from './screens/admin/AdminMonitoring';
 import AdminRules from './screens/admin/AdminRules';
+import UserProfile from './screens/UserProfile';
 import './screens/admin/admin.css';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
@@ -293,12 +296,20 @@ export default function App() {
                 <Route path="/financial-data" element={<FinanceFinancialData companyId={companyId} />} />
                 <Route path="/documents" element={<FinanceDocuments companyId={companyId} />} />
                 <Route path="/sections" element={<FinanceSections sections={sections} setSections={setSections} />} />
-                <Route path="/evidence" element={<FinanceComingSoon label="Evidence" />} />
+                <Route path="/evidence" element={<FinanceEvidence />} />
                 <Route path="/review-queue" element={<FinanceReviewQueuePage sections={sections} />} />
-                <Route path="/comments" element={<FinanceComingSoon label="Comments" />} />
-                <Route path="/activity" element={<FinanceComingSoon label="Activity" />} />
+                <Route path="/comments" element={<FinanceComments />} />
+                <Route path="/activity" element={<FinanceActivity />} />
               </Routes>
             </main>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute allowedRoles={['promoter', 'merchant_banker', 'legal_advisor', 'finance_ca', 'admin']}>
+            <UserProfile />
           </ProtectedRoute>
         }
       />
