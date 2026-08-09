@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Lock, ChevronDown, ChevronUp, Download, Loader2, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Lock, ChevronDown, ChevronUp, Download, Loader2, History, FileText } from 'lucide-react';
 import * as canvasApi from '../../canvas/services/canvasApi.js';
 import { countReviewStatuses, getSectionReviewState } from '../../utils/reviewStatus.js';
 
@@ -46,6 +47,7 @@ function VersionHistory({ companyId, sectionName }) {
 }
 
 export default function Approvals({ companyId, companyName, sections = [], readiness }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(null);
   const [exporting, setExporting] = useState(null);
   const [exportError, setExportError] = useState(null);
@@ -123,7 +125,12 @@ export default function Approvals({ companyId, companyName, sections = [], readi
 
       {/* Final Sign-off */}
       <div className="card">
-        <h3 style={{ marginBottom: 14, fontSize: '0.95rem', color: 'var(--ink)' }}>Final IPO Readiness</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--ink)' }}>Final IPO Readiness</h3>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/reports')}>
+            <FileText size={13} strokeWidth={2} /> View Full Reports
+          </button>
+        </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--ink-soft)', marginBottom: 14 }}>
           {counts.approved} / {sections.length} sections approved
           {r.total_open_gaps ? ` · ${r.total_open_gaps} open gap${r.total_open_gaps > 1 ? 's' : ''}` : ''}

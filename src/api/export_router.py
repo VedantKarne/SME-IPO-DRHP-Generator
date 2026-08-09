@@ -50,8 +50,7 @@ def export_section(
         try:
             from docx import Document
             from htmldocx import HtmlToDocx
-            import io
-            
+
             document = Document()
             document.add_heading(req.section_name, 0)
             

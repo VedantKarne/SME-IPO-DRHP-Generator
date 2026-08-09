@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ListChecks, FileEdit, ShieldCheck, ClipboardList,
-  BadgeCheck, Activity, Folder, BookOpen, LogOut, Mail,
+  BadgeCheck, Activity, Folder, BookOpen, LogOut, Mail, FileText
 } from 'lucide-react';
 import { clearToken } from '../utils/auth';
 import { broadcastUpdate } from '../utils/tabSync';
@@ -10,16 +10,17 @@ import useCanvasStore from '../canvas/services/canvasStore.js';
 import { needsReview } from '../utils/reviewStatus.js';
 
 const NAV = [
-  { path: '/banker/overview',      icon: LayoutDashboard, label: 'Overview' },
-  { path: '/banker/review-queue',  icon: ListChecks,       label: 'Review Queue', badgeKey: 'reviewQueue' },
-  { path: '/workspace',            icon: FileEdit,         label: 'DRHP Workspace' },
-  { path: '/banker/compliance',    icon: ShieldCheck,      label: 'Compliance' },
-  { path: '/banker/evidence',      icon: ClipboardList,    label: 'Evidence' },
-  { path: '/banker/approvals',     icon: BadgeCheck,       label: 'Approvals' },
-  { path: '/banker/activity',      icon: Activity,         label: 'Activity & Audit' },
-  { path: '/documents',            icon: Folder,           label: 'Documents' },
-  { path: '/knowledge-base',       icon: BookOpen,         label: 'Knowledge Base' },
-  { path: '/invitations',          icon: Mail,             label: 'My Invitations' },
+  { path: '/banker/overview', icon: LayoutDashboard, label: 'Overview' },
+  { path: '/banker/review-queue', icon: ListChecks, label: 'Review Queue', badgeKey: 'reviewQueue' },
+  { path: '/workspace', icon: FileEdit, label: 'DRHP Workspace' },
+  { path: '/banker/compliance', icon: ShieldCheck, label: 'Compliance' },
+  { path: '/banker/evidence', icon: ClipboardList, label: 'Evidence' },
+  { path: '/banker/approvals', icon: BadgeCheck, label: 'Approvals' },
+  { path: '/reports', icon: FileText, label: 'Reports' },
+  { path: '/banker/activity', icon: Activity, label: 'Activity & Audit' },
+  { path: '/documents', icon: Folder, label: 'Documents' },
+  { path: '/knowledge-base', icon: BookOpen, label: 'Knowledge Base' },
+  { path: '/invitations', icon: Mail, label: 'My Invitations' },
 ];
 
 export default function BankerSidebar({ companyName, sections = [] }) {

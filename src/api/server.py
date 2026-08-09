@@ -691,10 +691,26 @@ def save_version(
 # ─────────────────────────────────────────────
 @app.get("/api/auth/me")
 def get_me(current_user: dict = Depends(get_current_user)):
+    # company_id/company_name/role come straight from the JWT payload (no DB
+    # hit needed) — cin is the one field callers need that was never in the
+    # token, so this is the only part of the response that queries the DB.
+    cin = None
+    db = SessionLocal()
+    try:
+        company_id = current_user.get("company_id")
+        if company_id:
+            company = db.query(Company).filter(Company.id == uuid.UUID(str(company_id))).first()
+            cin = company.cin if company else None
+    except Exception as e:
+        logger.warning(f"Failed to fetch CIN for /api/auth/me: {e}")
+    finally:
+        db.close()
+
     return {
         "company_id": current_user.get("company_id"),
         "company_name": current_user.get("company_name"),
-        "role": current_user.get("role")
+        "role": current_user.get("role"),
+        "cin": cin,
     }
 
 class SetupRequest(BaseModel):

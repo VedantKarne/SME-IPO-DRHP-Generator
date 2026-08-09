@@ -150,3 +150,9 @@ pdfplumber                  # src/ingestion/financial_table_parser.py (active) +
 # Uncomment when labelled training data (50-100 samples/category) is available:
 # transformers              # src/extraction/doc_classifier.py — LayoutLMv3 pipeline stub
 # datasets                  # HuggingFace Datasets API for fine-tuning LayoutLMv3
+
+
+# ── 16. Full DRHP Export ─────────────────────────────────────────────────────
+reportlab                   # src/agent/document_assembler.py — PDF assembly (was missing; broke /api/export/full/{pdf,docx} entirely, see PROJECT_CONTEXT.md 2026-08-09)
+python-docx                 # src/agent/document_assembler.py — DOCX assembly (already installed, was undeclared)
+htmldocx                    # src/api/export_router.py — per-section DOCX export (was missing; broke /api/export/section/docx)
