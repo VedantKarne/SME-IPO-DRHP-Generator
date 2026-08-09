@@ -45,12 +45,14 @@ def run_migrations():
         "ALTER TABLE readiness_score ADD COLUMN documents_score INTEGER",
         "ALTER TABLE readiness_score ADD COLUMN financials_score INTEGER",
         "ALTER TABLE readiness_score ADD COLUMN compliance_score INTEGER",
-        "ALTER TABLE readiness_score ADD COLUMN legal_score INTEGER",
         "ALTER TABLE readiness_score ADD COLUMN risk_score INTEGER",
         "ALTER TABLE readiness_score ADD COLUMN next_action TEXT",
         # company_user: nirmaan_id added later
         "ALTER TABLE company_user ADD COLUMN nirmaan_id VARCHAR(20)",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_company_user_nirmaan_id ON company_user (nirmaan_id)",
+        # company: pan and gst added later
+        "ALTER TABLE company ADD COLUMN pan_number VARCHAR(10)",
+        "ALTER TABLE company ADD COLUMN gst_number VARCHAR(15)",
     ]
     for sql in migrations:
         try:
@@ -83,11 +85,17 @@ def seed_demo_user():
                 cin="U72200MH2021PTC123456",
                 incorporation_date=None,
                 registered_office="Plot 42, Tech Park, Pune, Maharashtra 411057",
+                pan_number="AABCN1234F",
+                gst_number="27AABCN1234F1Z9",
                 source="demo_seed"
             )
             db.add(company)
             db.commit()
             db.refresh(company)
+        else:
+            company.pan_number = "AABCN1234F"
+            company.gst_number = "27AABCN1234F1Z9"
+            db.commit()
 
         # Find or create/update demo user
         user = db.query(CompanyUser).filter(CompanyUser.email == demo_email).first()
@@ -135,6 +143,34 @@ def seed_demo_user():
             if not banker_user.nirmaan_id:
                 banker_user.nirmaan_id = "MB-10482"
             db.commit()
+
+        # Seed additional demo users for Legal, Admin, and Finance
+        demo_pwd_common = bcrypt.hashpw("demo123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        
+        extra_users = [
+            {"email": "legal@nirmaan.ai", "role": "legal_advisor", "nirmaan_id": "LE-73129"},
+            {"email": "finance@nirmaan.ai", "role": "finance_ca", "nirmaan_id": "FI-59234"},
+            {"email": "admin@nirmaan.ai", "role": "admin", "nirmaan_id": "AD-99999"},
+        ]
+        
+        for u in extra_users:
+            existing = db.query(CompanyUser).filter(CompanyUser.email == u["email"]).first()
+            if not existing:
+                new_u = CompanyUser(
+                    company_id=company.id,
+                    email=u["email"],
+                    hashed_password=demo_pwd_common,
+                    role=u["role"],
+                    nirmaan_id=u["nirmaan_id"]
+                )
+                db.add(new_u)
+            else:
+                existing.hashed_password = demo_pwd_common
+                existing.company_id = company.id
+                existing.role = u["role"]
+                if not existing.nirmaan_id:
+                    existing.nirmaan_id = u["nirmaan_id"]
+        db.commit()
 
         # Seed 3 years of financials if not present
         existing_fins = db.query(FinancialStatement).filter(FinancialStatement.company_id == company.id).count()

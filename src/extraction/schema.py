@@ -15,6 +15,8 @@ class Company(Base):
     incorporation_date = Column(Date)
     registered_office = Column(Text)
     business_activity_nic = Column(String(10))
+    pan_number = Column(String(10))
+    gst_number = Column(String(15))
     dynamic_checklist = Column(JSON) # Factory License vs Startup Cert
     source = Column(String(20), default='promoter_input')
 
