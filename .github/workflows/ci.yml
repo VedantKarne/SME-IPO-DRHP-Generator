@@ -28,7 +28,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest fastapi "uvicorn[standard]" sqlalchemy pydantic \
                       python-jose[cryptography] bcrypt passlib groq python-docx reportlab \
-                      python-dotenv httpx langchain-core
+                      python-dotenv httpx langchain-core pymupdf htmldocx
 
       - name: Offline test suite
         env:
