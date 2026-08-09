@@ -247,73 +247,170 @@ Complete coverage of all mandatory DRHP sections as per SEBI's SME IPO framework
 
 ## 🏗️ Architecture
 
-The system is built as five sequential operational phases:
-
 ```mermaid
 flowchart TD
-    classDef frontend  fill:#1e3a8a,stroke:#3b82f6,stroke-width:2px,color:#fff,font-weight:bold
-    classDef api       fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#fff
-    classDef agent     fill:#4c1d95,stroke:#8b5cf6,stroke-width:2px,color:#fff,font-weight:bold
-    classDef llm       fill:#7c2d12,stroke:#f97316,stroke-width:2px,color:#fff
-    classDef db        fill:#3f3f46,stroke:#a1a1aa,stroke-width:2px,color:#fff
-    classDef hitl      fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#fff,font-weight:bold
+    classDef userNode    fill:#0f172a,stroke:#38bdf8,stroke-width:3px,color:#bfdbfe,font-weight:bold
+    classDef frontNode   fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#e0e7ff,font-weight:bold
+    classDef apiNode     fill:#052e16,stroke:#4ade80,stroke-width:2px,color:#bbf7d0,font-weight:bold
+    classDef agentNode   fill:#2e1065,stroke:#c084fc,stroke-width:2px,color:#f3e8ff,font-weight:bold
+    classDef llmNode     fill:#431407,stroke:#fb923c,stroke-width:2px,color:#ffedd5,font-weight:bold
+    classDef ragNode     fill:#082f49,stroke:#38bdf8,stroke-width:2px,color:#bae6fd,font-weight:bold
+    classDef dbNode      fill:#18181b,stroke:#71717a,stroke-width:2px,color:#d4d4d8
+    classDef hitlNode    fill:#500724,stroke:#fb7185,stroke-width:3px,color:#fecdd3,font-weight:bold
+    classDef eligNode    fill:#052e16,stroke:#86efac,stroke-width:2px,color:#bbf7d0
+    classDef exportNode  fill:#451a03,stroke:#fcd34d,stroke-width:2px,color:#fef9c3,font-weight:bold
+    classDef decNode     fill:#172554,stroke:#93c5fd,stroke-width:2px,color:#dbeafe,font-weight:bold
+    classDef ingestNode  fill:#1c1917,stroke:#a78bfa,stroke-width:2px,color:#ede9fe
 
-    subgraph Phase0["Phase 0 — Offline Ingestion (run once)"]
-        P0A["Original_Docs PDFs"] --> P0B["PyMuPDF + Docling Parser"]
-        P0B --> P0C["Regulatory + Precedent Chunkers"]
-        P0C --> P0D["RAPTOR Summary Tree via Groq"]
-        P0D --> P0E["BGE-M3 Dual Embedder CUDA or MPS or CPU"]
-        P0E --> P0F[("ChromaDB + Sparse JSON Index")]
+    USER(["👤 Promoter · Merchant Banker · Legal · Finance · Admin"]):::userNode
+
+    %% ── PHASE 0 · OFFLINE INGESTION ─────────────────────────────────────────
+    subgraph PH0["⚙️ Phase 0 — Offline Corpus Ingestion  run once"]
+        direction LR
+        I0["📄 Source PDFs"]:::ingestNode
+        I1["pdf_parser.py — PyMuPDF + Docling"]:::ingestNode
+        I2["regulatory_chunker.py — ICDR-aware chunks"]:::ingestNode
+        I3["precedent_chunker.py — DRHP section chunks"]:::ingestNode
+        I4["raptor.py — 3-level summary tree via Groq"]:::ingestNode
+        I5["bge_m3_embedder.py — BAAI/bge-m3 Dense + Sparse"]:::ingestNode
+        I6[("ChromaDB — regulatory_clauses + precedent_chunks")]:::dbNode
+        I0 --> I1 --> I2 & I3 --> I4 --> I5 --> I6
     end
 
-    subgraph Phase1["Phase 1 — Guided Data Capture"]
-        P1A["React Frontend Vite"] --> P1B["Wizard API /api/wizard/*"]
-        P1B --> P1C[("SQLite test_wizard.db")]
-        P1A --> P1D["Gemini 2.5 Flash PDF KPI Extract"]
-        P1D --> P1B
+    %% ── PHASE 1 · AUTH + DATA CAPTURE ───────────────────────────────────────
+    subgraph PH1["🎙️ Phase 1 — Authentication and Company Data Capture"]
+        direction TB
+        F1["🌐 Landing Page — Nirmaan AI Interview"]:::frontNode
+        F2["Auth.jsx — Login · Register · JWT"]:::frontNode
+        A1["auth_router.py — JWT · bcrypt · RBAC"]:::apiNode
+        A2["wizard.py — /api/wizard/* Company CRUD"]:::apiNode
+        A3["session_router.py — /api/session/restore"]:::apiNode
+        A4["project_router.py — Multi-user workspace"]:::apiNode
+        A5["document_upload_router.py — PDF ingestion"]:::apiNode
+        G1["🤖 Gemini 2.5 Flash — kpi_extractor.py"]:::llmNode
+        DB1[("SQLite nirmaan.db — SQLAlchemy ORM")]:::dbNode
+        F1 --> F2 --> A1 --> A2 & A3 & A4
+        A2 --> DB1
+        A5 --> G1 --> DB1
     end
 
-    subgraph Phase2["Phase 2 — Eligibility Check"]
-        P2A["GET /api/eligibility/{id}"] --> P2B["EligibilityEngine 5 ICDR checks"]
-        P2B --> P2C["EligibilityReport Pydantic"]
+    %% ── DATABASE SCHEMA ──────────────────────────────────────────────────────
+    subgraph DBSchema["🗄️ SQLite — 13 SQLAlchemy ORM Tables"]
+        direction LR
+        T1["company"]:::dbNode
+        T2["company_user"]:::dbNode
+        T3["project_member"]:::dbNode
+        T4["project_invitation"]:::dbNode
+        T5["financial_statement"]:::dbNode
+        T6["director_kmp"]:::dbNode
+        T7["offer_details"]:::dbNode
+        T8["generated_section"]:::dbNode
+        T9["chat_message"]:::dbNode
+        T10["section_version"]:::dbNode
+        T11["readiness_score"]:::dbNode
+        T12["uploaded_document"]:::dbNode
+        T13["financial_table"]:::dbNode
     end
 
-    subgraph Phase3["Phase 3 — Agentic Drafting"]
-        P3A["POST /api/agent/run"] --> P3B["LangGraph StateGraph 7 nodes"]
-        P3B --> P3C["Hybrid RAG Retriever"]
-        P3C --> P3D["BGE-M3 + ChromaDB + RRF + FlashRank"]
-        P3D --> P3B
-        P3B --> P3E["Groq Llama 3.3-70B Drafting"]
-        P3E --> P3F["Gap Detector + Completeness Score"]
-        P3F --> P3G{"Score below 0.75?"}
-        P3G -->|"Yes max 2x"| P3B
-        P3G -->|"No"| P3H["HITL interrupt()"]
+    %% ── PHASE 2 · ELIGIBILITY ENGINE ────────────────────────────────────────
+    subgraph PH2["⚖️ Phase 2 — SEBI ICDR Eligibility Engine"]
+        direction TB
+        E1["eligibility_router.py — GET /api/eligibility/company_id"]:::apiNode
+        E2["EligibilityEngine — checker.py — 5 ICDR hard checks"]:::eligNode
+        E3["Eligibility.jsx — Per-clause Pydantic report"]:::frontNode
+        EDEC{"Eligible?"}:::decNode
+        E1 --> E2 --> EDEC
+        EDEC -->|"Fail"| E3
     end
 
-    subgraph Phase4["Phase 4 — Human Review Workspace"]
-        P4A["Chat Edit Router"] --> P4B["Groq applies NL edit"]
-        P4C["Locking Router"] --> P4D["is_locked=True"]
-        P4E["Copilot Router Nirmaan"] --> P4F["RAG-grounded Q&A"]
-        P4G["Impact Router"] --> P4H["Field ripple map"]
+    %% ── HYBRID RAG ENGINE ────────────────────────────────────────────────────
+    subgraph RAG["🔍 Hybrid RAG Retrieval Engine — shared by Phase 3 and Copilot"]
+        direction LR
+        R1["vector_store.py — ChromaDB PersistentClient"]:::ragNode
+        R2["hybrid_retriever.py — Dense + Sparse RRF k=60"]:::ragNode
+        R3["flashrank_reranker.py — ONNX cross-encoder"]:::ragNode
+        R4["parent_doc_store.py — Child to Parent expansion"]:::ragNode
+        R1 --> R2 --> R3 --> R4
     end
 
-    subgraph Phase5["Phase 5 — Assembly and Export"]
-        P5A["GET /api/readiness/{id}"] --> P5B["Readiness Dashboard"]
-        P5C["document_assembler_node"] --> P5D["DRHP.docx + DRHP.pdf"]
+    %% ── PHASE 3 · AGENTIC DRAFTING ──────────────────────────────────────────
+    subgraph PH3["🤖 Phase 3 — LangGraph Agentic Drafting per section"]
+        direction TB
+        AG0["POST /api/sections/company_id/generate — MemorySaver checkpoint"]:::apiNode
+
+        subgraph GRAPH["LangGraph StateGraph — AgentState — 8 Nodes"]
+            direction TB
+            GS(["START"])
+            ND1["regulatory_retrieval_node — corpus=regulatory k=3"]:::agentNode
+            ND2["precedent_retrieval_node — corpus=precedent k=3"]:::agentNode
+            ND3["data_fetch_node — SQLite facts + uploaded doc embeddings k=5"]:::agentNode
+            ND4["context_aggregator_node — explicit fan-in barrier"]:::agentNode
+            ND5["consistency_validator_node — run_all_checks cross-field"]:::agentNode
+            ND6["draft_generation_node — Groq llama-3.1-8b-instant max 1500 tok"]:::llmNode
+            ND7["gap_validator_node — flag_gaps regex — completeness score"]:::agentNode
+            ND8{"self_correction_router — score lt 0.75 AND revisions lt 2?"}:::decNode
+            ND9["hitl_review_interrupt — approve · revise · reject"]:::hitlNode
+            GS --> ND1 & ND2 & ND3
+            ND1 & ND2 & ND3 --> ND4 --> ND5 --> ND6 --> ND7 --> ND8
+            ND8 -->|"Yes — retry"| ND6
+            ND8 -->|"No — done"| ND9
+        end
+
+        AG0 --> GRAPH
     end
 
-    Phase0 -.->|"Vector index ready"| Phase3
-    Phase1 --> Phase2
-    Phase2 -->|"Eligible"| Phase3
-    Phase3 --> Phase4
-    Phase4 -->|"All certified"| Phase5
+    %% ── PHASE 4 · WORKSPACE + REVIEW ────────────────────────────────────────
+    subgraph PH4["✏️ Phase 4 — Document Workspace and Role-Based Review"]
+        direction TB
+        F3["Dashboard.jsx — ReadinessScore ring · sub-scores · next actions"]:::frontNode
+        F4["Documents.jsx — Upload · processing status · FinancialTable"]:::frontNode
+        F5["Workspace — canvas_router.py — TipTap editor · version history"]:::frontNode
+        F5B["chat_edit_router.py — /api/sections/id/chat — Groq NL edits"]:::apiNode
+        F5C["copilot_router.py — /api/copilot/ask — RAG Q&A citations"]:::apiNode
+        F5D["impact_router.py — /api/impact/field — cross-section ripple map"]:::apiNode
+        F6["locking_router.py — is_locked=True · intermediary_certified"]:::apiNode
+        F7["Banker workspace — ReviewQueue · Approvals · Evidence"]:::frontNode
+        F8["legal_review_router.py — /api/legal/* annotations"]:::apiNode
+        F9["finance_router.py — /api/finance/* · RBAC · clarifications"]:::apiNode
+        F10["admin_router.py — /api/admin/* user management"]:::apiNode
+        FRDEC{"All 25 sections certified?"}:::decNode
+        F3 --> F4 --> F5
+        F5 --> F5B & F5C & F5D
+        F5 --> F6 --> F7 & F8 & F9 & F10 --> FRDEC
+    end
+
+    %% ── PHASE 5 · EXPORT ─────────────────────────────────────────────────────
+    subgraph PH5["📤 Phase 5 — SEBI-Ordered Assembly and Export"]
+        direction LR
+        X1["export_router.py — /api/export/company_id/docx+pdf"]:::apiNode
+        X2["document_assembler.py — SEBI TOC order — drhp_cover.py"]:::exportNode
+        X3["python-docx — DRHP.docx"]:::exportNode
+        X4["ReportLab — DRHP.pdf"]:::exportNode
+        X1 --> X2 --> X3 & X4
+    end
+
+    %% ── TOP-LEVEL WIRING ────────────────────────────────────────────────────
+    USER --> PH1
+    PH1 --> DBSchema
+    PH1 --> PH2
+    PH0 -. "ChromaDB indexed" .-> RAG
+    EDEC -->|"Pass"| PH3
+    RAG --> ND1 & ND2 & ND3
+    I6 -. "client_documents corpus" .-> ND3
+    PH3 --> PH4
+    RAG --> F5C
+    ND9 -->|"Section saved to DB"| PH4
+    FRDEC -->|"Yes"| PH5
+    FRDEC -->|"No"| F5
 ```
 
 📖 **[Read the full Architecture Deep-Dive →](docs/architecture.md)**
 
-For the detailed data-flow diagram verified against the actual source code, see [Data_flow_diagram.md](Data_flow_diagram.md).
+For the verified data-flow diagram see [Data_flow_diagram.md](Data_flow_diagram.md).
 
 ---
+
+
 
 ## 📚 Documentation
 
