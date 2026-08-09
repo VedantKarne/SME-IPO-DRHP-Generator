@@ -11,8 +11,9 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, GitBranch } from 'lucide-react';
 import useCanvasStore from '../services/canvasStore.js';
+import DependencyGraph from '../../components/DependencyGraph.jsx';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,6 +50,7 @@ export default function DocumentSidebar({ containerRef }) {
   const navRailCollapsed = useCanvasStore((s) => s.navRailCollapsed);
   const setNavRailCollapsed = useCanvasStore((s) => s.setNavRailCollapsed);
   const [collapsed, setCollapsed] = useState(true);
+  const [depGraphOpen, setDepGraphOpen] = useState(false);
 
   const activeItemRef = useRef(null);
   const listRef       = useRef(null);
@@ -94,6 +96,22 @@ export default function DocumentSidebar({ containerRef }) {
 
       {/* ── SECTIONS label ── */}
       <div className="doc-sidebar__heading" aria-hidden="true">SECTIONS</div>
+
+      {/* ── Dependency graph trigger ── */}
+      <button
+        type="button"
+        onClick={() => setDepGraphOpen(true)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+          padding: '6px 10px', margin: '0 0 10px', fontSize: '0.75rem', fontWeight: 500,
+          color: 'var(--ink-soft)', background: 'var(--paper-raised)',
+          border: '1px solid var(--rule)', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+        }}
+      >
+        <GitBranch size={13} strokeWidth={1.75} aria-hidden="true" />
+        View Dependencies
+      </button>
+      <DependencyGraph isOpen={depGraphOpen} onClose={() => setDepGraphOpen(false)} />
 
       {/* ── Section nav list ── */}
       <nav aria-label="Jump to section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>

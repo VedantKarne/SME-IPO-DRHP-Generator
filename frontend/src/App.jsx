@@ -19,6 +19,7 @@ import Dashboard from './screens/Dashboard';
 import Eligibility from './screens/Eligibility';
 import Documents from './screens/Documents';
 import KnowledgeBase from './screens/KnowledgeBase';
+import Reports from './screens/Reports';
 import Profile from './screens/Profile';
 import Auth from './screens/Auth';
 import Onboarding from './screens/Onboarding';
@@ -318,6 +319,18 @@ export default function App() {
                 <Route path="/" element={<Navigate to={isBanker ? '/banker/overview' : '/dashboard'} replace />} />
                 <Route path="/documents" element={<Documents readOnly={isBanker} />} />
                 <Route path="/knowledge-base" element={<KnowledgeBase />} />
+                <Route
+                  path="/reports"
+                  element={
+                    <Reports
+                      companyId={companyId}
+                      companyName={companyName}
+                      sections={sections}
+                      eligibility={eligibility}
+                      consistency={consistency}
+                    />
+                  }
+                />
 
                 {isBanker ? (
                   <>

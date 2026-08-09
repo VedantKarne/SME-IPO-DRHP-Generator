@@ -1,17 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShieldCheck, CheckCircle2, XCircle, AlertTriangle, GitBranch } from 'lucide-react';
 import * as canvasApi from '../../canvas/services/canvasApi.js';
-
-// The 4 keys src/api/impact_router.py's IMPACT_MAP actually recognizes —
-// see PROJECT_CONTEXT.md: this is a static dependency lookup, not a live
-// SEBI regulation-change feed, so it's labeled "Data Dependency Map" here
-// rather than "Regulatory Updates".
-const IMPACT_KEYS = [
-  { key: 'total_issue_size_lakhs', label: 'Total Issue Size' },
-  { key: 'ebitda_lakhs',           label: 'EBITDA' },
-  { key: 'litigation',             label: 'Litigation' },
-  { key: 'registered_office',      label: 'Registered Office' },
-];
+import { IMPACT_KEYS } from '../../utils/impactKeys.js';
 
 export default function Compliance({ eligibility, consistency }) {
   const [impacts, setImpacts] = useState(null);

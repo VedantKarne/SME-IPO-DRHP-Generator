@@ -8,6 +8,7 @@ import {
 import { getToken, decodeToken, authedFetch } from '../utils/auth';
 import { isDemoCompany } from '../utils/demoMode.js';
 import { isSentToBanker, markSentToBanker } from '../utils/bankerHandoff.js';
+import PublicVerification from '../components/PublicVerification.jsx';
 
 const API_BASE = 'http://127.0.0.1:8000';
 
@@ -44,7 +45,20 @@ export default function Documents({ readOnly = false }) {
   const token = getToken();
   const decoded = token ? decodeToken(token) : null;
   const companyId = decoded?.company_id ?? null;
-  const isDemo = isDemoCompany(decoded?.company_name ?? null);
+  const companyName = decoded?.company_name ?? null;
+  const isDemo = isDemoCompany(companyName);
+
+  // CIN isn't in the JWT — fetch it once from /api/auth/me for the
+  // verification widget below (Company.cin is a real column, just never
+  // exposed to the frontend until now).
+  const [cin, setCin] = useState(null);
+  useEffect(() => {
+    if (!companyId) return;
+    authedFetch(`${API_BASE}/api/auth/me`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.cin) setCin(data.cin); })
+      .catch(() => {});
+  }, [companyId]);
 
   // For the seeded demo account, the checklist starts pre-filled with the
   // sample PDFs so the page demonstrates a fully-prepared filing without
@@ -378,6 +392,8 @@ export default function Documents({ readOnly = false }) {
           </p>
         </div>
       </div>
+
+      <PublicVerification companyName={companyName} cin={cin} readOnly={readOnly} />
 
       {/* Checklist */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>

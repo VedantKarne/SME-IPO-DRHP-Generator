@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, Scale, Users, ClipboardList, FileWarning, FileUp, FileEdit, CheckCircle2, XCircle, AlertTriangle, Search, MessageCircleQuestion } from 'lucide-react';
+import { Wallet, Scale, Users, ClipboardList, FileWarning, FileUp, FileEdit, CheckCircle2, XCircle, AlertTriangle, Search, MessageCircleQuestion, FileText } from 'lucide-react';
 import { authedFetch } from '../utils/auth';
 import ScoreRing from '../components/ScoreRing';
 
@@ -174,9 +174,14 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
           </div>
         </div>
 
-        <button className="btn btn-primary btn-lg" style={{ marginTop: 8 }} onClick={() => navigate('/workspace')}>
-          Continue Preparation →
-        </button>
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <button className="btn btn-primary btn-lg" onClick={() => navigate('/workspace')}>
+            Continue Preparation →
+          </button>
+          <button className="btn btn-secondary btn-lg" onClick={() => navigate('/reports')}>
+            <FileText size={15} strokeWidth={2} /> View Reports
+          </button>
+        </div>
       </div>
 
       {/* Sub-score rings */}
