@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt
+from typing import Optional
 import bcrypt
 import os
 import uuid
@@ -93,6 +94,15 @@ class RegisterRequest(BaseModel):
     cin: str
     email: str
     password: str
+    # Optional — omitted entirely by the existing Founder/Promoter sign-up
+    # form, which keeps that flow byte-identical to before. Only an
+    # explicit, allowlisted value changes the created user's role; anything
+    # else (missing, unrecognized) falls back to the original "promoter"
+    # default. 'merchant_banker' / 'admin' are deliberately not
+    # self-registerable here — unchanged from current behavior.
+    role: Optional[str] = None
+
+SELF_REGISTERABLE_ROLES = {"finance_ca"}
 
 class LoginRequest(BaseModel):
     email: str
@@ -122,11 +132,12 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
     
     # Create User
     hashed_pwd = bcrypt.hashpw(request.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    assigned_role = request.role if request.role in SELF_REGISTERABLE_ROLES else "promoter"
     user = CompanyUser(
         company_id=company.id,
         email=request.email,
         hashed_password=hashed_pwd,
-        role="promoter"
+        role=assigned_role
     )
     db.add(user)
     db.commit()

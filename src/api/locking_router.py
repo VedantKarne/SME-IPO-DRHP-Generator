@@ -26,7 +26,22 @@ def approve_and_lock_section(
 
     This is the regulatory sign-off action. It was previously unauthenticated:
     any anonymous caller could certify any section of any company.
+
+    Finance/CA is explicitly excluded: this endpoint has no role checks
+    otherwise (any Promoter/Merchant Banker caller may certify any
+    section), and without this exclusion a Finance/CA user could call it
+    directly to bypass finance_router.py's finance-review restrictions —
+    certifying a legal section, or fully locking a financial one, neither
+    of which Finance/CA is allowed to do. 'finance_ca' could not
+    authenticate as a real role before this task, so this adds no
+    restriction for any other, already-existing role.
     """
+    if current_user.get("role") == "finance_ca":
+        raise HTTPException(
+            status_code=403,
+            detail="Finance/CA cannot certify sections. Use finance-review for financial sections.",
+        )
+
     section = db.query(GeneratedSection).filter(GeneratedSection.id == section_id).first()
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")

@@ -16,6 +16,15 @@ export const isTokenExpired = (t) => {
   return decoded.exp * 1000 < Date.now();
 };
 
+// The authenticated user's role, straight from the JWT (source of truth —
+// see src/api/auth_router.py, which puts CompanyUser.role in every token).
+// Used by permissions/financeRolePermissions.js's can() calls.
+export const getCurrentRole = () => {
+  const token = getToken();
+  if (!token || isTokenExpired(token)) return null;
+  return decodeToken(token)?.role ?? null;
+};
+
 export const authedFetch = (url, opts = {}) => {
   // FormData bodies must NOT carry an explicit Content-Type — the browser needs
   // to set it itself so it can include the multipart boundary.

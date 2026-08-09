@@ -34,8 +34,16 @@ import Evidence from './screens/banker/Evidence';
 import Approvals from './screens/banker/Approvals';
 import Activity from './screens/banker/Activity';
 import LegalDashboard from './screens/legal/LegalDashboard';
+import FinanceSidebar from './screens/finance/components/FinanceSidebar';
+import FinanceDashboard from './screens/finance/FinanceDashboard';
+import FinanceDocuments from './screens/finance/FinanceDocuments';
+import FinanceFinancialData from './screens/finance/FinanceFinancialData';
+import FinanceSections from './screens/finance/FinanceSections';
+import FinanceReviewQueuePage from './screens/finance/FinanceReviewQueuePage';
+import FinanceComingSoon from './screens/finance/components/FinanceComingSoon';
 import { getToken, isTokenExpired, decodeToken, authedFetch } from './utils/auth';
 import { onSessionUpdate } from './utils/tabSync';
+import { getPostLoginRoute } from './utils/roleRouting';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -49,6 +57,10 @@ export default function App() {
   const [readiness, setReadiness] = useState(null);
   const [consistency, setConsistency] = useState(null);
   const [currentSection, setCurrentSection] = useState('');
+  // Was already in the /api/session/restore response but never kept in
+  // state (only read transiently in handleAuthSuccess below) — the
+  // Finance/CA Documents page needs it too.
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
 
   useEffect(() => {
     bootstrap();
@@ -83,13 +95,36 @@ export default function App() {
         setEligibility(data.eligibility || null);
         setReadiness(data.readiness || null);
         setConsistency(data.consistency || null);
+        setUploadedDocuments(data.uploaded_documents || []);
         return data;
       }
     } catch (e) { console.error('Bootstrap error:', e); }
     return null;
   };
 
-  const handleAuthSuccess = async (isNewRegistration) => {
+  const handleAuthSuccess = async (isNewRegistration, role) => {
+    // Roles with their own dashboard (currently just Finance/CA) skip the
+    // founder-oriented onboarding/documents flow entirely — see
+    // utils/roleRouting.js. Every other role (including no role, e.g. a
+    // user who reached /auth directly) keeps the exact existing behavior
+    // below, untouched.
+    //
+    // The JWT's role claim (now persisted server-side, see
+    // auth_router.py) is authoritative once the token is set; the role
+    // passed in from Auth.jsx is only a same-request fallback for the
+    // brief window before that token exists. For every role other than
+    // finance_ca the JWT role is 'promoter' (or 'merchant_banker'/'admin'),
+    // none of which map to a route below, so this changes nothing for them.
+    const token = getToken();
+    const jwtRole = token ? decodeToken(token)?.role : null;
+    const effectiveRole = jwtRole || role;
+    const roleRoute = getPostLoginRoute(effectiveRole);
+    if (roleRoute) {
+      bootstrap();
+      navigate(roleRoute);
+      return;
+    }
+
     if (isNewRegistration) {
       bootstrap();
       navigate('/onboarding');
@@ -178,6 +213,36 @@ export default function App() {
               eligibility={eligibility}
               consistency={consistency}
             />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/finance-dashboard/*"
+        element={
+          <ProtectedRoute>
+            <FinanceSidebar companyName={companyName} />
+            <main className="finance-shell-main">
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <FinanceDashboard
+                      companyName={companyName}
+                      sections={sections}
+                      readiness={readiness}
+                      uploadedDocuments={uploadedDocuments}
+                    />
+                  }
+                />
+                <Route path="/financial-data" element={<FinanceFinancialData companyId={companyId} />} />
+                <Route path="/documents" element={<FinanceDocuments companyId={companyId} />} />
+                <Route path="/sections" element={<FinanceSections sections={sections} setSections={setSections} />} />
+                <Route path="/evidence" element={<FinanceComingSoon label="Evidence" />} />
+                <Route path="/review-queue" element={<FinanceReviewQueuePage sections={sections} />} />
+                <Route path="/comments" element={<FinanceComingSoon label="Comments" />} />
+                <Route path="/activity" element={<FinanceComingSoon label="Activity" />} />
+              </Routes>
+            </main>
           </ProtectedRoute>
         }
       />

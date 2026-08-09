@@ -1,0 +1,215 @@
+/* ─────────────────────────────────────────────────────────────
+   Finance/CA dashboard — layout + Financial Review Queue styling.
+   All values reference the existing design-system.md tokens defined in
+   src/index.css (--paper*, --ink*, --status-*, --radius-*, --sidebar-w);
+   no new colors, fonts, or spacing values are introduced here. The
+   Financial Readiness summary panel reuses index.css's existing
+   .card / .readiness-hero / .readiness-stats / .stat-card classes
+   directly and needs no additional rules.
+   ───────────────────────────────────────────────────────────── */
+
+/* FinanceSidebar is position:fixed (reuses .global-sidebar), so the main
+   content area reserves the same width via margin instead of a grid
+   column — there's no copilot rail on this screen, so the 3-column
+   .shell grid used by the Founder app doesn't apply here. */
+.finance-shell-main {
+  margin-left: var(--sidebar-w);
+  padding: 40px 48px;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+/* ─── Financial Review Queue ─────────────────────────────────── */
+.finance-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.finance-queue-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule);
+  border-radius: var(--radius-sm);
+}
+
+.finance-queue-row--verified     { border-left-color: var(--status-approved); }
+.finance-queue-row--issues       { border-left-color: var(--status-gap); }
+.finance-queue-row--pending      { border-left-color: var(--status-draft); }
+.finance-queue-row--not_reviewed { border-left-color: var(--status-pending); }
+
+.finance-queue-icon { flex-shrink: 0; }
+
+.finance-queue-info { flex: 1; min-width: 0; }
+
+.finance-queue-area {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+
+.finance-queue-status { font-size: 0.78rem; }
+
+.finance-queue-status--verified     { color: var(--status-approved); }
+.finance-queue-status--issues       { color: var(--status-gap); }
+.finance-queue-status--pending      { color: var(--status-draft); }
+.finance-queue-status--not_reviewed { color: var(--status-pending); }
+
+/* ─── Documents page ─────────────────────────────────────────── */
+.finance-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.finance-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.finance-doc-icon { flex-shrink: 0; }
+
+.finance-doc-info { flex: 1; min-width: 0; }
+
+.finance-doc-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.finance-doc-meta {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* ─── Financial Data page ────────────────────────────────────── */
+.finance-fy-card { margin-bottom: 16px; }
+
+.finance-fy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.finance-fy-year {
+  font-family: var(--font-doc);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.finance-fy-source {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.finance-fy-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.finance-fy-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-4);
+}
+
+.finance-fy-field-label {
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.finance-fy-field-value {
+  font-family: var(--font-doc);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.finance-fy-history {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.finance-fy-history-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.finance-fy-history-item {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  padding: 4px 0;
+}
+
+/* ─── DRHP Sections page ─────────────────────────────────────── */
+.finance-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.finance-section-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.finance-section-preview {
+  padding: 16px;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  max-height: 140px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.finance-section-status {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.finance-section-gaps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--status-gap-soft);
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  color: var(--status-gap);
+}
+
+@media (max-width: 900px) {
+  .finance-shell-main { padding: 24px; }
+  .finance-fy-grid { grid-template-columns: repeat(2, 1fr); }
+}

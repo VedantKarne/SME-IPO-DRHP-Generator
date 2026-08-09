@@ -782,6 +782,9 @@ app.include_router(document_upload_router)
 from src.api.admin_router import router as admin_router
 app.include_router(admin_router)
 
+from src.api.finance_router import router as finance_router
+app.include_router(finance_router)
+
 
 # ─────────────────────────────────────────────
 # Bug 1 Fix: HITL Resume Endpoints mounted on the MAIN app.

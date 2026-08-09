@@ -221,6 +221,60 @@
   line-height: 1.55;
 }
 
+/* ─── Role selection cards ("Continue as" / LoginSection) ───────────── */
+.lv-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.lv-role-card {
+  text-align: center;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.lv-role-card:hover {
+  border-color: var(--signal);
+  background-color: var(--paper-sunken);
+}
+
+.lv-role-icon {
+  color: var(--signal);
+}
+
+.lv-role-title {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--ink);
+}
+
+.lv-role-desc {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .lv-role-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .lv-role-grid { grid-template-columns: 1fr; }
+}
+
 /* ─── Footer ─────────────────────────────────────────── */
 .lv-footer {
   border-top: 1px solid var(--rule);

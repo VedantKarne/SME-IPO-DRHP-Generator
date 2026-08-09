@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Loader2, Zap, Briefcase, Scale, ArrowLeft } from 'lucide-react';
 import { setToken } from '../utils/auth';
 
@@ -32,10 +32,9 @@ function makeMockToken(email, companyName) {
 }
 
 export default function Auth({ onAuthSuccess }) {
-  // Which role card was clicked on the landing page, persisted to localStorage
-  // by LoginSection.jsx. Arriving here via direct URL carries no role — all
-  // demo buttons stay visible in that case rather than guessing a role.
-  const landingRole = localStorage.getItem('nirmaan_role');
+  const location = useLocation();
+  const selectedRole = location.state?.role;
+  const landingRole = selectedRole || localStorage.getItem('nirmaan_role');
   const showFounderDemo = !landingRole || landingRole === 'founder';
   const showBankerDemo  = !landingRole || landingRole === 'merchant_banker';
   const showLegalDemo   = !landingRole || landingRole === 'legal_advisor';
@@ -64,7 +63,10 @@ export default function Auth({ onAuthSuccess }) {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const body = isLogin
         ? { email, password }
-        : { email, password, company_name: companyName, cin };
+        : {
+            email, password, company_name: companyName, cin,
+            ...(selectedRole === 'finance_ca' ? { role: 'finance_ca' } : {}),
+          };
 
       const res = await fetch(`${API}${endpoint}`, {
         method: 'POST',
@@ -79,7 +81,7 @@ export default function Auth({ onAuthSuccess }) {
       }
 
       setToken(data.access_token);
-      onAuthSuccess(!isLogin); // Pass true if it was a registration
+      onAuthSuccess(!isLogin, selectedRole); // Pass true if it was a registration
 
     } catch (err) {
       // TypeError = fetch itself failed = backend is down / unreachable.
@@ -127,6 +129,8 @@ export default function Auth({ onAuthSuccess }) {
       }
 
       setToken(data.access_token);
+      // Demo access always signs into the seeded founder demo account,
+      // regardless of which role card was selected — no role forwarded.
       onAuthSuccess(false);
     } catch (err) {
       if (err instanceof TypeError || roleLabel === 'legal') {

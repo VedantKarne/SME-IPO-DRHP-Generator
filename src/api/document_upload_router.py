@@ -20,6 +20,7 @@ import shutil
 from typing import List, Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -480,6 +481,42 @@ def get_document_status(
         )
         for r in records
     ]
+
+
+@router.get("/{upload_id}/file")
+def get_document_file(
+    upload_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Serves the original uploaded file — the evidence/source document behind
+    an extracted figure. New endpoint; no existing route in this router (or
+    anywhere else) previously exposed the raw file for a real (non-demo)
+    upload — Documents.jsx's "view document" control only worked for the
+    seeded demo account's static sample PDFs. Generic (not role-restricted)
+    since viewing an already-accessible document is not itself a
+    finance-only action; the Finance/CA "Evidence" view is simply the first
+    UI to call it.
+    """
+    try:
+        upload_uuid = uuid.UUID(upload_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid upload_id format")
+
+    record = db.query(UploadedDocument).filter(UploadedDocument.id == upload_uuid).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    company_id_str = str(record.company_id)
+    if str(current_user["company_id"]) != company_id_str:
+        raise HTTPException(status_code=403, detail="Not authorized for this company")
+
+    file_path = os.path.join(CLIENT_DOCS_DIR, company_id_str, record.filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File no longer exists on disk")
+
+    return FileResponse(file_path, filename=record.filename)
 
 
 @router.delete("/{upload_id}", status_code=200)

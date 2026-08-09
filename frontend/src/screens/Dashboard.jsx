@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, Scale, Users, ClipboardList, FileWarning, FileUp, FileEdit, CheckCircle2, XCircle, AlertTriangle, Search } from 'lucide-react';
+import { Wallet, Scale, Users, ClipboardList, FileWarning, FileUp, FileEdit, CheckCircle2, XCircle, AlertTriangle, Search, MessageCircleQuestion } from 'lucide-react';
 import { authedFetch } from '../utils/auth';
-import ScoreRing from '../components/ScoreRing.jsx';
+import ScoreRing from '../components/ScoreRing';
 
 const API = 'http://127.0.0.1:8000';
 
@@ -83,6 +83,7 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
   const navigate = useNavigate();
   const [eligibilityData, setEligibilityData] = useState(propEligibility || null);
   const [consistencyData, setConsistencyData] = useState(propConsistency || null);
+  const [clarifications, setClarifications] = useState([]);
 
   useEffect(() => {
     if (propEligibility) setEligibilityData(propEligibility);
@@ -103,6 +104,14 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data) setConsistencyData(data); })
       .catch(err => console.error('Consistency fetch error:', err));
+
+    // Finance/CA's flagged clarification requests (src/api/finance_router.py).
+    // No existing Founder-facing comment feed exists to reuse — this is the
+    // first one, so it's additive here rather than replacing anything.
+    authedFetch(`${API}/api/finance/${companyId}/clarifications`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setClarifications(data.clarifications || []); })
+      .catch(err => console.error('Clarifications fetch error:', err));
   }, [companyId]);
 
   const hour = new Date().getHours();
@@ -290,6 +299,34 @@ export default function Dashboard({ companyId, companyName, sections, readiness,
           )}
         </div>
       </div>
+
+      {/* Finance/CA clarification requests — only shown when there are any,
+          so this doesn't add clutter for companies with no Finance/CA
+          reviewer yet. */}
+      {clarifications.length > 0 && (
+        <div className="card" style={{ marginBottom: 24 }}>
+          <h3 style={{ marginBottom: 14, fontSize: '0.95rem', color: 'var(--ink)' }}>Clarification Requests</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {clarifications.map((c) => (
+              <div key={c.id} style={{
+                display: 'flex', gap: 14, alignItems: 'flex-start',
+                padding: '12px 14px',
+                background: 'var(--status-draft-soft)',
+                border: '1px solid rgba(148,111,46,0.2)',
+                borderRadius: 'var(--radius-sm)',
+              }}>
+                <MessageCircleQuestion size={18} strokeWidth={1.5} color="var(--status-draft)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: 2, color: 'var(--ink)' }}>
+                    Finance/CA needs input on "{c.section_name}"
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--ink-soft)' }}>{c.text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Next Actions */}
       <div className="card">
