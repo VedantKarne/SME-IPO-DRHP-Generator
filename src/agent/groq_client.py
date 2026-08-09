@@ -69,7 +69,12 @@ class RateLimitAwareGroqClient:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             logger.warning("GROQ_API_KEY not set. Drafting may fail.")
-        self.client = Groq(api_key=api_key)
+            
+        import httpx
+        # Force IPv4 to prevent macOS httpx "nodename nor servname provided" errors
+        http_client = httpx.Client(transport=httpx.HTTPTransport(local_address="0.0.0.0"))
+        
+        self.client = Groq(api_key=api_key, http_client=http_client)
         self.model = model
         self.breaker = _CircuitBreaker()
 

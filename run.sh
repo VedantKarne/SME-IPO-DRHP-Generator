@@ -170,11 +170,14 @@ else
 fi
 
 # ── 6. Start backend ──────────────────────────────────────────────────────────
+# Ensure ports are free before starting
+lsof -ti:"$BACKEND_PORT" | xargs kill -9 2>/dev/null || true
+lsof -ti:"$FRONTEND_PORT" | xargs kill -9 2>/dev/null || true
+
 info "Starting backend on http://localhost:${BACKEND_PORT} ..."
 (cd "$SCRIPT_DIR" && uvicorn src.api.server:app \
   --host 0.0.0.0 \
   --port "$BACKEND_PORT" \
-  --reload \
   2>&1 | sed 's/^/  [backend] /') &
 BACKEND_PID=$!
 success "Backend started  (PID $BACKEND_PID)"

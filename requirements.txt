@@ -29,6 +29,8 @@ uvicorn==0.39.0             # pinned — confirmed in project .venv
 httpx                       # required by fastapi.testclient.TestClient
 python-jose[cryptography]   # JWT authentication
 bcrypt                      # Password hashing
+python-multipart            # FastAPI form data / file uploads
+
 
 
 # ── 3. Database / ORM ────────────────────────────────────────
