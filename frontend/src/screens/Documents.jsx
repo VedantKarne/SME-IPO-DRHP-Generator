@@ -103,14 +103,25 @@ export default function Documents({ readOnly = false }) {
       setChecklist(prev => prev.map((item, i) => {
         // Try to find a matching backend record by doc_type (which is the checklist index)
         const match = records.find(r => r.doc_type === String(i));
-        if (!match) return item;
+        if (!match) {
+          // If real backend data exists but this slot isn't in it, ensure it shows as NOT uploaded.
+          // This clears any fake demo data populated by isDemo initial state.
+          return {
+            ...item,
+            uploaded: false,
+            status: null,
+            filename: null,
+            uploadId: null
+          };
+        }
 
+        const isDone = match.status === 'done' || match.status === 'processed';
         return {
           ...item,
           uploadId: match.upload_id,
           filename: match.filename,
-          status: match.status,
-          uploaded: match.status === 'done',
+          status: match.status === 'processed' ? 'done' : match.status,
+          uploaded: isDone,
         };
       }));
     } catch (_) {}
@@ -139,10 +150,11 @@ export default function Documents({ readOnly = false }) {
           if (!s) return item;
           if (s.status !== item.status) {
             changed = true;
+            const isDone = s.status === 'done' || s.status === 'processed';
             return {
               ...item,
-              status: s.status,
-              uploaded: s.status === 'done',
+              status: s.status === 'processed' ? 'done' : s.status,
+              uploaded: isDone,
             };
           }
           return item;

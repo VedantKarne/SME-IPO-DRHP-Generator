@@ -92,6 +92,10 @@ export default function Auth({ onAuthSuccess }) {
       }
 
       setToken(data.access_token);
+      // Clear any stale company context from a previous user's session
+      // so the new JWT's company_id (or /api/user/projects lookup) is used fresh.
+      localStorage.removeItem('nirmaan_company_id');
+      localStorage.removeItem('nirmaan_company_name');
       onAuthSuccess(!isLogin, selectedRole); // Pass true if it was a registration
 
     } catch (err) {
@@ -140,6 +144,9 @@ export default function Auth({ onAuthSuccess }) {
       }
 
       setToken(data.access_token);
+      // Clear stale company context from any previous session
+      localStorage.removeItem('nirmaan_company_id');
+      localStorage.removeItem('nirmaan_company_name');
       onAuthSuccess(false, roleMap[roleLabel]);
     } catch (err) {
       if (err instanceof TypeError || roleLabel === 'legal' || roleLabel === 'admin' || roleLabel === 'finance') {

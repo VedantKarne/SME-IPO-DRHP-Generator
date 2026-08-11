@@ -252,6 +252,8 @@ def get_company_sections(company_id: uuid.UUID, current_user: dict = Depends(get
 # PRIORITY 1 — POST /api/agent/run
 # THE KEY BRIDGE: calls the real LangGraph agent
 # ─────────────────────────────────────────────
+STREAM_QUEUES = {}
+
 class AgentRunRequest(BaseModel):
     company_id: uuid.UUID
     section_name: str
@@ -298,7 +300,6 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
         "human_feedback": "",
         "status": "draft",
         "langgraph_thread_id": thread_id,
-        "stream_queue": stream_q,
         "completeness_score": 0.0,
         "revisions": 0,
         "gaps": []
@@ -308,6 +309,7 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
 
     def run_graph_thread():
         try:
+            STREAM_QUEUES[thread_id] = stream_q
             graph.invoke(initial_state, config=config)
             stream_q.put({"type": "graph_finished"})
         except Exception as agent_exc:
@@ -317,6 +319,9 @@ def run_agent(request: AgentRunRequest, current_user: dict = Depends(get_current
             else:
                 logger.error(f"graph.invoke failed: {agent_exc}", exc_info=True)
                 stream_q.put({"type": "error", "content": str(agent_exc)})
+        finally:
+            if thread_id in STREAM_QUEUES:
+                del STREAM_QUEUES[thread_id]
 
     threading.Thread(target=run_graph_thread).start()
 

@@ -199,53 +199,20 @@ function SectionEditor({ section, index, companyId, editorRefs, onAutosave, show
   const num        = String(index + 1).padStart(2, '0');
   const isEmpty    = !section.content && !section.draft_text && !section.markdown;
 
-  const [isGenerating, setIsGenerating] = useState(false);
+  const isBatchGenerating = useCanvasStore((s) => s.isBatchGenerating);
+  const batchGenerationQueue = useCanvasStore((s) => s.batchGenerationQueue);
+  const setBatchGenerationQueue = useCanvasStore((s) => s.setBatchGenerationQueue);
+  const setIsBatchGenerating = useCanvasStore((s) => s.setIsBatchGenerating);
+  const isGenerating = isBatchGenerating && batchGenerationQueue[0] === section.name;
   const [generateError, setGenerateError] = useState(null);
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
+  const handleGenerate = () => {
     setGenerateError(null);
-    try {
-      const editor = editorRefs?.current?.[section.name];
-      if (editor) {
-        editor.commands.setContent('', false);
-      }
-      let finalRes = null;
-      let accumulatedText = "";
-
-      await canvasApi.generateSectionStream(companyId, section.name, (type, payload) => {
-        if (type === 'token') {
-          accumulatedText += payload;
-          if (editor) {
-            // Re-render TipTap content continuously
-            const content = markdownToTipTap(accumulatedText);
-            editor.commands.setContent(content, false);
-          }
-        } else if (type === 'final') {
-          finalRes = payload;
-        }
-      });
-
-      if (finalRes && editor) {
-        const content = markdownToTipTap(finalRes.draft_text);
-        editor.commands.setContent(content, false);
-        upsertSection({
-          name: section.name,
-          draft_text: finalRes.draft_text,
-          content,
-          score: finalRes.completeness_score,
-          supporting_clause_ids: finalRes.supporting_clause_ids ?? section.supporting_clause_ids,
-        });
-      }
-    } catch (e) {
-      // Surface the failure. Previously this swallowed the error and the API
-      // layer returned canned prose, so a failed generation looked successful.
-      console.error('Generate failed:', e);
-      setGenerateError(e?.message ?? 'Generation failed.');
-    } finally {
-      setIsGenerating(false);
-    }
+    setBatchGenerationQueue([section.name, ...batchGenerationQueue]);
+    setIsBatchGenerating(true);
   };
+
+
 
   return (
     <div

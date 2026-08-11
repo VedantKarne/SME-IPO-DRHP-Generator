@@ -44,7 +44,7 @@ class AgentState(TypedDict):
     # Bug 1 Fix: Store the LangGraph thread_id so the HITL resume endpoint can use it.
     langgraph_thread_id: str
     
-    stream_queue: Any
+    gaps: list[str]
     
     # Validation / Scoring
     completeness_score: float
@@ -216,7 +216,10 @@ COMPANY FACTS:
     # source headers (a single regulatory citation can run to ~90 characters, and
     # a well-cited section carries dozens). A truncated draft is worse than a
     # short one: it ends mid-clause and the gap detector scores the fragment.
-    q = state.get("stream_queue")
+    thread_id = state.get("langgraph_thread_id")
+    
+    from src.api.server import STREAM_QUEUES
+    q = STREAM_QUEUES.get(thread_id) if thread_id else None
     if q:
         draft_generator = client.generate(messages, max_tokens=1500, stream=True)
         full_draft = []

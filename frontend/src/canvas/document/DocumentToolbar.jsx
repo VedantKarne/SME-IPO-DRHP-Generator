@@ -109,6 +109,43 @@ export default function DocumentToolbar({
   const addVersion          = useVersionStore((s) => s.addVersion);
   const appendPromptHistory = useCanvasStore((s) => s.appendPromptHistory);
   const sections            = useCanvasStore((s) => s.sections);
+  const selectedSections    = useCanvasStore((s) => s.selectedSections);
+  const setBatchGenerationQueue = useCanvasStore((s) => s.setBatchGenerationQueue);
+  const setIsBatchGenerating = useCanvasStore((s) => s.setIsBatchGenerating);
+  const isBatchGenerating   = useCanvasStore((s) => s.isBatchGenerating);
+  const batchGenerationQueue = useCanvasStore((s) => s.batchGenerationQueue);
+
+  // Derive total in queue initially if we want, but since queue pops, total shrinks.
+  // We'll just show remaining count.
+  const handleBatchGenerate = (mode) => {
+    setGenOpen(false);
+    
+    let queue = [];
+    if (mode === 'current') {
+      if (!activeSectionName) {
+        showToast('No active section to generate.', 'error');
+        return;
+      }
+      queue = [activeSectionName];
+    } else if (mode === 'remaining') {
+      queue = sections
+        .filter(s => !s.locked && !s.content && !s.draft_text && !s.markdown)
+        .map(s => s.name);
+    } else if (mode === 'selected') {
+      queue = Array.from(selectedSections);
+    } else if (mode === 'full') {
+      queue = sections.map(s => s.name);
+    }
+
+    if (queue.length === 0) {
+      showToast('No sections to generate based on your selection.', 'info');
+      return;
+    }
+
+    setBatchGenerationQueue(queue);
+    setIsBatchGenerating(true);
+    showToast(`Started generating ${queue.length} section(s).`, 'success');
+  };
   const ed = activeEditor;
 
   // ── Keyboard: ⌘K toggles Copilot, Escape closes everything ──────────
@@ -239,18 +276,19 @@ export default function DocumentToolbar({
     ? (AI_ACTIONS.find((a) => a.id === aiLoading)?.label ?? 'Working')
     : (promptBusy ? 'Applying' : null);
 
-  // ── Read-only render (founder/promoter role) ─────────────────────────
+  // ── Read-only render (viewer / reviewer / or founder role) ───────────
   // Every button below mutates the document in some way (typing, AI
   // rewrite/generate, formatting) except Print and Export, which stay
-  // available so a founder can still review and export the banker's draft.
+  // available so read-only users can still review and export the draft.
   if (readOnly) {
     return (
       <>
         <div className="doc-toolbar" role="toolbar" aria-label="Document formatting toolbar">
           <span className="dtb-readonly-label">
             <Lock size={13} strokeWidth={2} aria-hidden="true" />
-            Read-only — drafted by your Merchant Banker
+            Read-only — you have viewer access to this draft
           </span>
+
 
           <div className="dtb-spacer" aria-hidden="true" />
 
@@ -442,32 +480,66 @@ export default function DocumentToolbar({
           <button
             type="button"
             className="dtb-generate-btn"
-            onClick={() => setGenOpen((v) => !v)}
-            aria-haspopup="menu"
-            aria-expanded={genOpen}
-            title="Generate full DRHP from AI"
+            onClick={() => {
+              if (isBatchGenerating) {
+                setIsBatchGenerating(false);
+                setBatchGenerationQueue([]);
+                showToast('Batch generation cancelled.', 'info');
+              } else {
+                setGenOpen((v) => !v);
+              }
+            }}
+            aria-haspopup={!isBatchGenerating ? "menu" : undefined}
+            aria-expanded={!isBatchGenerating ? genOpen : undefined}
+            title={isBatchGenerating ? "Cancel Generation" : "Generate full DRHP from AI"}
           >
-            <Sparkles size={13} strokeWidth={2} aria-hidden="true" />
-            Generate DRHP
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            {isBatchGenerating ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="spin">⟳</span>
+                Generating {batchGenerationQueue.length} remaining...
+                <span style={{ fontSize: '0.65rem', marginLeft: 4 }}>(Cancel)</span>
+              </div>
+            ) : (
+              <>
+                <Sparkles size={13} strokeWidth={2} aria-hidden="true" />
+                Generate DRHP
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </>
+            )}
           </button>
 
           {genOpen && (
             <ul className="dtb-ai-menu" role="menu" aria-label="Generate options">
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
-                  onClick={() => { handleAIAction('rewrite'); setGenOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Sparkles size={13} strokeWidth={2} /></span>
-                  Generate full DRHP draft
+                  onClick={() => handleBatchGenerate('current')}>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><FileText size={13} strokeWidth={2} /></span>
+                  Generate Current Section
                 </button>
               </li>
               <li role="none">
                 <button type="button" role="menuitem" className="dtb-ai-menu__item"
-                  onClick={() => { handleAIAction('professional'); setGenOpen(false); }}>
-                  <span className="dtb-ai-menu__icon" aria-hidden="true"><FileText size={13} strokeWidth={2} /></span>
-                  Generate this section only
+                  onClick={() => handleBatchGenerate('remaining')}>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Sparkles size={13} strokeWidth={2} /></span>
+                  Generate Remaining Sections
+                </button>
+              </li>
+              <li role="none">
+                <button type="button" role="menuitem" className="dtb-ai-menu__item"
+                  onClick={() => handleBatchGenerate('selected')}
+                  disabled={selectedSections.size === 0}>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Sparkles size={13} strokeWidth={2} /></span>
+                  Generate Selected Sections ({selectedSections.size})
+                </button>
+              </li>
+              <li role="separator" className="dtb-ai-menu__sep" />
+              <li role="none">
+                <button type="button" role="menuitem" className="dtb-ai-menu__item"
+                  onClick={() => handleBatchGenerate('full')}>
+                  <span className="dtb-ai-menu__icon" aria-hidden="true"><Sparkles size={13} strokeWidth={2} /></span>
+                  Generate Full DRHP
                 </button>
               </li>
               <li role="separator" className="dtb-ai-menu__sep" />

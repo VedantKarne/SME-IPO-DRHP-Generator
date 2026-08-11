@@ -23,6 +23,7 @@ import useToast, { ToastContainer } from '../toolbar/useToast.jsx';
 import CanvasAppBar     from './CanvasAppBar.jsx';
 import DocumentSidebar  from './DocumentSidebar.jsx';
 import DocumentToolbar  from './DocumentToolbar.jsx';
+import { useBatchGeneration } from './useBatchGeneration.js';
 import DocumentCanvas   from './DocumentCanvas.jsx';
 import CopilotPanel     from './CopilotPanel.jsx';
 import BankerReviewPanel from './BankerReviewPanel.jsx';
@@ -87,15 +88,18 @@ export default function CanvasLayout({ companyId, companyName, readOnly = false,
   const activeSectionName = activeSection?.name ?? '';
   const activeEditor      = editorRefs.current[activeSectionName] ?? null;
 
+  // Toast system
+  const { toasts, showToast, dismissToast } = useToast();
+
+  // Initialize batch generation queue processor
+  useBatchGeneration(companyId, editorRefs, showToast);
+
   // The app's main nav (GlobalSidebar, rendered as a sibling outside this
   // tree — see App.jsx) and the Sections panel below are mutually exclusive:
   // whichever isn't showing frees its width for the document itself.
   const navRailCollapsed = useCanvasStore((s) => s.navRailCollapsed);
   const sidebarWEffective = navRailCollapsed ? 'var(--sidebar-w-rail)' : 'var(--sidebar-w)';
   const docSidebarW       = navRailCollapsed ? `${DOC_SIDEBAR_W}px` : '0px';
-
-  // Toast system
-  const { toasts, showToast, dismissToast } = useToast();
 
   // Autosave callback. Receives an error when the save did NOT succeed, so we
   // never show "Autosaved" for work that was not actually persisted.

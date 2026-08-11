@@ -82,6 +82,9 @@ export default function App() {
   // state (only read transiently in handleAuthSuccess below) — the
   // Finance/CA Documents page needs it too.
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  // Per-project permission level for the current user ('viewer' | 'editor' | 'reviewer' | 'admin').
+  // null means promoter/owner (full access). Fetched from /api/user/projects after bootstrap.
+  const [projectPermission, setProjectPermission] = useState(null);
 
   useEffect(() => {
     bootstrap();
@@ -97,6 +100,10 @@ export default function App() {
     });
   }, []);
 
+  // Professional roles that join IPO projects via invitation.
+  // New-style accounts have null JWT company_id; old-style have the company they registered with.
+  const PROFESSIONAL_ROLES = new Set(['merchant_banker', 'legal_advisor', 'chartered_accountant', 'company_secretary', 'auditor']);
+
   const bootstrap = async () => {
     try {
       const token = getToken();
@@ -104,14 +111,63 @@ export default function App() {
         return null;
       }
 
-      const { company_id: default_company_id, company_name: default_company_name, role: userRole } = decodeToken(token);
+      const { company_id: jwt_company_id, company_name: jwt_company_name, role: userRole } = decodeToken(token);
+      const isProfessional = PROFESSIONAL_ROLES.has(userRole);
 
-      const active_company_id = localStorage.getItem('nirmaan_company_id') || default_company_id;
-      const active_company_name = localStorage.getItem('nirmaan_company_name') || default_company_name;
+      let active_company_id;
+      let active_company_name;
 
-      setCompanyId(active_company_id);
-      setCompanyName(active_company_name);
+      // JWT company_id is the primary source of truth.
+      // It was set at login for a specific company and is always correct.
+      // Only for new-style professional accounts (null JWT company_id) do we
+      // resolve the project from their invitations/memberships.
+      const storedCompanyId = localStorage.getItem('nirmaan_company_id');
+
+      if (!jwt_company_id && isProfessional) {
+        // New-style professional: no JWT company_id — resolve from memberships.
+        try {
+          const projRes = await authedFetch(`${API}/api/user/projects`);
+          if (projRes.ok) {
+            const projects = await projRes.json();
+            // Pick first member project (invited to an IPO project)
+            const memberProject = projects.find(p => p.role !== 'Owner/Promoter') || projects[0];
+            if (memberProject) {
+              active_company_id = memberProject.id;
+              active_company_name = memberProject.name;
+              localStorage.setItem('nirmaan_company_id', memberProject.id);
+              localStorage.setItem('nirmaan_company_name', memberProject.name);
+              setProjectPermission(memberProject.permission || null);
+            }
+          }
+        } catch (_) { /* non-fatal — professional with no accepted invitations yet */ }
+      } else {
+        // JWT has company_id (all promoters, and old-style professionals).
+        // Use JWT as source of truth; seed localStorage if empty.
+        if (!storedCompanyId && jwt_company_id) {
+          localStorage.setItem('nirmaan_company_id', jwt_company_id);
+          if (jwt_company_name) localStorage.setItem('nirmaan_company_name', jwt_company_name);
+        }
+        active_company_id = localStorage.getItem('nirmaan_company_id') || jwt_company_id;
+        active_company_name = localStorage.getItem('nirmaan_company_name') || jwt_company_name;
+
+        // Fetch the user's permission level for this project
+        if (active_company_id) {
+          try {
+            const projRes = await authedFetch(`${API}/api/user/projects`);
+            if (projRes.ok) {
+              const projects = await projRes.json();
+              const activeProject = projects.find(p => p.id === active_company_id);
+              if (activeProject) setProjectPermission(activeProject.permission || null);
+            }
+          } catch (_) { /* non-fatal */ }
+        }
+      }
+
+      setCompanyId(active_company_id || '');
+      setCompanyName(active_company_name || '');
       setRole(userRole || '');
+
+      if (!active_company_id) return null;
 
       const r = await authedFetch(`${API}/api/session/restore?company_id=${active_company_id}`);
       if (r.ok) {
@@ -126,6 +182,8 @@ export default function App() {
     } catch (e) { console.error('Bootstrap error:', e); }
     return null;
   };
+
+
 
   const handleAuthSuccess = async (isNewRegistration, roleArg) => {
     // Roles with their own dashboard (currently just Finance/CA) skip the
@@ -178,6 +236,7 @@ export default function App() {
     navigate(hasDocuments ? '/dashboard' : '/documents');
   };
 
+
   const handleOnboardingComplete = () => {
     bootstrap();
     // The Dashboard's readiness/eligibility data is only meaningful once
@@ -188,6 +247,18 @@ export default function App() {
 
   const approvedCount = sections.filter(s => s.locked).length;
   const isBanker = role === 'merchant_banker';
+
+  // Determine whether the current user can edit the canvas.
+  // Priority order:
+  //   1. Promoters / owners always have full access (no projectPermission record).
+  //   2. Merchant bankers with 'editor' or 'admin' project permission can edit.
+  //   3. Any member explicitly granted 'editor' or 'admin' permission can edit.
+  //   4. 'viewer' and 'reviewer' are read-only.
+  const EDIT_PERMISSIONS = new Set(['editor', 'admin']);
+  const canEdit =
+    role === 'promoter' ||
+    (isBanker && (!projectPermission || EDIT_PERMISSIONS.has(projectPermission))) ||
+    (!isBanker && EDIT_PERMISSIONS.has(projectPermission));
 
   return (
     <Routes>
@@ -238,7 +309,8 @@ export default function App() {
               companyId={companyId}
               companyName={companyName}
               sections={sections}
-              readOnly={!isBanker}
+              readOnly={!canEdit}
+
               role={role}
               eligibility={eligibility}
               consistency={consistency}

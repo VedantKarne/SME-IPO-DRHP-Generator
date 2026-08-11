@@ -49,6 +49,8 @@ export default function DocumentSidebar({ containerRef }) {
   const activeSectionIdx = useCanvasStore((s) => s.activeSectionIdx);
   const navRailCollapsed = useCanvasStore((s) => s.navRailCollapsed);
   const setNavRailCollapsed = useCanvasStore((s) => s.setNavRailCollapsed);
+  const selectedSections = useCanvasStore((s) => s.selectedSections);
+  const toggleSectionSelection = useCanvasStore((s) => s.toggleSectionSelection);
   const [collapsed, setCollapsed] = useState(true);
   const [depGraphOpen, setDepGraphOpen] = useState(false);
 
@@ -122,13 +124,21 @@ export default function DocumentSidebar({ containerRef }) {
             const num      = String(idx + 1).padStart(2, '0');
 
             return (
-              <li key={section.name} role="none" ref={isActive ? activeItemRef : null}>
+              <li key={section.name} role="none" ref={isActive ? activeItemRef : null} style={{ display: 'flex', alignItems: 'center' }}>
+                <input 
+                  type="checkbox"
+                  checked={selectedSections.has(section.name)}
+                  onChange={() => toggleSectionSelection(section.name)}
+                  style={{ marginRight: 8, cursor: 'pointer', accentColor: 'var(--signal-accent)' }}
+                  title="Select for batch generation"
+                />
                 <button
                   type="button"
                   className={`doc-sidebar__item${isActive ? ' doc-sidebar__item--active' : ''}`}
                   onClick={() => handleClick(section.name)}
                   aria-current={isActive ? 'true' : undefined}
                   title={`${section.name} — ${dotTitle(section)}`}
+                  style={{ flexGrow: 1 }}
                 >
                   {/* Number */}
                   <span className="doc-sidebar__num" aria-hidden="true">{num}</span>

@@ -65,6 +65,21 @@ const useCanvasStore = create((set) => ({
    */
   navRailCollapsed: true,
 
+  /**
+   * Set of section names currently checked in the sidebar.
+   */
+  selectedSections: new Set(),
+
+  /**
+   * Queue of section names waiting to be generated.
+   */
+  batchGenerationQueue: [],
+
+  /**
+   * True if a batch generation is currently running.
+   */
+  isBatchGenerating: false,
+
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   /**
@@ -136,6 +151,36 @@ const useCanvasStore = create((set) => ({
    * @param {boolean} value
    */
   setOfflineNotified: (value) => set({ offlineNotified: value }),
+
+  /**
+   * toggleSectionSelection(name)
+   * Check or uncheck a section in the sidebar.
+   */
+  toggleSectionSelection: (name) =>
+    set((state) => {
+      const next = new Set(state.selectedSections);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return { selectedSections: next };
+    }),
+
+  /**
+   * clearSectionSelection()
+   */
+  clearSectionSelection: () => set({ selectedSections: new Set() }),
+
+  /**
+   * setBatchGenerationQueue(queue)
+   */
+  setBatchGenerationQueue: (queue) => set({ batchGenerationQueue: queue }),
+
+  /**
+   * setIsBatchGenerating(bool)
+   */
+  setIsBatchGenerating: (bool) => set({ isBatchGenerating: bool }),
 }));
 
 export default useCanvasStore;
