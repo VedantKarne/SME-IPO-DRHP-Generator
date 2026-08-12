@@ -515,7 +515,6 @@ SME-IPO-DRHP-Generator/
 │
 ├── Original_Docs/                    # Raw PDFs (gitignored)
 ├── Databases/                        # ChromaDB + SQLite stores (gitignored)
-├── Dev_Phases_Progress/              # 16 development phase checkpoints
 ├── tests/                            # Pytest test suites
 ├── images/                           # Platform screenshots
 ├── docs/                             # Detailed technical documentation
